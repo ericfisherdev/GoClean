@@ -83,9 +83,9 @@ func CreateViolationBatch(count int) []models.Violation {
 	
 	violationTypes := []models.ViolationType{
 		models.ViolationTypeFunctionLength,
-		models.ViolationTypeFunctionParameters,
-		models.ViolationTypeFunctionComplexity,
-		models.ViolationTypeNesting,
+		models.ViolationTypeParameterCount,
+		models.ViolationTypeCyclomaticComplexity,
+		models.ViolationTypeNestingDepth,
 		models.ViolationTypeNaming,
 	}
 	
