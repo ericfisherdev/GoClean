@@ -86,30 +86,35 @@ jobs:
     - name: Check if tag exists
       id: check_tag
       run: |
-        if git rev-parse "v${{ steps.extract_version.outputs.VERSION }}" >/dev/null 2>&1; then
+        VERSION="${{ steps.extract_version.outputs.VERSION }}"
+        if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.extract_version.outputs.VERSION }} already exists"
+          echo "Tag v${VERSION} already exists"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.extract_version.outputs.VERSION }} does not exist"
+          echo "Tag v${VERSION} does not exist"
         fi
 
     - name: Create and push tag
       if: steps.check_tag.outputs.exists == 'false'
       run: |
+        VERSION="${{ steps.extract_version.outputs.VERSION }}"
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         
         # Create annotated tag
-        git tag -a "v${{ steps.extract_version.outputs.VERSION }}" \
-          -m "Release v${{ steps.extract_version.outputs.VERSION }}" \
-          -m "PR: #${{ github.event.pull_request.number }}" \
-          -m "Title: ${{ github.event.pull_request.title }}"
+        git tag -a "v${VERSION}" \
+          -m "Release v${VERSION}" \
+          -m "PR: #${PR_NUMBER}" \
+          -m "Title: ${PR_TITLE}"
         
         # Push the tag (this will trigger the release workflow)
-        git push origin "v${{ steps.extract_version.outputs.VERSION }}"
+        git push origin "v${VERSION}"
         
-        echo "Created and pushed tag v${{ steps.extract_version.outputs.VERSION }}"
+        echo "Created and pushed tag v${VERSION}"
         echo "This will trigger the release workflow to build and publish the release"
 
     - name: Comment on PR
@@ -127,5 +132,6 @@ jobs:
     - name: Skip if tag exists
       if: steps.check_tag.outputs.exists == 'true'
       run: |
-        echo "Tag v${{ steps.extract_version.outputs.VERSION }} already exists. Skipping tag creation."
+        VERSION="${{ steps.extract_version.outputs.VERSION }}"
+        echo "Tag v${VERSION} already exists. Skipping tag creation."
         echo "If you need to create a new release, please update the version number in the code."
