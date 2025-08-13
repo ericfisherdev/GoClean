@@ -314,6 +314,22 @@
         .fade-in {
             animation: fadeIn 0.5s;
         }
+        .no-visible-violations {
+            opacity: 0.5;
+            background-color: var(--bg-tertiary);
+        }
+        .filter-active {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border-color: var(--primary-color) !important;
+        }
+        .sort-indicator::after {
+            content: " ▲";
+            opacity: 0.5;
+        }
+        .sort-indicator.desc::after {
+            content: " ▼";
+        }
     </style>
     
     <!-- Preload critical resources -->
