@@ -179,10 +179,10 @@ func TestShouldExclude(t *testing.T) {
 		{"file.go", false},
 		{"vendor/lib.go", true},
 		{"src/vendor/lib.go", true},
-		{"main_test.go", true},
+		{"main_test.go", true}, // _test.go pattern should match main_test.go
 		{"main.go", false},
 		{".git/config", true},
-		{".gitignore", true}, // .git pattern matches .gitignore
+		{".gitignore", false}, // .git/ pattern should not match .gitignore (more precise)
 		{"temp.tmp", true},
 		{"normal.js", false},
 	}
