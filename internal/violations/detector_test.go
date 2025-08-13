@@ -1,0 +1,177 @@
+package violations
+
+import (
+	"testing"
+
+	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/scanner"
+)
+
+func TestNewDetectorRegistry(t *testing.T) {
+	registry := NewDetectorRegistry()
+	
+	if registry == nil {
+		t.Fatal("Expected registry to be created")
+	}
+	
+	if len(registry.GetDetectors()) != 0 {
+		t.Error("Expected empty registry initially")
+	}
+}
+
+func TestDetectorRegistry_RegisterDetector(t *testing.T) {
+	registry := NewDetectorRegistry()
+	detector := NewFunctionDetector(nil)
+	
+	registry.RegisterDetector(detector)
+	
+	detectors := registry.GetDetectors()
+	if len(detectors) != 1 {
+		t.Errorf("Expected 1 detector, got %d", len(detectors))
+	}
+	
+	if detectors[0] != detector {
+		t.Error("Expected registered detector to be returned")
+	}
+}
+
+func TestDetectorRegistry_DetectAll(t *testing.T) {
+	registry := NewDetectorRegistry()
+	
+	// Create a detector that always returns one violation
+	mockDetector := &mockDetector{
+		name: "Mock Detector",
+		violations: []*models.Violation{
+			{
+				Type:    models.ViolationTypeFunctionLength,
+				Message: "Mock violation",
+				File:    "test.go",
+				Line:    1,
+				Rule:    "mock-rule",
+			},
+		},
+	}
+	
+	registry.RegisterDetector(mockDetector)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	violations := registry.DetectAll(fileInfo, nil)
+	
+	if len(violations) != 1 {
+		t.Errorf("Expected 1 violation, got %d", len(violations))
+	}
+	
+	if violations[0].Message != "Mock violation" {
+		t.Errorf("Expected 'Mock violation', got %s", violations[0].Message)
+	}
+}
+
+func TestDetectorRegistry_DetectAll_MultipleDetectors(t *testing.T) {
+	registry := NewDetectorRegistry()
+	
+	// Register multiple detectors
+	detector1 := &mockDetector{
+		name: "Detector 1",
+		violations: []*models.Violation{
+			{Type: models.ViolationTypeFunctionLength, Message: "Violation 1", File: "test.go", Line: 1, Rule: "rule1"},
+		},
+	}
+	
+	detector2 := &mockDetector{
+		name: "Detector 2",
+		violations: []*models.Violation{
+			{Type: models.ViolationTypeParameterCount, Message: "Violation 2", File: "test.go", Line: 2, Rule: "rule2"},
+			{Type: models.ViolationTypeNaming, Message: "Violation 3", File: "test.go", Line: 3, Rule: "rule3"},
+		},
+	}
+	
+	registry.RegisterDetector(detector1)
+	registry.RegisterDetector(detector2)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	violations := registry.DetectAll(fileInfo, nil)
+	
+	if len(violations) != 3 {
+		t.Errorf("Expected 3 violations, got %d", len(violations))
+	}
+	
+	// Verify all violations are present
+	messages := make(map[string]bool)
+	for _, v := range violations {
+		messages[v.Message] = true
+	}
+	
+	expectedMessages := []string{"Violation 1", "Violation 2", "Violation 3"}
+	for _, msg := range expectedMessages {
+		if !messages[msg] {
+			t.Errorf("Expected violation message '%s' not found", msg)
+		}
+	}
+}
+
+func TestDefaultDetectorConfig(t *testing.T) {
+	config := DefaultDetectorConfig()
+	
+	if config == nil {
+		t.Fatal("Expected default config to be created")
+	}
+	
+	// Verify default values
+	if config.MaxFunctionLines != 25 {
+		t.Errorf("Expected MaxFunctionLines 25, got %d", config.MaxFunctionLines)
+	}
+	
+	if config.MaxCyclomaticComplexity != 8 {
+		t.Errorf("Expected MaxCyclomaticComplexity 8, got %d", config.MaxCyclomaticComplexity)
+	}
+	
+	if config.MaxParameters != 4 {
+		t.Errorf("Expected MaxParameters 4, got %d", config.MaxParameters)
+	}
+	
+	if config.MaxNestingDepth != 3 {
+		t.Errorf("Expected MaxNestingDepth 3, got %d", config.MaxNestingDepth)
+	}
+	
+	if config.MaxClassLines != 150 {
+		t.Errorf("Expected MaxClassLines 150, got %d", config.MaxClassLines)
+	}
+	
+	if config.MaxMethods != 20 {
+		t.Errorf("Expected MaxMethods 20, got %d", config.MaxMethods)
+	}
+	
+	if config.AllowSingleLetterVars {
+		t.Error("Expected AllowSingleLetterVars to be false")
+	}
+	
+	if !config.RequireCamelCase {
+		t.Error("Expected RequireCamelCase to be true")
+	}
+	
+	if !config.RequireCommentsForPublic {
+		t.Error("Expected RequireCommentsForPublic to be true")
+	}
+}
+
+// mockDetector implements the Detector interface for testing
+type mockDetector struct {
+	name        string
+	description string
+	violations  []*models.Violation
+}
+
+func (m *mockDetector) Detect(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation {
+	return m.violations
+}
+
+func (m *mockDetector) Name() string {
+	return m.name
+}
+
+func (m *mockDetector) Description() string {
+	if m.description == "" {
+		return "Mock detector for testing"
+	}
+	return m.description
+}

@@ -29,15 +29,15 @@ func (s Severity) String() string {
 type ViolationType string
 
 const (
-	ViolationTypeFunctionLength    ViolationType = "function_length"
-	ViolationTypeFunctionComplexity ViolationType = "function_complexity"
-	ViolationTypeFunctionParameters ViolationType = "function_parameters"
-	ViolationTypeNesting           ViolationType = "nesting_depth"
-	ViolationTypeNaming            ViolationType = "naming_convention"
-	ViolationTypeClassSize         ViolationType = "class_size"
-	ViolationTypeDocumentation     ViolationType = "documentation"
-	ViolationTypeMagicNumbers      ViolationType = "magic_numbers"
-	ViolationTypeDuplication       ViolationType = "code_duplication"
+	ViolationTypeFunctionLength         ViolationType = "function_length"
+	ViolationTypeCyclomaticComplexity  ViolationType = "cyclomatic_complexity"
+	ViolationTypeParameterCount        ViolationType = "parameter_count"
+	ViolationTypeNestingDepth         ViolationType = "nesting_depth"
+	ViolationTypeNaming               ViolationType = "naming_convention"
+	ViolationTypeClassSize            ViolationType = "class_size"
+	ViolationTypeMissingDocumentation ViolationType = "missing_documentation"
+	ViolationTypeMagicNumbers         ViolationType = "magic_numbers"
+	ViolationTypeDuplication          ViolationType = "code_duplication"
 )
 
 // Violation represents a clean code violation found during scanning
@@ -55,6 +55,7 @@ type Violation struct {
 	Context     string        `json:"context,omitempty"`
 	Rule        string        `json:"rule"`
 	Suggestion  string        `json:"suggestion,omitempty"`
+	CodeSnippet string        `json:"code_snippet,omitempty"`
 }
 
 // Location represents a position in source code
