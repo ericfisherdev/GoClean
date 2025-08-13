@@ -1,6 +1,6 @@
 # GoClean Makefile
 
-.PHONY: build test clean install lint fmt vet run dev
+.PHONY: build test clean install lint fmt vet run dev benchmark benchmark-suite benchmark-report
 
 # Build configuration
 BINARY_NAME=goclean
@@ -86,19 +86,52 @@ build-all:
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH)
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
 
+# Run benchmarks
+benchmark:
+	@echo "Running benchmarks..."
+	$(GOTEST) -bench=. -benchmem ./internal/...
+
+# Run comprehensive benchmark suite
+benchmark-suite: build
+	@echo "Running comprehensive benchmark suite..."
+	$(GOTEST) -bench=BenchmarkSuite -benchmem -timeout=30m .
+
+# Run benchmarks and generate report
+benchmark-report:
+	@echo "Running benchmarks and generating report..."
+	$(GOTEST) -bench=. -benchmem -cpuprofile=cpu.prof -memprofile=mem.prof ./internal/... > benchmark_results.txt
+	@echo "Benchmark results saved to benchmark_results.txt"
+	@echo "CPU profile saved to cpu.prof"
+	@echo "Memory profile saved to mem.prof"
+
+# Compare benchmark results
+benchmark-compare:
+	@echo "Comparing benchmark results..."
+	@echo "Usage: make benchmark-compare old=old_results.txt new=new_results.txt"
+	@benchstat $(old) $(new)
+
+# Run performance validation benchmarks
+benchmark-validate: build
+	@echo "Running performance validation benchmarks..."
+	$(GOTEST) -bench=BenchmarkOverallPerformance -benchmem -timeout=10m .
+
 # Help
 help:
 	@echo "Available targets:"
-	@echo "  build        - Build the application"
-	@echo "  test         - Run tests"
-	@echo "  test-coverage- Run tests with coverage"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  deps         - Install dependencies"
-	@echo "  install      - Install the binary"
-	@echo "  lint         - Run linter"
-	@echo "  fmt          - Format code"
-	@echo "  vet          - Vet code"
-	@echo "  run          - Build and run the application"
-	@echo "  dev          - Run in development mode"
-	@echo "  build-all    - Build for multiple platforms"
-	@echo "  help         - Show this help"
+	@echo "  build            - Build the application"
+	@echo "  test             - Run tests"
+	@echo "  test-coverage    - Run tests with coverage"
+	@echo "  benchmark        - Run benchmarks"
+	@echo "  benchmark-suite  - Run comprehensive benchmark suite"
+	@echo "  benchmark-report - Run benchmarks and generate report"
+	@echo "  benchmark-validate - Run performance validation benchmarks"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  deps             - Install dependencies"
+	@echo "  install          - Install the binary"
+	@echo "  lint             - Run linter"
+	@echo "  fmt              - Format code"
+	@echo "  vet              - Vet code"
+	@echo "  run              - Build and run the application"
+	@echo "  dev              - Run in development mode"
+	@echo "  build-all        - Build for multiple platforms"
+	@echo "  help             - Show this help"
