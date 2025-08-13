@@ -26,6 +26,9 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -
 # Build the application
 build:
 	@echo "Building $(BINARY_NAME) $(VERSION)..."
+	@echo "Working directory: $(PWD)"
+	@echo "Main path: $(MAIN_PATH)"
+	@ls -la $(MAIN_PATH) 2>/dev/null || echo "Directory $(MAIN_PATH) not found, listing current dir:" && ls -la .
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
 
