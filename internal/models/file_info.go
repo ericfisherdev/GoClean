@@ -22,6 +22,7 @@ type ScanResult struct {
 	File       *FileInfo    `json:"file"`
 	Violations []*Violation `json:"violations"`
 	Metrics    *FileMetrics `json:"metrics"`
+	ASTInfo    interface{}  `json:"ast_info,omitempty"` // Go AST info when available
 }
 
 // FileMetrics contains basic metrics about a file

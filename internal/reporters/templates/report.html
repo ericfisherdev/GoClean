@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ themeClass .Config.Theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoClean Code Analysis Report</title>
+    {{ .RefreshMeta }}
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    
+    <!-- Enhanced styles -->
+    <style>
+        /* Enhanced GoClean Report Styles - Inline for static generation */
+        :root {
+            --primary-color: #007bff;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #0dcaf0;
+            --dark-color: #212529;
+            --light-color: #f8f9fa;
+            --transition-fast: 0.15s;
+            --transition-normal: 0.3s;
+            --transition-slow: 0.5s;
+            --border-radius: 8px;
+            --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --box-shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .dark-theme {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3a3a3a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #8a8a8a;
+            --border-color: #444;
+        }
+
+        .light-theme, :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .enhanced-card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transition: all var(--transition-normal) ease;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .enhanced-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--box-shadow-lg);
+        }
+
+        .stats-card-enhanced {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--primary-color), var(--info-color));
+            transition: width var(--transition-normal) ease;
+        }
+
+        .stats-card-enhanced:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        .stats-card-enhanced.critical::before {
+            background: linear-gradient(180deg, var(--danger-color), #ff6b6b);
+        }
+
+        .violation-card-enhanced {
+            border: none;
+            border-radius: var(--border-radius);
+            transition: all var(--transition-normal) ease;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .violation-card-enhanced::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            border-radius: var(--border-radius) 0 0 var(--border-radius);
+        }
+
+        .violation-card-enhanced[data-severity="Critical"]::before {
+            background: linear-gradient(180deg, var(--danger-color), #c62828);
+        }
+
+        .violation-card-enhanced[data-severity="High"]::before {
+            background: linear-gradient(180deg, #fd7e14, #f57c00);
+        }
+
+        .violation-card-enhanced[data-severity="Medium"]::before {
+            background: linear-gradient(180deg, var(--warning-color), #f9a825);
+        }
+
+        .violation-card-enhanced[data-severity="Low"]::before {
+            background: linear-gradient(180deg, var(--success-color), #2e7d32);
+        }
+
+        .violation-card-enhanced:hover {
+            transform: translateX(8px);
+            box-shadow: var(--box-shadow-lg);
+        }
+
+        .accordion-enhanced .accordion-item {
+            border: none;
+            margin-bottom: 1rem;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: var(--bg-primary);
+            box-shadow: var(--box-shadow);
+        }
+
+        .accordion-enhanced .accordion-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: none;
+            padding: 1.25rem;
+            font-weight: 500;
+            transition: all var(--transition-normal) ease;
+        }
+
+        .accordion-enhanced .accordion-button:not(.collapsed) {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: none;
+        }
+
+        .filter-section-enhanced {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        .search-input-enhanced .form-control {
+            border-radius: var(--border-radius);
+            border: 2px solid var(--border-color);
+            transition: all var(--transition-normal) ease;
+        }
+
+        .search-input-enhanced .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .btn-enhanced {
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: all var(--transition-normal) ease;
+        }
+
+        .enhanced-focus:focus,
+        .enhanced-focus:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .quick-actions {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            box-shadow: var(--box-shadow-lg);
+            transition: all var(--transition-normal) ease;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-action-btn:hover {
+            transform: scale(1.1);
+            background: var(--primary-color);
+            opacity: 0.9;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media (max-width: 768px) {
+            .stats-card-enhanced {
+                margin-bottom: 1rem;
+            }
+            .filter-section-enhanced {
+                padding: 1rem;
+            }
+            .violation-card-enhanced:hover {
+                transform: none;
+            }
+            .enhanced-card:hover {
+                transform: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media print {
+            .auto-refresh-indicator,
+            .filter-section-enhanced,
+            .navbar,
+            .quick-actions {
+                display: none !important;
+            }
+            .enhanced-card,
+            .violation-card-enhanced,
+            .accordion-enhanced .accordion-item {
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+        }
+        /* Consolidated styles */
+        .dark-theme .card {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .dark-theme .table {
+            color: var(--text-primary);
+        }
+        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > td,
+        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > th {
+            background-color: var(--bg-secondary);
+        }
+        .code-snippet {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85em;
+            border-radius: var(--border-radius);
+            background: var(--bg-secondary);
+        }
+        .auto-refresh-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .search-highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .dark-theme .search-highlight {
+            background-color: #664d03;
+            color: #fff;
+        }
+        .filtered-hidden {
+            display: none !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+    </style>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" as="style">
+    
+    <!-- Meta tags for better mobile experience -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="GoClean Report">
+</head>
+<body>
+    <!-- Auto-refresh indicator -->
+    {{ if .Config.AutoRefresh }}
+    <div class="auto-refresh-indicator">
+        <div class="badge bg-info">
+            <i class="bi bi-arrow-clockwise"></i> Auto-refresh every {{ .Config.RefreshInterval }}s
+        </div>
+    </div>
+    {{ end }}
+
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="bi bi-code-square"></i> GoClean Report</a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">Generated: {{ .GeneratedAt }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 fade-in" id="main-content">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card enhanced-card stats-card-enhanced critical">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="card-title text-danger mb-1">{{ .Summary.TotalViolations }}</h3>
+                                <p class="card-text small text-muted mb-0">Total Violations</p>
+                            </div>
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card enhanced-card stats-card-enhanced">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="card-title text-primary mb-1">{{ .Summary.ScannedFiles }}</h3>
+                                <p class="card-text small text-muted mb-0">Files Scanned</p>
+                            </div>
+                            <i class="bi bi-file-earmark-code-fill text-primary fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card enhanced-card stats-card-enhanced">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="card-title text-success mb-1">{{ formatDuration .Summary.Duration }}</h3>
+                                <p class="card-text small text-muted mb-0">Scan Duration</p>
+                            </div>
+                            <i class="bi bi-clock-fill text-success fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card enhanced-card stats-card-enhanced">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="card-title text-info mb-1">{{ .Summary.TotalFiles }}</h3>
+                                <p class="card-text small text-muted mb-0">Total Files</p>
+                            </div>
+                            <i class="bi bi-folder-fill text-info fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Violations by Type Chart -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-pie-chart-fill"></i> Violations by Type</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="violationsByTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Violations by Severity Chart -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-bar-chart-fill"></i> Violations by Severity</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="violationsBySeverityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Violated Files -->
+        {{ if .Statistics.TopViolatedFiles }}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-file-earmark-x-fill"></i> Most Violated Files</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>File</th>
+                                        <th>Total Violations</th>
+                                        <th>Lines</th>
+                                        <th>Violations per 100 Lines</th>
+                                        <th>Severity Distribution</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{ range .Statistics.TopViolatedFiles }}
+                                    <tr>
+                                        <td>
+                                            <code><a href="#file-{{ replace .File "/" "_" }}" class="text-decoration-none">{{ basename .File }}</a></code>
+                                            <br><small class="text-muted">{{ dirname .File }}</small>
+                                        </td>
+                                        <td><span class="badge bg-danger">{{ .TotalViolations }}</span></td>
+                                        <td>{{ .Lines }}</td>
+                                        <td>{{ percentage .TotalViolations .Lines | printf "%.1f" }}%</td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                {{ range $severity, $count := .ViolationsBySeverity }}
+                                                {{ if gt $count 0 }}
+                                                <span class="{{ severityBadge $severity }}">{{ $count }}</span>
+                                                {{ end }}
+                                                {{ end }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ end }}
+
+        <!-- Filter and Search Controls -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card enhanced-card filter-section-enhanced">
+                    <div class="card-header">
+                        <h5><i class="bi bi-funnel"></i> Filters & Search</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Search Files & Violations</label>
+                                <div class="search-input-enhanced">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" class="form-control enhanced-focus" id="searchInput" placeholder="Search in files, messages, code..." aria-label="Search">
+                                        <button class="btn btn-outline-secondary btn-enhanced" type="button" id="clearSearch" aria-label="Clear search">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="severityFilter" class="form-label">Severity</label>
+                                <select class="form-select" id="severityFilter">
+                                    <option value="">All Severities</option>
+                                    <option value="Critical">Critical</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="typeFilter" class="form-label">Violation Type</label>
+                                <select class="form-select" id="typeFilter">
+                                    <option value="">All Types</option>
+                                    <option value="function_length">Long Functions</option>
+                                    <option value="function_complexity">Complex Functions</option>
+                                    <option value="function_parameters">Too Many Parameters</option>
+                                    <option value="naming_convention">Naming Convention</option>
+                                    <option value="code_duplication">Code Duplication</option>
+                                    <option value="missing_documentation">Missing Documentation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="sortBy" class="form-label">Sort By</label>
+                                <select class="form-select" id="sortBy">
+                                    <option value="file">File Name</option>
+                                    <option value="severity">Severity</option>
+                                    <option value="type">Violation Type</option>
+                                    <option value="line">Line Number</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="expandAll">
+                                        <i class="bi bi-arrows-expand"></i> Expand All
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="collapseAll">
+                                        <i class="bi bi-arrows-collapse"></i> Collapse All
+                                    </button>
+                                </div>
+                                <div class="ms-3 d-inline-block">
+                                    <small class="text-muted">
+                                        <span id="visibleFilesCount">0</span> files visible, 
+                                        <span id="visibleViolationsCount">0</span> violations shown
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Details -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-list-ul"></i> Detailed Violations</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ $violationsByFile := .GetViolationsByFile }}
+                        {{ if $violationsByFile }}
+                        <div class="accordion accordion-enhanced" id="fileAccordion">
+                            {{ range $filePath, $violations := $violationsByFile }}
+                            <div class="accordion-item file-item" 
+                                 id="file-{{ replace $filePath "/" "_" }}"
+                                 data-file-path="{{ $filePath }}"
+                                 data-file-name="{{ basename $filePath }}"
+                                 data-violation-count="{{ len $violations }}"
+                                 data-search-content="{{ $filePath | lower }}">
+                                <h2 class="accordion-header" id="heading-{{ replace $filePath "/" "_" }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#collapse-{{ replace $filePath "/" "_" }}" 
+                                            aria-expanded="false" aria-controls="collapse-{{ replace $filePath "/" "_" }}">
+                                        <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                            <div>
+                                                <strong>{{ basename $filePath }}</strong>
+                                                <br><small class="text-muted">{{ $filePath }}</small>
+                                            </div>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <span class="badge bg-danger violation-count-badge">{{ len $violations }} violations</span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse-{{ replace $filePath "/" "_" }}" 
+                                     class="accordion-collapse collapse" 
+                                     aria-labelledby="heading-{{ replace $filePath "/" "_" }}" 
+                                     data-bs-parent="#fileAccordion">
+                                    <div class="accordion-body">
+                                        {{ range $violations }}
+                                        <div class="card violation-card-enhanced mb-3"
+                                             data-severity="{{ .Severity }}"
+                                             data-type="{{ .Type }}"
+                                             data-line="{{ .Line }}"
+                                             data-search-content="{{ .Message | lower }} {{ .Description | lower }} {{ .CodeSnippet | lower }}">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">
+                                                            <i class="bi bi-{{ severityIcon .Severity }}"></i>
+                                                            {{ violationTypeDisplay .Type }}
+                                                        </h6>
+                                                        <span class="{{ severityBadge .Severity }}">{{ .Severity }}</span>
+                                                    </div>
+                                                    <small class="text-muted">Line {{ .Line }}{{ if .EndLine }}-{{ .EndLine }}{{ end }}</small>
+                                                </div>
+                                                
+                                                <p class="card-text">{{ .Message }}</p>
+                                                
+                                                {{ if .Description }}
+                                                <p class="card-text"><small class="text-muted">{{ .Description }}</small></p>
+                                                {{ end }}
+                                                
+                                                {{ if .CodeSnippet }}
+                                                <div class="mt-3">
+                                                    <h6>Code:</h6>
+                                                    <pre class="code-snippet border rounded p-2"><code class="language-go">{{ .CodeSnippet }}</code></pre>
+                                                </div>
+                                                {{ end }}
+                                                
+                                                {{ if .Suggestion }}
+                                                <div class="alert alert-info mt-3 mb-0">
+                                                    <i class="bi bi-lightbulb-fill"></i> <strong>Suggestion:</strong> {{ .Suggestion }}
+                                                </div>
+                                                {{ end }}
+                                            </div>
+                                        </div>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            </div>
+                            {{ end }}
+                        </div>
+                        <div id="noResultsMessage" class="alert alert-warning mt-3" style="display: none;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> No violations match the current filters.
+                        </div>
+                        {{ else }}
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle-fill"></i> No violations found! Your code follows clean code principles.
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Enhanced interactions -->
+    <script>
+        // Enhanced GoClean Report Interactions - Inline for static generation
+        class ThemeManager {
+            constructor() {
+                this.currentTheme = localStorage.getItem('goclean-theme') || 'auto';
+                this.applyTheme();
+                this.setupThemeToggle();
+            }
+
+            setupThemeToggle() {
+                if (!document.querySelector('.theme-toggle')) {
+                    this.createThemeToggle();
+                }
+            }
+
+            createThemeToggle() {
+                const navbar = document.querySelector('.navbar-nav');
+                if (navbar) {
+                    const themeToggle = document.createElement('div');
+                    themeToggle.className = 'nav-item dropdown';
+                    themeToggle.innerHTML = `
+                        <a class="nav-link dropdown-toggle theme-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-palette"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" data-theme="light"><i class="bi bi-sun-fill"></i> Light</a></li>
+                            <li><a class="dropdown-item" href="#" data-theme="dark"><i class="bi bi-moon-fill"></i> Dark</a></li>
+                            <li><a class="dropdown-item" href="#" data-theme="auto"><i class="bi bi-circle-half"></i> Auto</a></li>
+                        </ul>
+                    `;
+                    navbar.appendChild(themeToggle);
+
+                    themeToggle.querySelectorAll('[data-theme]').forEach(link => {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.setTheme(e.target.closest('[data-theme]').dataset.theme);
+                        });
+                    });
+                }
+            }
+
+            setTheme(theme) {
+                this.currentTheme = theme;
+                localStorage.setItem('goclean-theme', theme);
+                this.applyTheme();
+            }
+
+            applyTheme() {
+                const html = document.documentElement;
+                const body = document.body;
+                
+                html.classList.remove('light-theme', 'dark-theme');
+                body.classList.remove('light-theme', 'dark-theme');
+                
+                if (this.currentTheme === 'auto') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const themeClass = prefersDark ? 'dark-theme' : 'light-theme';
+                    html.classList.add(themeClass);
+                    body.classList.add(themeClass);
+                } else {
+                    const themeClass = this.currentTheme + '-theme';
+                    html.classList.add(themeClass);
+                    body.classList.add(themeClass);
+                }
+            }
+
+            toggleTheme() {
+                const themes = ['light', 'dark', 'auto'];
+                const currentIndex = themes.indexOf(this.currentTheme);
+                const nextIndex = (currentIndex + 1) % themes.length;
+                this.setTheme(themes[nextIndex]);
+            }
+        }
+
+        class EnhancedSearchManager {
+            constructor() {
+                this.searchInput = document.getElementById('searchInput');
+                this.severityFilter = document.getElementById('severityFilter');
+                this.typeFilter = document.getElementById('typeFilter');
+                this.sortBy = document.getElementById('sortBy');
+                this.clearSearchBtn = document.getElementById('clearSearch');
+                this.expandAllBtn = document.getElementById('expandAll');
+                this.collapseAllBtn = document.getElementById('collapseAll');
+                this.visibleFilesCount = document.getElementById('visibleFilesCount');
+                this.visibleViolationsCount = document.getElementById('visibleViolationsCount');
+                this.noResultsMessage = document.getElementById('noResultsMessage');
+                this.fileItems = document.querySelectorAll('.file-item');
+                
+                this.initEventListeners();
+                this.applyFilters(); // Initial filter application
+            }
+
+            initEventListeners() {
+                if (this.searchInput) {
+                    this.searchInput.addEventListener('input', this.debounce(() => this.applyFilters(), 250));
+                }
+                if (this.clearSearchBtn) {
+                    this.clearSearchBtn.addEventListener('click', () => {
+                        if (this.searchInput) this.searchInput.value = '';
+                        this.applyFilters();
+                    });
+                }
+                if (this.severityFilter) {
+                    this.severityFilter.addEventListener('change', () => this.applyFilters());
+                }
+                if (this.typeFilter) {
+                    this.typeFilter.addEventListener('change', () => this.applyFilters());
+                }
+                if (this.sortBy) {
+                    this.sortBy.addEventListener('change', () => this.applySorting());
+                }
+                if (this.expandAllBtn) {
+                    this.expandAllBtn.addEventListener('click', () => this.expandAll());
+                }
+                if (this.collapseAllBtn) {
+                    this.collapseAllBtn.addEventListener('click', () => this.collapseAll());
+                }
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 'f':
+                                e.preventDefault();
+                                this.focusSearch();
+                                break;
+                            case 'e':
+                                e.preventDefault();
+                                this.expandAll();
+                                break;
+                            case 'c':
+                                e.preventDefault();
+                                this.collapseAll();
+                                break;
+                        }
+                    }
+                    if (e.key === 'Escape' && this.searchInput) {
+                        this.searchInput.value = '';
+                        this.applyFilters();
+                    }
+                });
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            applyFilters() {
+                const searchTerm = this.searchInput ? this.searchInput.value.toLowerCase().trim() : '';
+                const severityFilter = this.severityFilter ? this.severityFilter.value : '';
+                const typeFilter = this.typeFilter ? this.typeFilter.value : '';
+                
+                let visibleFiles = 0;
+                let visibleViolations = 0;
+                
+                this.fileItems.forEach(fileItem => {
+                    const fileName = (fileItem.dataset.fileName || '').toLowerCase();
+                    const filePath = (fileItem.dataset.filePath || '').toLowerCase();
+                    const fileMatchesSearch = !searchTerm || fileName.includes(searchTerm) || filePath.includes(searchTerm);
+                    
+                    const violations = fileItem.querySelectorAll('.violation-card-enhanced');
+                    let visibleViolationsInFile = 0;
+                    
+                    violations.forEach(violation => {
+                        const severity = violation.dataset.severity || '';
+                        const type = violation.dataset.type || '';
+                        const searchContent = (violation.dataset.searchContent || '').toLowerCase();
+                        
+                        const severityMatches = !severityFilter || severity === severityFilter;
+                        const typeMatches = !typeFilter || type === typeFilter;
+                        const contentMatchesSearch = !searchTerm || searchContent.includes(searchTerm);
+                        
+                        const searchMatches = !searchTerm || fileMatchesSearch || contentMatchesSearch;
+                        const violationVisible = severityMatches && typeMatches && searchMatches;
+                        
+                        if (violationVisible) {
+                            violation.classList.remove('filtered-hidden');
+                            visibleViolationsInFile++;
+                        } else {
+                            violation.classList.add('filtered-hidden');
+                        }
+                    });
+                    
+                    if (visibleViolationsInFile > 0) {
+                        fileItem.classList.remove('filtered-hidden');
+                        visibleFiles++;
+                        visibleViolations += visibleViolationsInFile;
+                        const badge = fileItem.querySelector('.violation-count-badge');
+                        if (badge) badge.textContent = `${visibleViolationsInFile} violations`;
+                    } else {
+                        fileItem.classList.add('filtered-hidden');
+                    }
+                });
+                
+                this.updateCounts(visibleFiles, visibleViolations);
+                this.highlightSearchTerms(searchTerm);
+                this.applySorting();
+            }
+
+            applySorting() {
+                const sortBy = this.sortBy ? this.sortBy.value : 'file';
+                const accordion = document.getElementById('fileAccordion');
+                if (!accordion) return;
+                
+                const fileItems = Array.from(this.fileItems);
+                
+                fileItems.sort((a, b) => {
+                    switch (sortBy) {
+                        case 'severity':
+                            const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+                            const aMaxSeverity = Math.max(...Array.from(a.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
+                            const bMaxSeverity = Math.max(...Array.from(b.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
+                            return bMaxSeverity - aMaxSeverity;
+                        case 'type':
+                            const aTypes = Array.from(a.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
+                            const bTypes = Array.from(b.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
+                            return aTypes.localeCompare(bTypes);
+                        case 'line':
+                             const aMinLine = Math.min(...Array.from(a.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
+                            const bMinLine = Math.min(...Array.from(b.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
+                            return aMinLine - bMinLine;
+                        case 'file':
+                        default:
+                            return (a.dataset.fileName || '').localeCompare(b.dataset.fileName || '');
+                    }
+                });
+                
+                fileItems.forEach(item => accordion.appendChild(item));
+            }
+
+            highlightSearchTerms(searchTerm) {
+                document.querySelectorAll('.search-highlight').forEach(el => {
+                    el.outerHTML = el.innerHTML;
+                });
+
+                if (!searchTerm) return;
+
+                const escapedTerm = this.escapeRegExp(searchTerm);
+                const regex = new RegExp(`(${escapedTerm})`, 'gi');
+                const nodes = document.querySelectorAll('.violation-card-enhanced:not(.filtered-hidden) .card-text, .violation-card-enhanced:not(.filtered-hidden) .code-snippet code');
+
+                nodes.forEach(node => {
+                    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+                    let textNode;
+                    while(textNode = walker.nextNode()) {
+                        if (textNode.parentElement.tagName !== 'SCRIPT' && textNode.parentElement.tagName !== 'STYLE' && regex.test(textNode.nodeValue)) {
+                            const span = document.createElement('span');
+                            span.innerHTML = textNode.nodeValue.replace(regex, '<span class="search-highlight">$1</span>');
+                            textNode.parentNode.replaceChild(span, textNode);
+                        }
+                    }
+                });
+            }
+
+            expandAll() {
+                document.querySelectorAll('#fileAccordion .accordion-collapse').forEach(collapse => {
+                    if (!collapse.closest('.file-item').classList.contains('filtered-hidden')) {
+                        new bootstrap.Collapse(collapse, { show: true });
+                    }
+                });
+            }
+            
+            collapseAll() {
+                document.querySelectorAll('#fileAccordion .accordion-collapse.show').forEach(collapse => {
+                    const instance = bootstrap.Collapse.getInstance(collapse);
+                    if (instance) instance.hide();
+                });
+            }
+            
+            updateCounts(visibleFiles, visibleViolations) {
+                if (this.visibleFilesCount) this.visibleFilesCount.textContent = visibleFiles;
+                if (this.visibleViolationsCount) this.visibleViolationsCount.textContent = visibleViolations;
+
+                const hasActiveFilter = (this.searchInput && this.searchInput.value) || 
+                                       (this.severityFilter && this.severityFilter.value) || 
+                                       (this.typeFilter && this.typeFilter.value);
+                if (this.noResultsMessage) {
+                    this.noResultsMessage.style.display = (visibleFiles === 0 && hasActiveFilter) ? 'block' : 'none';
+                }
+            }
+
+            focusSearch() {
+                if (this.searchInput) {
+                    this.searchInput.focus();
+                    this.searchInput.select();
+                }
+            }
+        }
+
+        // Initialize enhanced features when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeManager = new ThemeManager();
+            const searchManager = new EnhancedSearchManager();
+            
+            // Quick actions setup
+            const quickActions = document.createElement('div');
+            quickActions.className = 'quick-actions d-none d-lg-block';
+            quickActions.innerHTML = `
+                <button class="quick-action-btn" title="Back to top" aria-label="Back to top" data-action="back-to-top" style="display: none;">
+                    <i class="bi bi-arrow-up"></i>
+                </button>
+                <button class="quick-action-btn" title="Toggle theme" aria-label="Toggle theme" data-action="toggle-theme">
+                    <i class="bi bi-palette"></i>
+                </button>
+                <button class="quick-action-btn" title="Focus search" aria-label="Focus search" data-action="focus-search">
+                    <i class="bi bi-search"></i>
+                </button>
+            `;
+            document.body.appendChild(quickActions);
+
+            quickActions.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-action]');
+                if (!button) return;
+
+                switch(button.dataset.action) {
+                    case 'back-to-top':
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                        break;
+                    case 'toggle-theme':
+                        themeManager.toggleTheme();
+                        break;
+                    case 'focus-search':
+                        searchManager.focusSearch();
+                        break;
+                }
+            });
+
+            // Show/hide back to top button based on scroll position
+            const backToTopBtn = quickActions.querySelector('[data-action="back-to-top"]');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    backToTopBtn.style.display = 'flex';
+                } else {
+                    backToTopBtn.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    
+    <script>
+        // Violations by Type Chart
+        const violationsByTypeCtx = document.getElementById('violationsByTypeChart').getContext('2d');
+        const violationsByTypeData = {
+            {{ $violationsByType := .Statistics.ViolationsByType }}
+            labels: [
+                {{ range $type, $count := $violationsByType }}
+                "{{ violationTypeDisplay $type }}",
+                {{ end }}
+            ],
+            datasets: [{
+                data: [
+                    {{ range $type, $count := $violationsByType }}
+                    {{ $count }},
+                    {{ end }}
+                ],
+                backgroundColor: [
+                    '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997',
+                    '#0dcaf0', '#6f42c1', '#d63384', '#6c757d', '#495057'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        new Chart(violationsByTypeCtx, {
+            type: 'doughnut',
+            data: violationsByTypeData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Violations by Severity Chart
+        const violationsBySeverityCtx = document.getElementById('violationsBySeverityChart').getContext('2d');
+        const violationsBySeverityData = {
+            {{ $violationsBySeverity := .Statistics.ViolationsBySeverity }}
+            labels: [
+                {{ range $severity, $count := $violationsBySeverity }}
+                "{{ $severity }}",
+                {{ end }}
+            ],
+            datasets: [{
+                data: [
+                    {{ range $severity, $count := $violationsBySeverity }}
+                    {{ $count }},
+                    {{ end }}
+                ],
+                backgroundColor: [
+                    '#198754', '#ffc107', '#fd7e14', '#dc3545'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        new Chart(violationsBySeverityCtx, {
+            type: 'bar',
+            data: violationsBySeverityData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Auto-scroll to first violation when file is opened
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+            button.addEventListener('click', function() {
+                setTimeout(() => {
+                    if (this.getAttribute('aria-expanded') === 'true') {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 150);
+            });
+        });
+        
+        // Add fade-in animation to cards on load
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.card, .accordion-item').forEach((element, index) => {
+                setTimeout(() => {
+                    element.classList.add('fade-in');
+                }, index * 50);
+            });
+        });
+        
+        // Interactive filtering and sorting functionality
+        class ViolationFilter {
+            constructor() {
+                this.fileItems = document.querySelectorAll('.file-item');
+                this.violationCards = document.querySelectorAll('.violation-card');
+                this.searchInput = document.getElementById('searchInput');
+                this.severityFilter = document.getElementById('severityFilter');
+                this.typeFilter = document.getElementById('typeFilter');
+                this.sortBy = document.getElementById('sortBy');
+                this.clearSearchBtn = document.getElementById('clearSearch');
+                this.expandAllBtn = document.getElementById('expandAll');
+                this.collapseAllBtn = document.getElementById('collapseAll');
+                this.visibleFilesCount = document.getElementById('visibleFilesCount');
+                this.visibleViolationsCount = document.getElementById('visibleViolationsCount');
+                this.noResultsMessage = document.getElementById('noResultsMessage');
+                
+                this.initEventListeners();
+                this.updateCounts();
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), wait);
+                };
+            }
+
+            escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+            
+            initEventListeners() {
+                const debouncedFilter = this.debounce(() => this.applyFilters(), 250);
+
+                // Search input
+                this.searchInput.addEventListener('input', debouncedFilter);
+                this.clearSearchBtn.addEventListener('click', () => {
+                    this.searchInput.value = '';
+                    this.applyFilters();
+                });
+                
+                // Filter dropdowns
+                this.severityFilter.addEventListener('change', () => this.applyFilters());
+                this.typeFilter.addEventListener('change', () => this.applyFilters());
+                
+                // Sort dropdown
+                this.sortBy.addEventListener('change', () => this.applySorting());
+                
+                // Expand/Collapse buttons
+                this.expandAllBtn.addEventListener('click', () => this.expandAll());
+                this.collapseAllBtn.addEventListener('click', () => this.collapseAll());
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 'f':
+                                e.preventDefault();
+                                this.searchInput.focus();
+                                break;
+                            case 'e':
+                                e.preventDefault();
+                                this.expandAll();
+                                break;
+                            case 'c':
+                                e.preventDefault();
+                                this.collapseAll();
+                                break;
+                        }
+                    }
+                    if (e.key === 'Escape') {
+                        this.searchInput.value = '';
+                        this.applyFilters();
+                    }
+                });
+            }
+            
+            applyFilters() {
+                const searchTerm = this.searchInput.value.toLowerCase().trim();
+                const severityFilter = this.severityFilter.value;
+                const typeFilter = this.typeFilter.value;
+                
+                let visibleFiles = 0;
+                let visibleViolations = 0;
+                
+                this.fileItems.forEach(fileItem => {
+                    const fileName = fileItem.dataset.fileName.toLowerCase();
+                    const filePath = fileItem.dataset.filePath.toLowerCase();
+                    const fileSearchContent = fileItem.dataset.searchContent;
+                    
+                    // Check if file matches search
+                    const fileMatches = !searchTerm || 
+                        fileName.includes(searchTerm) || 
+                        filePath.includes(searchTerm) || 
+                        fileSearchContent.includes(searchTerm);
+                    
+                    // Filter violations within this file
+                    const violations = fileItem.querySelectorAll('.violation-card');
+                    let visibleViolationsInFile = 0;
+                    
+                    violations.forEach(violation => {
+                        const severity = violation.dataset.severity;
+                        const type = violation.dataset.type;
+                        const searchContent = violation.dataset.searchContent;
+                        
+                        const severityMatches = !severityFilter || severity === severityFilter;
+                        const typeMatches = !typeFilter || type === typeFilter;
+                        const contentMatches = !searchTerm || searchContent.includes(searchTerm);
+                        
+                        const violationVisible = severityMatches && typeMatches && contentMatches;
+                        
+                        if (violationVisible) {
+                            violation.classList.remove('filtered-hidden');
+                            visibleViolationsInFile++;
+                        } else {
+                            violation.classList.add('filtered-hidden');
+                        }
+                    });
+                    
+                    // Show/hide file based on whether it has visible violations and matches search
+                    const fileVisible = fileMatches && visibleViolationsInFile > 0;
+                    
+                    if (fileVisible) {
+                        fileItem.classList.remove('filtered-hidden');
+                        fileItem.classList.remove('no-visible-violations');
+                        visibleFiles++;
+                        visibleViolations += visibleViolationsInFile;
+                        
+                        // Update violation count badge
+                        const badge = fileItem.querySelector('.violation-count-badge');
+                        if (badge) {
+                            badge.textContent = `${visibleViolationsInFile} violations`;
+                        }
+                    } else {
+                        fileItem.classList.add('filtered-hidden');
+                        if (visibleViolationsInFile === 0 && violations.length > 0) {
+                            fileItem.classList.add('no-visible-violations');
+                        }
+                    }
+                });
+                
+                this.updateCounts(visibleFiles, visibleViolations);
+                this.highlightSearchTerms(searchTerm);
+            }
+            
+            applySorting() {
+                const sortBy = this.sortBy.value;
+                const accordion = document.getElementById('fileAccordion');
+                const fileItems = Array.from(this.fileItems);
+                
+                fileItems.sort((a, b) => {
+                    switch (sortBy) {
+                        case 'file':
+                            return a.dataset.fileName.localeCompare(b.dataset.fileName);
+                        case 'severity':
+                            // Sort by highest severity first
+                            const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+                            const aMaxSeverity = Math.max(...Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
+                            const bMaxSeverity = Math.max(...Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
+                            return bMaxSeverity - aMaxSeverity;
+                        case 'type':
+                            const aTypes = Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
+                            const bTypes = Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
+                            return aTypes.localeCompare(bTypes);
+                        case 'line':
+                            const aMinLine = Math.min(...Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
+                            const bMinLine = Math.min(...Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
+                            return aMinLine - bMinLine;
+                        default:
+                            return 0;
+                    }
+                });
+                
+                // Reorder DOM elements
+                fileItems.forEach(item => accordion.appendChild(item));
+            }
+            
+            expandAll() {
+                const collapses = document.querySelectorAll('#fileAccordion .accordion-collapse:not(.filtered-hidden)');
+                collapses.forEach(collapse => {
+                    if (!collapse.closest('.file-item').classList.contains('filtered-hidden')) {
+                        const bsCollapse = new bootstrap.Collapse(collapse, { show: true });
+                    }
+                });
+            }
+            
+            collapseAll() {
+                const collapses = document.querySelectorAll('#fileAccordion .accordion-collapse.show');
+                collapses.forEach(collapse => {
+                    const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    }
+                });
+            }
+            
+            highlightSearchTerms(searchTerm) {
+                // Remove existing highlights
+                document.querySelectorAll('.search-highlight').forEach(highlight => {
+                    const parent = highlight.parentNode;
+                    parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                    parent.normalize();
+                });
+                
+                if (!searchTerm) return;
+
+                const escapedSearchTerm = this.escapeRegExp(searchTerm);
+                
+                // Add new highlights
+                const walker = document.createTreeWalker(
+                    document.getElementById('fileAccordion'),
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.parentElement.tagName !== 'SCRIPT' && 
+                        node.parentElement.tagName !== 'STYLE' &&
+                        !node.parentElement.classList.contains('search-highlight')) {
+                        textNodes.push(node);
+                    }
+                }
+                
+                textNodes.forEach(textNode => {
+                    const text = textNode.textContent;
+                    const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+                    if (regex.test(text)) {
+                        const span = document.createElement('span');
+                        span.innerHTML = text.replace(regex, '<span class="search-highlight">$1</span>');
+                        textNode.parentNode.replaceChild(span, textNode);
+                    }
+                });
+            }
+            
+            updateCounts(visibleFiles = null, visibleViolations = null) {
+                if (visibleFiles === null) {
+                    visibleFiles = document.querySelectorAll('.file-item:not(.filtered-hidden)').length;
+                }
+                if (visibleViolations === null) {
+                    visibleViolations = document.querySelectorAll('.violation-card:not(.filtered-hidden)').length;
+                }
+                
+                this.visibleFilesCount.textContent = visibleFiles;
+                this.visibleViolationsCount.textContent = visibleViolations;
+
+                const hasActiveFilter = this.searchInput.value || this.severityFilter.value || this.typeFilter.value;
+                if (this.noResultsMessage) {
+                    this.noResultsMessage.style.display = (visibleFiles === 0 && hasActiveFilter) ? 'block' : 'none';
+                }
+            }
+        }
+        
+        // Initialize filter when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('fileAccordion')) {
+                new ViolationFilter();
+            }
+        });
+    </script>
+</body>
+</html>

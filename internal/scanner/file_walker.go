@@ -124,24 +124,39 @@ func (fw *FileWalker) shouldExclude(path string) bool {
 	return false
 }
 
-// matchesPattern checks if a path matches a pattern
+// matchesPattern checks if a path matches a pattern.
+// It is a simple implementation that can be enhanced with glob patterns.
 func (fw *FileWalker) matchesPattern(path, pattern string) bool {
-	// Simple pattern matching - can be enhanced later with glob patterns
-	pattern = strings.TrimSpace(pattern)
-	
-	// Handle directory patterns ending with /
+	// Normalize both path and pattern to use forward slashes for consistent matching.
+	path = filepath.ToSlash(path)
+	pattern = filepath.ToSlash(strings.TrimSpace(pattern))
+
+	// Handle directory patterns (e.g., "vendor/")
 	if strings.HasSuffix(pattern, "/") {
-		return strings.Contains(path, pattern) || strings.Contains(path, strings.TrimSuffix(pattern, "/"))
+		// Match if the path contains the pattern as a directory component.
+		return strings.Contains(path, "/"+pattern) || strings.HasPrefix(path, pattern)
 	}
-	
-	// Handle file extensions
+
+	// Handle file extension patterns (e.g., "*.go")
 	if strings.HasPrefix(pattern, "*.") {
-		ext := strings.TrimPrefix(pattern, "*")
-		return strings.HasSuffix(path, ext)
+		return strings.HasSuffix(path, pattern[1:])
 	}
-	
-	// Handle simple substring matching
-	return strings.Contains(path, pattern)
+
+	// Handle suffix patterns (e.g., "_test.go")
+	if strings.HasSuffix(pattern, ".go") || strings.Contains(pattern, "_") {
+		return strings.Contains(path, pattern)
+	}
+
+	// For other patterns, check if any path component matches the pattern exactly.
+	// This is more robust than a simple substring search.
+	// e.g., "tests" will match "/path/to/tests/file.go" but not "/path/to/mytests/file.go".
+	for _, part := range strings.Split(path, "/") {
+		if part == pattern {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isAllowedFileType checks if the file type is allowed for scanning

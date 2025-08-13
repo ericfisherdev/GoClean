@@ -1,0 +1,8 @@
+# Image assets directory
+This directory contains static image assets for the GoClean HTML reports.
+
+## Contents:
+- favicon.ico - Browser favicon
+- logo-light.svg - Light theme logo
+- logo-dark.svg - Dark theme logo
+- icons/ - Various UI icons

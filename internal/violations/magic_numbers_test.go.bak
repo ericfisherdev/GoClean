@@ -1,0 +1,135 @@
+package violations
+import (
+	"go/parser"
+	"go/token"
+	"testing"
+
+	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/types"
+)
+func TestMagicNumberDetector_Detect_NoMagicNumbers(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewMagicNumberDetector(config)
+	source := `
+package main
+func example() {
+	x := 0
+	y := 1 
+	z := 10
+	array := make([]int, 100)
+	timeout := 60 * 24 // Common time values
+}`
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, "test.go", source, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("Failed to parse source: %v", err)
+	}
+	fileInfo := &models.FileInfo{
+		Path:     "/test/example.go",
+		Language: "Go",
+	}
+	astInfo := &types.GoASTInfo{
+		AST:     astFile,
+		FileSet: fset,
+	}
+	violations := detector.Detect(fileInfo, astInfo)
+	// Should not detect violations for acceptable numbers
+	if len(violations) != 0 {
+		t.Errorf("Expected no violations, got %d", len(violations))
+	}
+}
+func TestMagicNumberDetector_Detect_WithMagicNumbers(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewMagicNumberDetector(config)
+	source := `
+package main
+func example() {
+	timeout := 3600  // Magic number - should be a constant
+	buffer := make([]byte, 8192) // Magic number
+	discount := price * 0.15     // Magic number
+	maxRetries := 73            // Magic number
+}`
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, "test.go", source, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("Failed to parse source: %v", err)
+	}
+	fileInfo := &models.FileInfo{
+		Path:     "/test/example.go",
+		Language: "Go",
+	}
+	astInfo := &types.GoASTInfo{
+		AST:     astFile,
+		FileSet: fset,
+	}
+	violations := detector.Detect(fileInfo, astInfo)
+	// Should detect magic numbers
+	if len(violations) < 3 {
+		t.Errorf("Expected at least 3 violations for magic numbers, got %d", len(violations))
+	}
+	// Check violation types
+	for _, violation := range violations {
+		if violation.Type != models.ViolationTypeMagicNumber {
+			t.Errorf("Expected magic number violation type, got %s", violation.Type)
+		}
+		if violation.Severity != models.SeverityLow {
+			t.Errorf("Expected low severity, got %s", violation.Severity)
+		}
+	}
+}
+func TestMagicNumberDetector_AcceptableValues(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewMagicNumberDetector(config)
+	testCases := []struct {
+		name  string
+		value int
+		acceptable bool
+	}{
+		{"Zero", 0, true},
+		{"One", 1, true},
+		{"Two", 2, true},
+		{"Ten", 10, true},
+		{"Hour minutes", 60, true},
+		{"Day hours", 24, true},
+		{"Week days", 7, true},
+		{"Year days", 365, true},
+		{"Kilobyte", 1024, true},
+		{"Small array size", 5, true},
+		{"Random large number", 12345, false},
+		{"Magic retry count", 73, false},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := detector.isAcceptableInt(tc.value)
+			if result != tc.acceptable {
+				t.Errorf("Value %d: expected acceptable=%t, got %t", tc.value, tc.acceptable, result)
+			}
+		})
+	}
+}
+func TestMagicNumberDetector_AcceptableFloats(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewMagicNumberDetector(config)
+	testCases := []struct {
+		name  string
+		value float64
+		acceptable bool
+	}{
+		{"Zero", 0.0, true},
+		{"One", 1.0, true},
+		{"Half", 0.5, true},
+		{"Quarter", 0.25, true},
+		{"Pi approximation", 3.14, true},
+		{"E approximation", 2.71828, true},
+		{"Random decimal", 2.7845, false},
+		{"Magic percentage", 0.123, false},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := detector.isAcceptableFloat(tc.value)
+			if result != tc.acceptable {
+				t.Errorf("Value %f: expected acceptable=%t, got %t", tc.value, tc.acceptable, result)
+			}
+		})
+	}
+}
