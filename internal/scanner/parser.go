@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/ericfisherdev/goclean/internal/models"
@@ -17,7 +15,6 @@ import (
 type Parser struct {
 	verbose     bool
 	astAnalyzer *ASTAnalyzer
-	bufferPool  sync.Pool
 }
 
 // NewParser creates a new Parser instance
@@ -25,11 +22,6 @@ func NewParser(verbose bool) *Parser {
 	return &Parser{
 		verbose:     verbose,
 		astAnalyzer: NewASTAnalyzer(verbose),
-		bufferPool: sync.Pool{
-			New: func() interface{} {
-				return make([]byte, 0, 64*1024) // 64KB initial capacity
-			},
-		},
 	}
 }
 
@@ -284,31 +276,7 @@ func (p *Parser) extractMetricsFromContent(content []byte, language string) *mod
 	return metrics
 }
 
-// readFileOptimized reads a file using the buffer pool for memory efficiency
+// readFileOptimized reads a file using the standard library for simplicity and efficiency.
 func (p *Parser) readFileOptimized(filePath string) ([]byte, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	
-	// Get a buffer from the pool
-	buf := p.bufferPool.Get().([]byte)
-	defer p.bufferPool.Put(buf[:0]) // Reset length but keep capacity
-	
-	// Use the buffer to read the file
-	buffer := bytes.NewBuffer(buf)
-	buffer.Reset() // Clear any existing data
-	
-	// Read the file content into the buffer
-	_, err = io.Copy(buffer, file)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Return a copy since we're returning the buffer to the pool
-	result := make([]byte, buffer.Len())
-	copy(result, buffer.Bytes())
-	
-	return result, nil
+	return os.ReadFile(filePath)
 }
