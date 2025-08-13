@@ -1,38 +1,29 @@
 package violations
-
 import (
 	"testing"
-
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
+	"github.com/ericfisherdev/goclean/internal/
 )
-
 func TestNewNamingDetector(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	if detector == nil {
 		t.Fatal("Expected detector to be created")
 	}
-	
 	if detector.config == nil {
 		t.Error("Expected config to be initialized")
 	}
-	
 	if detector.Name() == "" {
 		t.Error("Expected detector to have a name")
 	}
-	
 	if detector.Description() == "" {
 		t.Error("Expected detector to have a description")
 	}
 }
-
 func TestNamingDetector_NonDescriptiveFunctionName(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:      "data", // Non-descriptive
 				StartLine: 10,
@@ -40,9 +31,7 @@ func TestNamingDetector_NonDescriptiveFunctionName(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	found := false
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "non-descriptive-function-name" {
@@ -52,18 +41,15 @@ func TestNamingDetector_NonDescriptiveFunctionName(t *testing.T) {
 			}
 		}
 	}
-	
 	if !found {
 		t.Error("Expected non-descriptive function name violation")
 	}
 }
-
 func TestNamingDetector_ImproperGoCasing(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:       "my_function", // Should be myFunction or MyFunction
 				StartLine:  10,
@@ -76,34 +62,29 @@ func TestNamingDetector_ImproperGoCasing(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	caseSViolations := 0
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "go-function-case" {
 			caseSViolations++
 		}
 	}
-	
 	if caseSViolations != 2 {
 		t.Errorf("Expected 2 casing violations, got %d", caseSViolations)
 	}
 }
-
 func TestNamingDetector_SingleLetterParameters(t *testing.T) {
 	config := &DetectorConfig{
 		AllowSingleLetterVars: false, // Disallow single letter vars
 	}
 	detector := NewNamingDetector(config)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:      "TestFunc",
 				StartLine: 10,
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},    // Single letter (should violate if not allowed)
 					{Name: "data", Type: "string"}, // Acceptable
 					{Name: "i", Type: "int"},    // Common loop counter (might be acceptable)
@@ -111,35 +92,30 @@ func TestNamingDetector_SingleLetterParameters(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	singleLetterViolations := 0
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "single-letter-parameter" {
 			singleLetterViolations++
 		}
 	}
-	
 	// Should have violations for single letter params when not allowed
 	if singleLetterViolations == 0 {
 		t.Error("Expected single letter parameter violations")
 	}
 }
-
 func TestNamingDetector_AllowSingleLetterParameters(t *testing.T) {
 	config := &DetectorConfig{
 		AllowSingleLetterVars: true, // Allow single letter vars
 	}
 	detector := NewNamingDetector(config)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:      "TestFunc",
 				StartLine: 10,
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 					{Name: "y", Type: "int"},
 					{Name: "i", Type: "int"},
@@ -147,9 +123,7 @@ func TestNamingDetector_AllowSingleLetterParameters(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	// Should not have single letter violations when allowed
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "single-letter-parameter" {
@@ -157,13 +131,11 @@ func TestNamingDetector_AllowSingleLetterParameters(t *testing.T) {
 		}
 	}
 }
-
 func TestNamingDetector_TypeNaming(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Types: []*scanner.TypeInfo{
+	astInfo := &types.GoASTInfo{
+		Types: []*types.TypeInfo{
 			{
 				Name:       "data",    // Non-descriptive
 				StartLine:  10,
@@ -176,9 +148,7 @@ func TestNamingDetector_TypeNaming(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	typeViolations := 0
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && 
@@ -186,21 +156,18 @@ func TestNamingDetector_TypeNaming(t *testing.T) {
 			typeViolations++
 		}
 	}
-	
 	if typeViolations < 2 {
 		t.Errorf("Expected at least 2 type naming violations, got %d", typeViolations)
 	}
 }
-
 func TestNamingDetector_VariableNaming(t *testing.T) {
 	config := &DetectorConfig{
 		AllowSingleLetterVars: false,
 	}
 	detector := NewNamingDetector(config)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Variables: []*scanner.VariableInfo{
+	astInfo := &types.GoASTInfo{
+		Variables: []*types.VariableInfo{
 			{
 				Name:       "x",        // Single letter (not allowed)
 				Line:       10,
@@ -213,9 +180,7 @@ func TestNamingDetector_VariableNaming(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	variableViolations := 0
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && 
@@ -223,18 +188,15 @@ func TestNamingDetector_VariableNaming(t *testing.T) {
 			variableViolations++
 		}
 	}
-	
 	if variableViolations < 2 {
 		t.Errorf("Expected at least 2 variable naming violations, got %d", variableViolations)
 	}
 }
-
 func TestNamingDetector_ConstantNaming(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	fileInfo := &models.FileInfo{Path: "test.go"}
-	astInfo := &scanner.GoASTInfo{
-		Constants: []*scanner.ConstantInfo{
+	astInfo := &types.GoASTInfo{
+		Constants: []*types.ConstantInfo{
 			{
 				Name:       "my_constant", // Wrong casing
 				Line:       10,
@@ -252,37 +214,28 @@ func TestNamingDetector_ConstantNaming(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	constantViolations := 0
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "go-constant-case" {
 			constantViolations++
 		}
 	}
-	
 	// Should only violate the first one (my_constant)
 	if constantViolations != 1 {
 		t.Errorf("Expected 1 constant naming violation, got %d", constantViolations)
 	}
 }
-
 func TestNamingDetector_NoAST(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	fileInfo := &models.FileInfo{Path: "test.js"} // Non-Go file
-	
 	violations := detector.Detect(fileInfo, nil)
-	
 	if len(violations) != 0 {
 		t.Errorf("Expected no violations for non-Go files, got %d", len(violations))
 	}
 }
-
 func TestIsNonDescriptiveName(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -301,7 +254,6 @@ func TestIsNonDescriptiveName(t *testing.T) {
 		{"counter", false},
 		{"userName", false},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isNonDescriptiveName(tt.name)
@@ -311,10 +263,8 @@ func TestIsNonDescriptiveName(t *testing.T) {
 		})
 	}
 }
-
 func TestIsSingleLetterVar(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -327,7 +277,6 @@ func TestIsSingleLetterVar(t *testing.T) {
 		{"", false},
 		{"123", false},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isSingleLetterVar(tt.name)
@@ -337,10 +286,8 @@ func TestIsSingleLetterVar(t *testing.T) {
 		})
 	}
 }
-
 func TestIsCommonShortParam(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -357,7 +304,6 @@ func TestIsCommonShortParam(t *testing.T) {
 		{"count", false},
 		{"xyz", false},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isCommonShortParam(tt.name)
@@ -367,10 +313,8 @@ func TestIsCommonShortParam(t *testing.T) {
 		})
 	}
 }
-
 func TestHasInappropriateAbbreviation(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -384,7 +328,6 @@ func TestHasInappropriateAbbreviation(t *testing.T) {
 		{"getUserString", false},
 		{"getAddress", false},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.hasInappropriateAbbreviation(tt.name)
@@ -394,10 +337,8 @@ func TestHasInappropriateAbbreviation(t *testing.T) {
 		})
 	}
 }
-
 func TestIsProperGoFunctionCase(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name       string
 		isExported bool
@@ -409,19 +350,16 @@ func TestIsProperGoFunctionCase(t *testing.T) {
 		{"HTTPHandler", true, true},
 		{"getUserData", true, false}, // Should start with uppercase
 		{"get_user", true, false},    // Should not have underscores
-		
 		// Unexported functions
 		{"getUserData", false, true},
 		{"processData", false, true},
 		{"httpHandler", false, true},
 		{"GetUserData", false, false}, // Should start with lowercase
 		{"get_user", false, false},    // Should not have underscores
-		
 		// Edge cases
 		{"", true, false},
 		{"", false, false},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isProperGoFunctionCase(tt.name, tt.isExported)
@@ -432,10 +370,8 @@ func TestIsProperGoFunctionCase(t *testing.T) {
 		})
 	}
 }
-
 func TestIsCamelCase(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -448,7 +384,6 @@ func TestIsCamelCase(t *testing.T) {
 		{"getUser_Data", false},  // Mixed style not allowed
 		{"getUSERData", false},   // All caps in middle not allowed (unless acronym)
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isCamelCase(tt.name)
@@ -458,10 +393,8 @@ func TestIsCamelCase(t *testing.T) {
 		})
 	}
 }
-
 func TestIsAllCapsWithUnderscores(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	tests := []struct {
 		name     string
 		expected bool
@@ -474,7 +407,6 @@ func TestIsAllCapsWithUnderscores(t *testing.T) {
 		{"max_size", false},
 		{"MAX_SIZE_123", true},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := detector.isAllCapsWithUnderscores(tt.name)
@@ -484,30 +416,25 @@ func TestIsAllCapsWithUnderscores(t *testing.T) {
 		})
 	}
 }
-
 func TestGenerateCodeSnippets(t *testing.T) {
 	detector := NewNamingDetector(nil)
-	
 	// Test function snippet generation
-	fn := &scanner.FunctionInfo{
+	fn := &types.FunctionInfo{
 		Name:         "TestFunc",
 		IsMethod:     false,
 		ReceiverType: "",
 	}
-	
 	snippet := detector.generateFunctionNameSnippet(fn)
 	expected := "func TestFunc"
 	if snippet != expected {
 		t.Errorf("generateFunctionNameSnippet() = %q, expected %q", snippet, expected)
 	}
-	
 	// Test method snippet generation
-	method := &scanner.FunctionInfo{
+	method := &types.FunctionInfo{
 		Name:         "Method",
 		IsMethod:     true,
 		ReceiverType: "*Struct",
 	}
-	
 	methodSnippet := detector.generateFunctionNameSnippet(method)
 	expectedMethod := "func (*Struct) Method"
 	if methodSnippet != expectedMethod {

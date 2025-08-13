@@ -7,6 +7,8 @@ import (
 	"go/token"
 	"path/filepath"
 	"strings"
+
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 // ASTAnalyzer handles Go AST parsing and analysis
@@ -24,7 +26,7 @@ func NewASTAnalyzer(verbose bool) *ASTAnalyzer {
 }
 
 // AnalyzeGoFile performs AST-based analysis of a Go source file
-func (a *ASTAnalyzer) AnalyzeGoFile(filePath string) (*GoASTInfo, error) {
+func (a *ASTAnalyzer) AnalyzeGoFile(filePath string) (*types.GoASTInfo, error) {
 	if a.verbose {
 		fmt.Printf("Analyzing Go file with AST: %s\n", filePath)
 	}
@@ -36,16 +38,16 @@ func (a *ASTAnalyzer) AnalyzeGoFile(filePath string) (*GoASTInfo, error) {
 	}
 
 	// Create AST info
-	astInfo := &GoASTInfo{
+	astInfo := &types.GoASTInfo{
 		FilePath:    filePath,
 		PackageName: src.Name.Name,
 		AST:         src,
 		FileSet:     a.fileSet,
-		Functions:   make([]*FunctionInfo, 0),
-		Types:       make([]*TypeInfo, 0),
-		Imports:     make([]*ImportInfo, 0),
-		Variables:   make([]*VariableInfo, 0),
-		Constants:   make([]*ConstantInfo, 0),
+		Functions:   make([]*types.FunctionInfo, 0),
+		Types:       make([]*types.TypeInfo, 0),
+		Imports:     make([]*types.ImportInfo, 0),
+		Variables:   make([]*types.VariableInfo, 0),
+		Constants:   make([]*types.ConstantInfo, 0),
 	}
 
 	// Analyze imports
@@ -66,7 +68,7 @@ func (a *ASTAnalyzer) AnalyzeGoFile(filePath string) (*GoASTInfo, error) {
 }
 
 // inspectNode analyzes individual AST nodes
-func (a *ASTAnalyzer) inspectNode(n ast.Node, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) inspectNode(n ast.Node, astInfo *types.GoASTInfo) {
 	switch node := n.(type) {
 	case *ast.FuncDecl:
 		a.analyzeFunctionDecl(node, astInfo)
@@ -76,7 +78,7 @@ func (a *ASTAnalyzer) inspectNode(n ast.Node, astInfo *GoASTInfo) {
 }
 
 // analyzeFunctionDecl analyzes function declarations
-func (a *ASTAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, astInfo *types.GoASTInfo) {
 	if fn.Name == nil {
 		return
 	}
@@ -84,7 +86,7 @@ func (a *ASTAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, astInfo *GoASTInfo) 
 	pos := a.fileSet.Position(fn.Pos())
 	end := a.fileSet.Position(fn.End())
 
-	funcInfo := &FunctionInfo{
+	funcInfo := &types.FunctionInfo{
 		Name:         fn.Name.Name,
 		StartLine:    pos.Line,
 		EndLine:      end.Line,
@@ -111,7 +113,7 @@ func (a *ASTAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, astInfo *GoASTInfo) 
 }
 
 // analyzeGenDecl analyzes general declarations (types, vars, consts)
-func (a *ASTAnalyzer) analyzeGenDecl(decl *ast.GenDecl, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeGenDecl(decl *ast.GenDecl, astInfo *types.GoASTInfo) {
 	for _, spec := range decl.Specs {
 		switch s := spec.(type) {
 		case *ast.TypeSpec:
@@ -127,11 +129,11 @@ func (a *ASTAnalyzer) analyzeGenDecl(decl *ast.GenDecl, astInfo *GoASTInfo) {
 }
 
 // analyzeTypeSpec analyzes type specifications
-func (a *ASTAnalyzer) analyzeTypeSpec(spec *ast.TypeSpec, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeTypeSpec(spec *ast.TypeSpec, astInfo *types.GoASTInfo) {
 	pos := a.fileSet.Position(spec.Pos())
 	end := a.fileSet.Position(spec.End())
 
-	typeInfo := &TypeInfo{
+	typeInfo := &types.TypeInfo{
 		Name:        spec.Name.Name,
 		StartLine:   pos.Line,
 		EndLine:     end.Line,
@@ -157,11 +159,11 @@ func (a *ASTAnalyzer) analyzeTypeSpec(spec *ast.TypeSpec, astInfo *GoASTInfo) {
 }
 
 // analyzeVarSpec analyzes variable specifications
-func (a *ASTAnalyzer) analyzeVarSpec(spec *ast.ValueSpec, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeVarSpec(spec *ast.ValueSpec, astInfo *types.GoASTInfo) {
 	pos := a.fileSet.Position(spec.Pos())
 
 	for _, name := range spec.Names {
-		varInfo := &VariableInfo{
+		varInfo := &types.VariableInfo{
 			Name:       name.Name,
 			Line:       pos.Line,
 			Column:     pos.Column,
@@ -178,11 +180,11 @@ func (a *ASTAnalyzer) analyzeVarSpec(spec *ast.ValueSpec, astInfo *GoASTInfo) {
 }
 
 // analyzeConstSpec analyzes constant specifications
-func (a *ASTAnalyzer) analyzeConstSpec(spec *ast.ValueSpec, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeConstSpec(spec *ast.ValueSpec, astInfo *types.GoASTInfo) {
 	pos := a.fileSet.Position(spec.Pos())
 
 	for _, name := range spec.Names {
-		constInfo := &ConstantInfo{
+		constInfo := &types.ConstantInfo{
 			Name:       name.Name,
 			Line:       pos.Line,
 			Column:     pos.Column,
@@ -199,11 +201,11 @@ func (a *ASTAnalyzer) analyzeConstSpec(spec *ast.ValueSpec, astInfo *GoASTInfo) 
 }
 
 // analyzeImports extracts import information
-func (a *ASTAnalyzer) analyzeImports(file *ast.File, astInfo *GoASTInfo) {
+func (a *ASTAnalyzer) analyzeImports(file *ast.File, astInfo *types.GoASTInfo) {
 	for _, imp := range file.Imports {
 		pos := a.fileSet.Position(imp.Pos())
 		
-		importInfo := &ImportInfo{
+		importInfo := &types.ImportInfo{
 			Path:   strings.Trim(imp.Path.Value, `"`),
 			Line:   pos.Line,
 			Column: pos.Column,
@@ -218,26 +220,26 @@ func (a *ASTAnalyzer) analyzeImports(file *ast.File, astInfo *GoASTInfo) {
 }
 
 // extractParameters extracts parameter information from function type
-func (a *ASTAnalyzer) extractParameters(params *ast.FieldList) []ParameterInfo {
+func (a *ASTAnalyzer) extractParameters(params *ast.FieldList) []types.ParameterInfo {
 	if params == nil {
 		return nil
 	}
 
-	var parameters []ParameterInfo
+	var parameters []types.ParameterInfo
 	for _, param := range params.List {
 		typeName := a.extractTypeName(param.Type)
 		
 		if len(param.Names) > 0 {
 			// Named parameters
 			for _, name := range param.Names {
-				parameters = append(parameters, ParameterInfo{
+				parameters = append(parameters, types.ParameterInfo{
 					Name: name.Name,
 					Type: typeName,
 				})
 			}
 		} else {
 			// Unnamed parameter
-			parameters = append(parameters, ParameterInfo{
+			parameters = append(parameters, types.ParameterInfo{
 				Type: typeName,
 			})
 		}
@@ -317,81 +319,3 @@ func (a *ASTAnalyzer) calculateCyclomaticComplexity(fn *ast.FuncDecl) int {
 	return complexity
 }
 
-// GoASTInfo contains comprehensive AST information for a Go file
-type GoASTInfo struct {
-	FilePath    string
-	PackageName string
-	AST         *ast.File
-	FileSet     *token.FileSet
-	Functions   []*FunctionInfo
-	Types       []*TypeInfo
-	Imports     []*ImportInfo
-	Variables   []*VariableInfo
-	Constants   []*ConstantInfo
-}
-
-// FunctionInfo contains detailed information about a function
-type FunctionInfo struct {
-	Name         string
-	StartLine    int
-	EndLine      int
-	StartColumn  int
-	EndColumn    int
-	Parameters   []ParameterInfo
-	Results      []string
-	IsExported   bool
-	IsMethod     bool
-	ReceiverType string
-	Complexity   int
-	LineCount    int
-	HasComments  bool
-	ASTNode      *ast.FuncDecl
-}
-
-// ParameterInfo contains information about function parameters
-type ParameterInfo struct {
-	Name string
-	Type string
-}
-
-// TypeInfo contains information about type declarations
-type TypeInfo struct {
-	Name        string
-	Kind        string // "struct", "interface", "alias"
-	StartLine   int
-	EndLine     int
-	StartColumn int
-	EndColumn   int
-	IsExported  bool
-	FieldCount  int // For structs
-	MethodCount int // For interfaces
-	ASTNode     *ast.TypeSpec
-}
-
-// ImportInfo contains information about imports
-type ImportInfo struct {
-	Path   string
-	Alias  string
-	Line   int
-	Column int
-}
-
-// VariableInfo contains information about variable declarations
-type VariableInfo struct {
-	Name       string
-	Type       string
-	Line       int
-	Column     int
-	IsExported bool
-	ASTNode    *ast.ValueSpec
-}
-
-// ConstantInfo contains information about constant declarations
-type ConstantInfo struct {
-	Name       string
-	Type       string
-	Line       int
-	Column     int
-	IsExported bool
-	ASTNode    *ast.ValueSpec
-}

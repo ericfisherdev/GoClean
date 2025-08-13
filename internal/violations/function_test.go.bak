@@ -1,68 +1,53 @@
 package violations
-
 import (
-	"go/ast"
 	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
-
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
+	"github.com/ericfisherdev/goclean/internal/
 )
-
 func TestNewFunctionDetector(t *testing.T) {
 	detector := NewFunctionDetector(nil)
-	
 	if detector == nil {
 		t.Fatal("Expected detector to be created")
 	}
-	
 	if detector.config == nil {
 		t.Error("Expected config to be initialized")
 	}
-	
 	if detector.Name() == "" {
 		t.Error("Expected detector to have a name")
 	}
-	
 	if detector.Description() == "" {
 		t.Error("Expected detector to have a description")
 	}
 }
-
 func TestFunctionDetector_LongFunction(t *testing.T) {
 	config := &DetectorConfig{
 		MaxFunctionLines: 5, // Very low threshold for testing
 	}
 	detector := NewFunctionDetector(config)
-	
 	// Create a file info
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
 	// Create AST info with a long function
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:      "LongFunction",
 				StartLine: 10,
 				LineCount: 15, // Exceeds threshold of 5
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 				},
 				IsExported: true,
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	if len(violations) == 0 {
 		t.Error("Expected violations for long function")
 	}
-	
 	found := false
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeFunctionLength {
@@ -78,38 +63,32 @@ func TestFunctionDetector_LongFunction(t *testing.T) {
 			}
 		}
 	}
-	
 	if !found {
 		t.Error("Expected function length violation")
 	}
 }
-
 func TestFunctionDetector_ComplexFunction(t *testing.T) {
 	config := &DetectorConfig{
 		MaxCyclomaticComplexity: 3,
 	}
 	detector := NewFunctionDetector(config)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:       "ComplexFunction",
 				StartLine:  10,
 				LineCount:  20,
 				Complexity: 8, // Exceeds threshold of 3
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 				},
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	found := false
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeCyclomaticComplexity {
@@ -119,29 +98,25 @@ func TestFunctionDetector_ComplexFunction(t *testing.T) {
 			}
 		}
 	}
-	
 	if !found {
 		t.Error("Expected cyclomatic complexity violation")
 	}
 }
-
 func TestFunctionDetector_TooManyParameters(t *testing.T) {
 	config := &DetectorConfig{
 		MaxParameters: 2,
 	}
 	detector := NewFunctionDetector(config)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:      "FunctionWithManyParams",
 				StartLine: 10,
 				LineCount: 5,
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "a", Type: "int"},
 					{Name: "b", Type: "string"},
 					{Name: "c", Type: "bool"},
@@ -150,9 +125,7 @@ func TestFunctionDetector_TooManyParameters(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	found := false
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeParameterCount {
@@ -162,39 +135,33 @@ func TestFunctionDetector_TooManyParameters(t *testing.T) {
 			}
 		}
 	}
-	
 	if !found {
 		t.Error("Expected parameter count violation")
 	}
 }
-
 func TestFunctionDetector_MissingDocumentation(t *testing.T) {
 	config := &DetectorConfig{
 		RequireCommentsForPublic: true,
 	}
 	detector := NewFunctionDetector(config)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:        "PublicFunction",
 				StartLine:   10,
 				LineCount:   5,
 				IsExported:  true,
 				HasComments: false, // Missing documentation
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 				},
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	found := false
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeMissingDocumentation {
@@ -204,39 +171,33 @@ func TestFunctionDetector_MissingDocumentation(t *testing.T) {
 			}
 		}
 	}
-	
 	if !found {
 		t.Error("Expected missing documentation violation")
 	}
 }
-
 func TestFunctionDetector_PrivateFunction_NoDocumentationRequired(t *testing.T) {
 	config := &DetectorConfig{
 		RequireCommentsForPublic: true,
 	}
 	detector := NewFunctionDetector(config)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:        "privateFunction", // Not exported
 				StartLine:   10,
 				LineCount:   5,
 				IsExported:  false,
 				HasComments: false,
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 				},
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	// Should not have missing documentation violation for private functions
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeMissingDocumentation {
@@ -244,7 +205,6 @@ func TestFunctionDetector_PrivateFunction_NoDocumentationRequired(t *testing.T) 
 		}
 	}
 }
-
 func TestFunctionDetector_MultipleViolations(t *testing.T) {
 	config := &DetectorConfig{
 		MaxFunctionLines:        10,
@@ -253,13 +213,11 @@ func TestFunctionDetector_MultipleViolations(t *testing.T) {
 		RequireCommentsForPublic: true,
 	}
 	detector := NewFunctionDetector(config)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.go",
 	}
-	
-	astInfo := &scanner.GoASTInfo{
-		Functions: []*scanner.FunctionInfo{
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
 			{
 				Name:       "BadFunction",
 				StartLine:  10,
@@ -267,7 +225,7 @@ func TestFunctionDetector_MultipleViolations(t *testing.T) {
 				Complexity: 12,  // Too complex
 				IsExported: true,
 				HasComments: false, // Missing docs
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "a", Type: "int"},
 					{Name: "b", Type: "string"},
 					{Name: "c", Type: "bool"},
@@ -276,61 +234,50 @@ func TestFunctionDetector_MultipleViolations(t *testing.T) {
 			},
 		},
 	}
-	
 	violations := detector.Detect(fileInfo, astInfo)
-	
 	// Should have multiple violations
 	if len(violations) < 4 {
 		t.Errorf("Expected at least 4 violations, got %d", len(violations))
 	}
-	
 	types := make(map[models.ViolationType]bool)
 	for _, v := range violations {
 		types[v.Type] = true
 	}
-	
 	expectedTypes := []models.ViolationType{
 		models.ViolationTypeFunctionLength,
 		models.ViolationTypeCyclomaticComplexity,
 		models.ViolationTypeParameterCount,
 		models.ViolationTypeMissingDocumentation,
 	}
-	
 	for _, expected := range expectedTypes {
 		if !types[expected] {
 			t.Errorf("Expected violation type %s", expected)
 		}
 	}
 }
-
 func TestFunctionDetector_NoAST(t *testing.T) {
 	detector := NewFunctionDetector(nil)
-	
 	fileInfo := &models.FileInfo{
 		Path: "test.js", // Non-Go file
 	}
-	
 	// No AST info for non-Go files
 	violations := detector.Detect(fileInfo, nil)
-	
 	if len(violations) != 0 {
 		t.Errorf("Expected no violations for non-Go files, got %d", len(violations))
 	}
 }
-
 func TestGenerateFunctionSignature(t *testing.T) {
 	detector := NewFunctionDetector(nil)
-	
 	tests := []struct {
 		name     string
-		function *scanner.FunctionInfo
+		function *types.FunctionInfo
 		expected string
 	}{
 		{
 			name: "simple function",
-			function: &scanner.FunctionInfo{
+			function: &types.FunctionInfo{
 				Name: "TestFunc",
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "x", Type: "int"},
 					{Name: "y", Type: "string"},
 				},
@@ -340,11 +287,11 @@ func TestGenerateFunctionSignature(t *testing.T) {
 		},
 		{
 			name: "method with receiver",
-			function: &scanner.FunctionInfo{
+			function: &types.FunctionInfo{
 				Name:         "Method",
 				IsMethod:     true,
 				ReceiverType: "*Struct",
-				Parameters: []scanner.ParameterInfo{
+				Parameters: []types.ParameterInfo{
 					{Name: "value", Type: "int"},
 				},
 				Results: []string{"int", "error"},
@@ -353,15 +300,14 @@ func TestGenerateFunctionSignature(t *testing.T) {
 		},
 		{
 			name: "function with no parameters",
-			function: &scanner.FunctionInfo{
+			function: &types.FunctionInfo{
 				Name:       "NoParams",
-				Parameters: []scanner.ParameterInfo{},
+				Parameters: []types.ParameterInfo{},
 				Results:    []string{},
 			},
 			expected: "func NoParams()",
 		},
 	}
-	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			signature := detector.generateFunctionSignature(tt.function)
@@ -371,7 +317,6 @@ func TestGenerateFunctionSignature(t *testing.T) {
 		})
 	}
 }
-
 func TestSeverityCalculation(t *testing.T) {
 	config := &DetectorConfig{
 		MaxFunctionLines:        10,
@@ -380,7 +325,6 @@ func TestSeverityCalculation(t *testing.T) {
 		MaxNestingDepth:        2,
 	}
 	detector := NewFunctionDetector(config)
-	
 	// Test function length severity
 	if detector.getSeverityForFunctionLength(12) != models.SeverityLow {
 		t.Error("Expected low severity for slightly long function")
@@ -391,7 +335,6 @@ func TestSeverityCalculation(t *testing.T) {
 	if detector.getSeverityForFunctionLength(25) != models.SeverityHigh {
 		t.Error("Expected high severity for very long function")
 	}
-	
 	// Test complexity severity
 	if detector.getSeverityForComplexity(6) != models.SeverityLow {
 		t.Error("Expected low severity for slightly complex function")
@@ -403,16 +346,13 @@ func TestSeverityCalculation(t *testing.T) {
 		t.Error("Expected high severity for very complex function")
 	}
 }
-
 func TestFunctionDetector_NestingDepth(t *testing.T) {
 	config := &DetectorConfig{
 		MaxNestingDepth: 2,
 	}
 	detector := NewFunctionDetector(config)
-
 	// Create code with excessive nesting
 	code := `package main
-
 func deeplyNestedFunction() {
 	if true {
 		if true {
@@ -422,15 +362,12 @@ func deeplyNestedFunction() {
 		}
 	}
 }`
-
 	astInfo := parseGoCodeForFunction(t, code)
 	fileInfo := &models.FileInfo{
 		Path:     "test.go",
 		Language: "Go",
 	}
-
 	violations := detector.Detect(fileInfo, astInfo)
-
 	// Should detect nesting depth violation
 	found := false
 	for _, v := range violations {
@@ -446,10 +383,8 @@ func deeplyNestedFunction() {
 		t.Error("Expected to find nesting depth violation")
 	}
 }
-
 func TestFunctionDetector_CalculateNestingDepth(t *testing.T) {
 	detector := NewFunctionDetector(nil)
-
 	tests := []struct {
 		name     string
 		code     string
@@ -511,19 +446,16 @@ func switchStatement() {
 			expected: 1, // Switch increases depth by 1, case is not a separate nesting level
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			astInfo := parseGoCodeForFunction(t, test.code)
 			if len(astInfo.Functions) == 0 {
 				t.Fatal("No functions found in parsed code")
 			}
-			
 			fn := astInfo.Functions[0]
 			if fn.ASTNode == nil {
 				t.Fatal("Function AST node is nil")
 			}
-			
 			depth := detector.calculateNestingDepth(fn.ASTNode)
 			if depth != test.expected {
 				t.Errorf("Expected nesting depth %d, got %d", test.expected, depth)
@@ -531,13 +463,11 @@ func switchStatement() {
 		})
 	}
 }
-
 func TestFunctionDetector_GetNestingDepthSeverity(t *testing.T) {
 	config := &DetectorConfig{
 		MaxNestingDepth: 3,
 	}
 	detector := NewFunctionDetector(config)
-
 	tests := []struct {
 		depth    int
 		expected models.Severity
@@ -549,7 +479,6 @@ func TestFunctionDetector_GetNestingDepthSeverity(t *testing.T) {
 		{7, models.SeverityHigh},   // Above 2x threshold
 		{9, models.SeverityHigh},   // Way above threshold
 	}
-
 	for _, test := range tests {
 		result := detector.getSeverityForNestingDepth(test.depth)
 		if result != test.expected {
@@ -557,10 +486,8 @@ func TestFunctionDetector_GetNestingDepthSeverity(t *testing.T) {
 		}
 	}
 }
-
 func TestFunctionDetector_GetNestingDepthSuggestion(t *testing.T) {
 	detector := NewFunctionDetector(nil)
-
 	suggestion := detector.getNestingDepthSuggestion("testFunction", 5)
 	if suggestion == "" {
 		t.Error("Expected non-empty suggestion")
@@ -572,34 +499,30 @@ func TestFunctionDetector_GetNestingDepthSuggestion(t *testing.T) {
 		t.Error("Expected suggestion to contain depth value")
 	}
 }
-
 // parseGoCodeForFunction is a helper function to parse Go code for testing
-func parseGoCodeForFunction(t *testing.T, code string) *scanner.GoASTInfo {
+func parseGoCodeForFunction(t *testing.T, code string) *types.GoASTInfo {
 	fileSet := token.NewFileSet()
 	file, err := parser.ParseFile(fileSet, "test.go", code, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("Failed to parse Go code: %v", err)
 	}
-
-	astInfo := &scanner.GoASTInfo{
+	astInfo := &types.GoASTInfo{
 		FilePath:    "test.go",
 		PackageName: file.Name.Name,
 		AST:         file,
 		FileSet:     fileSet,
-		Functions:   make([]*scanner.FunctionInfo, 0),
-		Types:       make([]*scanner.TypeInfo, 0),
-		Imports:     make([]*scanner.ImportInfo, 0),
-		Variables:   make([]*scanner.VariableInfo, 0),
-		Constants:   make([]*scanner.ConstantInfo, 0),
+		Functions:   make([]*types.FunctionInfo, 0),
+		Types:       make([]*types.TypeInfo, 0),
+		Imports:     make([]*types.ImportInfo, 0),
+		Variables:   make([]*types.VariableInfo, 0),
+		Constants:   make([]*types.ConstantInfo, 0),
 	}
-
 	// Analyze the AST to populate function information
 	ast.Inspect(file, func(n ast.Node) bool {
 		if funcDecl, ok := n.(*ast.FuncDecl); ok && funcDecl.Name != nil {
 			pos := fileSet.Position(funcDecl.Pos())
 			end := fileSet.Position(funcDecl.End())
-			
-			funcInfo := &scanner.FunctionInfo{
+			funcInfo := &types.FunctionInfo{
 				Name:        funcDecl.Name.Name,
 				StartLine:   pos.Line,
 				EndLine:     end.Line,
@@ -609,15 +532,12 @@ func parseGoCodeForFunction(t *testing.T, code string) *scanner.GoASTInfo {
 				IsMethod:    funcDecl.Recv != nil,
 				ASTNode:     funcDecl,
 			}
-			
 			astInfo.Functions = append(astInfo.Functions, funcInfo)
 		}
 		return true
 	})
-
 	return astInfo
 }
-
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }

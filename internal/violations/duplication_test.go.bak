@@ -1,0 +1,137 @@
+package violations
+import (
+	"testing"
+
+	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/types"
+)
+func TestDuplicationDetector_Detect_NoDuplication(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewDuplicationDetector(config)
+	fileInfo := &models.FileInfo{
+		Path:     "/test/example.go",
+		Language: "Go",
+	}
+	// Create AST with unique functions
+	functions := []*types.FunctionInfo{
+		{
+			Name:      "uniqueFunction1",
+			StartLine: 1,
+			EndLine:   5,
+		},
+		{
+			Name:      "uniqueFunction2",
+			StartLine: 7,
+			EndLine:   11,
+		},
+	}
+	astInfo := &types.GoASTInfo{
+		Functions: functions,
+	}
+	violations := detector.Detect(fileInfo, astInfo)
+	if len(violations) != 0 {
+		t.Errorf("Expected no violations, got %d", len(violations))
+	}
+}
+func TestDuplicationDetector_Detect_WithDuplication(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewDuplicationDetector(config)
+	// First file
+	fileInfo1 := &models.FileInfo{
+		Path:     "/test/file1.go",
+		Language: "Go",
+	}
+	duplicateBody := "func processData() {\n    data := getData()\n    if data == nil {\n        return nil\n    }\n    result := transform(data)\n    return result\n}"
+	astInfo1 := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
+			{
+				Name:      "processData",
+				StartLine: 1,
+				EndLine:   8,
+			},
+		},
+	}
+	// Process first file
+	violations1 := detector.Detect(fileInfo1, astInfo1)
+	if len(violations1) != 0 {
+		t.Errorf("Expected no violations for first occurrence, got %d", len(violations1))
+	}
+	// Second file with same code
+	fileInfo2 := &models.FileInfo{
+		Path:     "/test/file2.go",
+		Language: "Go",
+	}
+	astInfo2 := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
+			{
+				Name:      "handleData", // Different name but same logic
+				StartLine: 10,
+				EndLine:   17,
+			},
+		},
+	}
+	// Process second file - should detect duplication
+	violations2 := detector.Detect(fileInfo2, astInfo2)
+	if len(violations2) != 1 {
+		t.Errorf("Expected 1 duplication violation, got %d", len(violations2))
+	}
+	violation := violations2[0]
+	if violation.Type != models.ViolationTypeDuplication {
+		t.Errorf("Expected duplication violation type, got %s", violation.Type)
+	}
+	if violation.File != "/test/file2.go" {
+		t.Errorf("Expected violation in file2.go, got %s", violation.File)
+	}
+}
+func TestDuplicationDetector_Reset(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewDuplicationDetector(config)
+	fileInfo := &models.FileInfo{
+		Path:     "/test/example.go",
+		Language: "Go",
+	}
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
+			{
+				Name:      "testFunction",
+				StartLine: 1,
+				EndLine:   8,
+			},
+		},
+	}
+	// Process file to populate cache
+	detector.Detect(fileInfo, astInfo)
+	// Check cache is not empty
+	if len(detector.hashCache) == 0 {
+		t.Error("Expected cache to be populated")
+	}
+	// Reset cache
+	detector.Reset()
+	// Check cache is empty
+	if len(detector.hashCache) != 0 {
+		t.Error("Expected cache to be empty after reset")
+	}
+}
+func TestDuplicationDetector_IgnoreSmallFunctions(t *testing.T) {
+	config := DefaultDetectorConfig()
+	detector := NewDuplicationDetector(config)
+	fileInfo := &models.FileInfo{
+		Path:     "/test/example.go",
+		Language: "Go",
+	}
+	// Small function (less than 5 lines)
+	astInfo := &types.GoASTInfo{
+		Functions: []*types.FunctionInfo{
+			{
+				Name:      "smallFunction",
+				StartLine: 1,
+				EndLine:   3,
+			},
+		},
+	}
+	violations := detector.Detect(fileInfo, astInfo)
+	// Should not detect violations for small functions
+	if len(violations) != 0 {
+		t.Errorf("Expected no violations for small function, got %d", len(violations))
+	}
+}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 // StructureDetector detects code structure-related violations
@@ -36,30 +36,40 @@ func (d *StructureDetector) Description() string {
 }
 
 // Detect analyzes code structure and returns violations
-func (d *StructureDetector) Detect(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation {
+func (d *StructureDetector) Detect(fileInfo *models.FileInfo, astInfo interface{}) []*models.Violation {
 	var violations []*models.Violation
 
 	if astInfo == nil {
+		return violations
+	}
+	
+	// Type assertion to get types.GoASTInfo
+	goAstInfo, ok := astInfo.(*types.GoASTInfo)
+	if !ok || goAstInfo == nil {
 		// For non-Go files, we can't do structural analysis
 		return violations
 	}
 
 	// Check types (structs, interfaces, etc.)
-	for _, typeInfo := range astInfo.Types {
-		violations = append(violations, d.checkTypeStructure(typeInfo, fileInfo.Path)...)
+	if goAstInfo.Types != nil {
+		for _, typeInfo := range goAstInfo.Types {
+			if typeInfo != nil {
+				violations = append(violations, d.checkTypeStructure(typeInfo, fileInfo.Path)...)
+			}
+		}
 	}
 
 	// Check for god objects (types with too many methods)
-	violations = append(violations, d.checkForGodObjects(astInfo, fileInfo.Path)...)
+	violations = append(violations, d.checkForGodObjects(goAstInfo, fileInfo.Path)...)
 
 	// Check for magic numbers
-	violations = append(violations, d.checkForMagicNumbers(astInfo, fileInfo.Path)...)
+	violations = append(violations, d.checkForMagicNumbers(goAstInfo, fileInfo.Path)...)
 
 	return violations
 }
 
 // checkTypeStructure analyzes individual types for structural issues
-func (d *StructureDetector) checkTypeStructure(typeInfo *scanner.TypeInfo, filePath string) []*models.Violation {
+func (d *StructureDetector) checkTypeStructure(typeInfo *types.TypeInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check struct size (line count)
@@ -118,14 +128,14 @@ func (d *StructureDetector) checkTypeStructure(typeInfo *scanner.TypeInfo, fileP
 }
 
 // checkForGodObjects identifies types that have too many associated methods
-func (d *StructureDetector) checkForGodObjects(astInfo *scanner.GoASTInfo, filePath string) []*models.Violation {
+func (d *StructureDetector) checkForGodObjects(goAstInfo *types.GoASTInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Group methods by receiver type
-	methodsByReceiver := make(map[string][]*scanner.FunctionInfo)
-	receiverLineInfo := make(map[string]*scanner.TypeInfo)
+	methodsByReceiver := make(map[string][]*types.FunctionInfo)
+	receiverLineInfo := make(map[string]*types.TypeInfo)
 
-	for _, fn := range astInfo.Functions {
+	for _, fn := range goAstInfo.Functions {
 		if fn.IsMethod && fn.ReceiverType != "" {
 			cleanReceiverType := d.cleanReceiverType(fn.ReceiverType)
 			methodsByReceiver[cleanReceiverType] = append(methodsByReceiver[cleanReceiverType], fn)
@@ -133,7 +143,7 @@ func (d *StructureDetector) checkForGodObjects(astInfo *scanner.GoASTInfo, fileP
 	}
 
 	// Find corresponding type info for receivers
-	for _, typeInfo := range astInfo.Types {
+	for _, typeInfo := range goAstInfo.Types {
 		if _, exists := methodsByReceiver[typeInfo.Name]; exists {
 			receiverLineInfo[typeInfo.Name] = typeInfo
 		}
@@ -168,13 +178,13 @@ func (d *StructureDetector) checkForGodObjects(astInfo *scanner.GoASTInfo, fileP
 }
 
 // checkForMagicNumbers identifies hardcoded numeric literals that should be constants
-func (d *StructureDetector) checkForMagicNumbers(astInfo *scanner.GoASTInfo, filePath string) []*models.Violation {
+func (d *StructureDetector) checkForMagicNumbers(goAstInfo *types.GoASTInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Walk through all functions to find magic numbers
-	for _, fn := range astInfo.Functions {
+	for _, fn := range goAstInfo.Functions {
 		if fn.ASTNode != nil {
-			violations = append(violations, d.findMagicNumbers(fn.ASTNode, astInfo.FileSet, filePath)...)
+			violations = append(violations, d.findMagicNumbers(fn.ASTNode, goAstInfo.FileSet, filePath)...)
 		}
 	}
 
@@ -243,7 +253,7 @@ func (d *StructureDetector) cleanReceiverType(receiverType string) string {
 }
 
 // generateTypeSignature creates a code snippet showing the type signature
-func (d *StructureDetector) generateTypeSignature(typeInfo *scanner.TypeInfo) string {
+func (d *StructureDetector) generateTypeSignature(typeInfo *types.TypeInfo) string {
 	switch typeInfo.Kind {
 	case "struct":
 		return fmt.Sprintf("type %s struct { ... } // %d fields", typeInfo.Name, typeInfo.FieldCount)

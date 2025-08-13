@@ -4,7 +4,8 @@ package models
 type Severity int
 
 const (
-	SeverityLow Severity = iota
+	SeverityInfo Severity = iota
+	SeverityLow
 	SeverityMedium
 	SeverityHigh
 	SeverityCritical
@@ -12,6 +13,8 @@ const (
 
 func (s Severity) String() string {
 	switch s {
+	case SeverityInfo:
+		return "Info"
 	case SeverityLow:
 		return "Low"
 	case SeverityMedium:
@@ -38,6 +41,10 @@ const (
 	ViolationTypeMissingDocumentation ViolationType = "missing_documentation"
 	ViolationTypeMagicNumbers         ViolationType = "magic_numbers"
 	ViolationTypeDuplication          ViolationType = "code_duplication"
+	ViolationTypeMagicNumber          ViolationType = "magic_number"
+	ViolationTypeCommentedCode        ViolationType = "commented_code"
+	ViolationTypeTodo                 ViolationType = "todo_marker"
+	ViolationTypeDocumentation        ViolationType = "documentation_quality"
 )
 
 // Violation represents a clean code violation found during scanning

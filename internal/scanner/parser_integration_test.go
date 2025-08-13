@@ -5,6 +5,7 @@ import (
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/testutils"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 func TestParseFile_GoFileUsesAST(t *testing.T) {
@@ -49,7 +50,7 @@ type Person struct {
 	}
 	
 	// Cast and verify AST info
-	astInfo, ok := result.ASTInfo.(*GoASTInfo)
+	astInfo, ok := result.ASTInfo.(*types.GoASTInfo)
 	if !ok {
 		t.Error("Expected ASTInfo to be of type *GoASTInfo")
 	} else {
