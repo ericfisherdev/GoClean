@@ -41,6 +41,8 @@ reports/
 *.md
 !README.md
 !docs/*.md
+!CONTRIBUTING.md
+!.github/*.md
 
 # Temporary files
 tmp/
