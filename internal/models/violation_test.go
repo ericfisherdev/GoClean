@@ -27,15 +27,15 @@ func TestSeverityString(t *testing.T) {
 func TestViolationTypes(t *testing.T) {
 	// Test that all violation types are defined as expected
 	expectedTypes := map[ViolationType]string{
-		ViolationTypeFunctionLength:    "function_length",
-		ViolationTypeFunctionComplexity: "function_complexity",
-		ViolationTypeFunctionParameters: "function_parameters",
-		ViolationTypeNesting:           "nesting_depth",
-		ViolationTypeNaming:            "naming_convention",
-		ViolationTypeClassSize:         "class_size",
-		ViolationTypeDocumentation:     "documentation",
-		ViolationTypeMagicNumbers:      "magic_numbers",
-		ViolationTypeDuplication:       "code_duplication",
+		ViolationTypeFunctionLength:         "function_length",
+		ViolationTypeCyclomaticComplexity:   "cyclomatic_complexity",
+		ViolationTypeParameterCount:         "parameter_count",
+		ViolationTypeNestingDepth:           "nesting_depth",
+		ViolationTypeNaming:                 "naming_convention",
+		ViolationTypeClassSize:              "class_size",
+		ViolationTypeMissingDocumentation:   "missing_documentation",
+		ViolationTypeMagicNumbers:           "magic_numbers",
+		ViolationTypeDuplication:            "code_duplication",
 	}
 
 	for violationType, expectedString := range expectedTypes {
@@ -237,12 +237,12 @@ func TestViolationTypeConstants(t *testing.T) {
 	// Ensure all violation type constants are unique
 	types := []ViolationType{
 		ViolationTypeFunctionLength,
-		ViolationTypeFunctionComplexity,
-		ViolationTypeFunctionParameters,
-		ViolationTypeNesting,
+		ViolationTypeCyclomaticComplexity,
+		ViolationTypeParameterCount,
+		ViolationTypeNestingDepth,
 		ViolationTypeNaming,
 		ViolationTypeClassSize,
-		ViolationTypeDocumentation,
+		ViolationTypeMissingDocumentation,
 		ViolationTypeMagicNumbers,
 		ViolationTypeDuplication,
 	}
