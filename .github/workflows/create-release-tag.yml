@@ -79,8 +79,9 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
-        # Create detailed tag message
-        TAG_MESSAGE="Release ${VERSION}
+        # Create detailed tag message using heredoc
+        TAG_MESSAGE=$(cat << EOF
+Release ${VERSION}
 
 Created from PR #${PR_NUMBER}: ${PR_TITLE}
 
@@ -89,7 +90,9 @@ Release branch: ${GITHUB_REF_NAME}
 Commit: ${GITHUB_SHA:0:7}
 Triggered by: @${GITHUB_ACTOR}
 
-This tag will trigger the automated release workflow."
+This tag will trigger the automated release workflow.
+EOF
+)
         
         # Create the annotated tag
         git tag -a "${TAG_NAME}" -m "${TAG_MESSAGE}"
@@ -117,8 +120,9 @@ This tag will trigger the automated release workflow."
         PR_TITLE="${{ github.event.pull_request.title }}"
         LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
         
-        # Generate release notes
-        RELEASE_NOTES="## GoClean ${VERSION}
+        # Generate release notes using heredoc
+        RELEASE_NOTES=$(cat << EOF
+## GoClean ${VERSION}
 
 ### Changes
 This release was created from PR #${PR_NUMBER}: ${PR_TITLE}
@@ -134,7 +138,9 @@ Download the appropriate binary for your platform from the assets below.
 - Compare changes: [\`${LAST_TAG}...${TAG_NAME}\`](https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...${TAG_NAME})
 
 ---
-*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*"
+*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*
+EOF
+)
 
         # Create draft release
         gh release create "${TAG_NAME}" \
