@@ -35,8 +35,8 @@ func TestGetDefaultConfig(t *testing.T) {
 	if cfg.Output.HTML.Path != "./reports/clean-code-report.html" {
 		t.Errorf("Expected HTML path './reports/clean-code-report.html', got %s", cfg.Output.HTML.Path)
 	}
-	if !cfg.Output.HTML.AutoRefresh {
-		t.Error("Expected HTML auto refresh to be enabled")
+	if cfg.Output.HTML.AutoRefresh {
+		t.Error("Expected HTML auto refresh to be disabled by default")
 	}
 	if cfg.Output.HTML.RefreshInterval != 10 {
 		t.Errorf("Expected HTML refresh interval 10, got %d", cfg.Output.HTML.RefreshInterval)

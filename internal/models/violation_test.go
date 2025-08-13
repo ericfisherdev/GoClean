@@ -160,21 +160,21 @@ func TestSeverityOrdering(t *testing.T) {
 		t.Error("SeverityHigh should be less than SeverityCritical")
 	}
 
-	// Test specific values
-	if int(SeverityLow) != 0 {
-		t.Errorf("Expected SeverityLow to be 0, got %d", int(SeverityLow))
+	// Test specific values (SeverityInfo is 0, so others are shifted)
+	if int(SeverityLow) != 1 {
+		t.Errorf("Expected SeverityLow to be 1, got %d", int(SeverityLow))
 	}
 
-	if int(SeverityMedium) != 1 {
-		t.Errorf("Expected SeverityMedium to be 1, got %d", int(SeverityMedium))
+	if int(SeverityMedium) != 2 {
+		t.Errorf("Expected SeverityMedium to be 2, got %d", int(SeverityMedium))
 	}
 
-	if int(SeverityHigh) != 2 {
-		t.Errorf("Expected SeverityHigh to be 2, got %d", int(SeverityHigh))
+	if int(SeverityHigh) != 3 {
+		t.Errorf("Expected SeverityHigh to be 3, got %d", int(SeverityHigh))
 	}
 
-	if int(SeverityCritical) != 3 {
-		t.Errorf("Expected SeverityCritical to be 3, got %d", int(SeverityCritical))
+	if int(SeverityCritical) != 4 {
+		t.Errorf("Expected SeverityCritical to be 4, got %d", int(SeverityCritical))
 	}
 }
 
