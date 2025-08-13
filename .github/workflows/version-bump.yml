@@ -1,0 +1,158 @@
+name: Version Bump Helper
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      create_pr:
+        description: 'Create PR to release branch'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get current version
+      id: current_version
+      run: |
+        # Get the latest tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        CURRENT_VERSION=${LAST_TAG#v}
+        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT_VERSION"
+
+    - name: Calculate new version
+      id: new_version
+      run: |
+        CURRENT_VERSION="${{ steps.current_version.outputs.CURRENT_VERSION }}"
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        
+        case "${{ github.event.inputs.bump_type }}" in
+          major)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          minor)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          patch)
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $NEW_VERSION"
+
+    - name: Update CHANGELOG
+      run: |
+        cat > CHANGELOG_NEW.md << EOF
+        # Changelog
+        
+        ## [v${{ steps.new_version.outputs.NEW_VERSION }}] - $(date +%Y-%m-%d)
+        
+        ### Added
+        - New features and improvements
+        
+        ### Changed
+        - Updates and modifications
+        
+        ### Fixed
+        - Bug fixes
+        
+        EOF
+        
+        if [ -f CHANGELOG.md ]; then
+          tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
+          mv CHANGELOG_NEW.md CHANGELOG.md
+        else
+          mv CHANGELOG_NEW.md CHANGELOG.md
+        fi
+        
+        echo "Updated CHANGELOG.md with version ${{ steps.new_version.outputs.NEW_VERSION }}"
+
+    - name: Create version branch
+      id: create_branch
+      run: |
+        BRANCH_NAME="release/v${{ steps.new_version.outputs.NEW_VERSION }}"
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+        git checkout -b "$BRANCH_NAME"
+        git add CHANGELOG.md
+        git commit -m "chore: bump version to v${{ steps.new_version.outputs.NEW_VERSION }}"
+        git push origin "$BRANCH_NAME"
+        
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "Created branch: $BRANCH_NAME"
+
+    - name: Create Pull Request
+      if: github.event.inputs.create_pr == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const pr = await github.rest.pulls.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Release v${{ steps.new_version.outputs.NEW_VERSION }}`,
+            body: `## Release v${{ steps.new_version.outputs.NEW_VERSION }}
+            
+            This PR bumps the version from v${{ steps.current_version.outputs.CURRENT_VERSION }} to v${{ steps.new_version.outputs.NEW_VERSION }}.
+            
+            ### Version Bump Type
+            - **${{ github.event.inputs.bump_type }}**
+            
+            ### Checklist
+            - [ ] Review CHANGELOG.md entries
+            - [ ] Verify all tests pass
+            - [ ] Update documentation if needed
+            - [ ] Confirm version number is correct
+            
+            ### Auto-Release
+            When this PR is merged into the \`release\` branch, it will automatically:
+            1. Create a git tag \`v${{ steps.new_version.outputs.NEW_VERSION }}\`
+            2. Trigger the release workflow
+            3. Build binaries for all platforms
+            4. Create a GitHub release with downloadable assets
+            
+            ---
+            *This PR was automatically created by the Version Bump workflow.*`,
+            head: '${{ steps.create_branch.outputs.BRANCH_NAME }}',
+            base: 'release',
+            draft: false
+          });
+          
+          console.log(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+          
+          // Add labels if they exist
+          try {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['release', 'automated']
+            });
+          } catch (error) {
+            console.log('Could not add labels (they may not exist)');
+          }

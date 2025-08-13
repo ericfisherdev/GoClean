@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Run tests
+      run: make test
+
+    - name: Run benchmarks
+      run: make benchmark-validate
+
+    - name: Build release binaries
+      run: make release-build
+      env:
+        VERSION: ${{ steps.version.outputs.VERSION }}
+
+    - name: Package release
+      run: make release-package
+      env:
+        VERSION: ${{ steps.version.outputs.VERSION }}
+
+    - name: Generate checksums
+      run: |
+        cd releases/${{ steps.version.outputs.VERSION }}
+        sha256sum * > checksums.txt
+        cat checksums.txt
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          releases/${{ steps.version.outputs.VERSION }}/*
+        body: |
+          ## GoClean ${{ steps.version.outputs.VERSION }}
+          
+          ### Installation
+          
+          Download the appropriate binary for your platform from the assets below.
+          
+          #### Linux (x64)
+          ```bash
+          wget https://github.com/ericfisherdev/GoClean/releases/download/v${{ steps.version.outputs.VERSION }}/goclean-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
+          tar -xzf goclean-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
+          sudo mv goclean-linux-amd64 /usr/local/bin/goclean
+          ```
+          
+          #### macOS (Intel)
+          ```bash
+          wget https://github.com/ericfisherdev/GoClean/releases/download/v${{ steps.version.outputs.VERSION }}/goclean-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz
+          tar -xzf goclean-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz
+          sudo mv goclean-darwin-amd64 /usr/local/bin/goclean
+          ```
+          
+          #### macOS (Apple Silicon)
+          ```bash
+          wget https://github.com/ericfisherdev/GoClean/releases/download/v${{ steps.version.outputs.VERSION }}/goclean-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz
+          tar -xzf goclean-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz
+          sudo mv goclean-darwin-arm64 /usr/local/bin/goclean
+          ```
+          
+          #### Windows
+          Download `goclean-${{ steps.version.outputs.VERSION }}-windows-amd64.zip`, extract, and add `goclean-windows-amd64.exe` to your PATH.
+          
+          ### Verification
+          Verify the installation:
+          ```bash
+          goclean version
+          ```
+          
+          See [CHANGELOG.md](https://github.com/ericfisherdev/GoClean/blob/main/CHANGELOG.md) for detailed changes.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
