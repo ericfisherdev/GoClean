@@ -37,12 +37,14 @@ Thumbs.db
 
 # Report files
 reports/
-*.html
+coverage.html
+/reports/*.html
 *.md
 !README.md
 !docs/*.md
 !CONTRIBUTING.md
 !.github/*.md
+!internal/reporters/templates/*.html
 
 # Temporary files
 tmp/

@@ -261,3 +261,183 @@ func createTestReport() *models.Report {
 	// Create and return test report
 	return models.NewReport(summary, []*models.ScanResult{scanResult}, reportConfig)
 }
+
+func TestHTMLReporter_InteractiveFeatures(t *testing.T) {
+	tempDir := t.TempDir()
+	outputPath := filepath.Join(tempDir, "interactive-report.html")
+
+	config := &HTMLConfig{
+		OutputPath:      outputPath,
+		AutoRefresh:     true,
+		RefreshInterval: 10,
+		Theme:           "light",
+	}
+
+	reporter, err := NewHTMLReporter(config)
+	if err != nil {
+		t.Fatalf("Failed to create HTML reporter: %v", err)
+	}
+
+	report := createTestReport()
+
+	err = reporter.Generate(report)
+	if err != nil {
+		t.Fatalf("Failed to generate HTML report: %v", err)
+	}
+
+	// Read and verify content contains interactive elements
+	content, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("Failed to read generated HTML file: %v", err)
+	}
+
+	htmlContent := string(content)
+
+	// Verify filter and search controls are present
+	interactiveElements := []string{
+		"id=\"searchInput\"",
+		"id=\"severityFilter\"",
+		"id=\"typeFilter\"",
+		"id=\"sortBy\"",
+		"id=\"expandAll\"",
+		"id=\"collapseAll\"",
+		"id=\"clearSearch\"",
+		"id=\"visibleFilesCount\"",
+		"id=\"visibleViolationsCount\"",
+	}
+
+	for _, element := range interactiveElements {
+		if !strings.Contains(htmlContent, element) {
+			t.Errorf("Generated HTML missing interactive element: %s", element)
+		}
+	}
+
+	// Verify data attributes for filtering are present
+	dataAttributes := []string{
+		"data-file-path=",
+		"data-file-name=",
+		"data-violation-count=",
+		"data-search-content=",
+		"data-severity=",
+		"data-type=",
+		"data-line=",
+		"file-item",
+		"violation-card",
+	}
+
+	for _, attribute := range dataAttributes {
+		if !strings.Contains(htmlContent, attribute) {
+			t.Errorf("Generated HTML missing data attribute: %s", attribute)
+		}
+	}
+
+	// Verify CSS classes for filtering are present
+	cssClasses := []string{
+		".filtered-hidden",
+		".search-highlight",
+		".no-visible-violations",
+		".filter-active",
+		".sort-indicator",
+	}
+
+	for _, cssClass := range cssClasses {
+		if !strings.Contains(htmlContent, cssClass) {
+			t.Errorf("Generated HTML missing CSS class: %s", cssClass)
+		}
+	}
+
+	// Verify JavaScript functionality is present
+	jsFeatures := []string{
+		"class ViolationFilter",
+		"applyFilters()",
+		"applySorting()",
+		"expandAll()",
+		"collapseAll()",
+		"highlightSearchTerms",
+		"updateCounts",
+		"addEventListener",
+	}
+
+	for _, jsFeature := range jsFeatures {
+		if !strings.Contains(htmlContent, jsFeature) {
+			t.Errorf("Generated HTML missing JavaScript feature: %s", jsFeature)
+		}
+	}
+}
+
+func TestTemplateFunctions(t *testing.T) {
+	funcs := getTemplateFunctions()
+
+	// Test new 'lower' function
+	lowerFunc, exists := funcs["lower"]
+	if !exists {
+		t.Error("Template function 'lower' not found")
+	} else {
+		result := lowerFunc.(func(string) string)("TEST STRING")
+		if result != "test string" {
+			t.Errorf("Lower function failed: expected 'test string', got '%s'", result)
+		}
+	}
+
+	// Test existing functions still work
+	testCases := []struct {
+		name     string
+		function string
+		input    interface{}
+		expected interface{}
+	}{
+		{
+			name:     "add function",
+			function: "add",
+			input:    []int{5, 3},
+			expected: 8,
+		},
+		{
+			name:     "percentage function",
+			function: "percentage",
+			input:    []int{25, 100},
+			expected: 25.0,
+		},
+		{
+			name:     "basename function",
+			function: "basename",
+			input:    "/path/to/file.go",
+			expected: "file.go",
+		},
+		{
+			name:     "replace function",
+			function: "replace",
+			input:    []string{"hello world", "world", "golang"},
+			expected: "hello golang",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fn, exists := funcs[tc.function]
+			if !exists {
+				t.Errorf("Template function '%s' not found", tc.function)
+				return
+			}
+
+			var result interface{}
+			switch tc.function {
+			case "add":
+				inputs := tc.input.([]int)
+				result = fn.(func(int, int) int)(inputs[0], inputs[1])
+			case "percentage":
+				inputs := tc.input.([]int)
+				result = fn.(func(int, int) float64)(inputs[0], inputs[1])
+			case "basename":
+				result = fn.(func(string) string)(tc.input.(string))
+			case "replace":
+				inputs := tc.input.([]string)
+				result = fn.(func(string, string, string) string)(inputs[0], inputs[1], inputs[2])
+			}
+
+			if result != tc.expected {
+				t.Errorf("Function '%s' failed: expected %v, got %v", tc.function, tc.expected, result)
+			}
+		})
+	}
+}

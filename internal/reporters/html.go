@@ -154,17 +154,8 @@ func getTemplateFunctions() template.FuncMap {
 			return slice[:n]
 		},
 		"formatCode": func(code string) template.HTML {
-			// Basic syntax highlighting - in a real implementation, 
-			// you might want to use a proper syntax highlighter
-			code = template.HTMLEscapeString(code)
-			
-			// Add some basic highlighting for Go keywords
-			keywords := []string{"func", "var", "const", "type", "package", "import", "if", "else", "for", "range", "return", "struct", "interface"}
-			for _, keyword := range keywords {
-				code = strings.ReplaceAll(code, keyword+" ", fmt.Sprintf(`<span class="keyword">%s</span> `, keyword))
-			}
-			
-			return template.HTML(code)
+			// Use Prism.js for proper syntax highlighting in the browser
+			return template.HTML(template.HTMLEscapeString(code))
 		},
 		"themeClass": func(theme string) string {
 			if theme == "dark" {
@@ -185,6 +176,9 @@ func getTemplateFunctions() template.FuncMap {
 			default:
 				return "badge bg-secondary"
 			}
+		},
+		"lower": func(s string) string {
+			return strings.ToLower(s)
 		},
 	}
 }
