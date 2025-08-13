@@ -1,12 +1,22 @@
 package scanner
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/ericfisherdev/goclean/internal/testutils"
 	"github.com/ericfisherdev/goclean/internal/types"
 )
+
+// Helper function to analyze a Go file with content reading
+func analyzeGoFileWithContent(analyzer *ASTAnalyzer, filePath string) (*types.GoASTInfo, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	return analyzer.AnalyzeGoFile(filePath, content)
+}
 
 func TestNewASTAnalyzer(t *testing.T) {
 	analyzer := NewASTAnalyzer(true)
@@ -44,7 +54,7 @@ func TestFunction(a int, b string) (int, error) {
 	filePath := testutils.CreateTestFile(t, tempDir, "test.go", goCode)
 	
 	// Analyze the file
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -115,7 +125,7 @@ type address struct {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "types.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -181,7 +191,7 @@ type Writer interface {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "interface.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -226,7 +236,7 @@ func (c Counter) Value() int {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "methods.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -273,7 +283,7 @@ var internal string`
 
 	filePath := testutils.CreateTestFile(t, tempDir, "vars.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -330,7 +340,7 @@ func ComplexFunction(x int) int {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "complex.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -362,7 +372,7 @@ import (
 
 	filePath := testutils.CreateTestFile(t, tempDir, "imports.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
@@ -414,7 +424,7 @@ func InvalidFunction( {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "invalid.go", invalidCode)
 	
-	_, err := analyzer.AnalyzeGoFile(filePath)
+	_, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err == nil {
 		t.Error("Expected error when analyzing invalid Go file")
 	}
@@ -426,7 +436,7 @@ func TestAnalyzeGoFile_NonExistentFile(t *testing.T) {
 	tempDir := testutils.CreateTempDir(t)
 	nonExistentPath := filepath.Join(tempDir, "does-not-exist.go")
 	
-	_, err := analyzer.AnalyzeGoFile(nonExistentPath)
+	_, err := analyzeGoFileWithContent(analyzer, nonExistentPath)
 	if err == nil {
 		t.Error("Expected error when analyzing non-existent file")
 	}
@@ -450,7 +460,7 @@ func SimpleFunction() {
 
 	filePath := testutils.CreateTestFile(t, tempDir, "simple.go", goCode)
 	
-	astInfo, err := analyzer.AnalyzeGoFile(filePath)
+	astInfo, err := analyzeGoFileWithContent(analyzer, filePath)
 	if err != nil {
 		t.Fatalf("Failed to analyze Go file: %v", err)
 	}
