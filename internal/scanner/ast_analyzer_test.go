@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ericfisherdev/goclean/internal/testutils"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 func TestNewASTAnalyzer(t *testing.T) {
@@ -124,7 +125,7 @@ type address struct {
 	}
 	
 	// Find Person struct
-	var personType *TypeInfo
+	var personType *types.TypeInfo
 	for _, typeInfo := range astInfo.Types {
 		if typeInfo.Name == "Person" {
 			personType = typeInfo
@@ -149,7 +150,7 @@ type address struct {
 	}
 	
 	// Check unexported type
-	var addressType *TypeInfo
+	var addressType *types.TypeInfo
 	for _, typeInfo := range astInfo.Types {
 		if typeInfo.Name == "address" {
 			addressType = typeInfo
@@ -371,7 +372,7 @@ import (
 	}
 	
 	// Check for dot import
-	var dotImport *ImportInfo
+	var dotImport *types.ImportInfo
 	for _, imp := range astInfo.Imports {
 		if imp.Alias == "." {
 			dotImport = imp
@@ -386,7 +387,7 @@ import (
 	}
 	
 	// Check for alias import
-	var aliasImport *ImportInfo
+	var aliasImport *types.ImportInfo
 	for _, imp := range astInfo.Imports {
 		if imp.Alias == "custom" {
 			aliasImport = imp

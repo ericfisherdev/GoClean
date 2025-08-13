@@ -7,7 +7,7 @@ import (
 	"unicode"
 
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 // NamingDetector detects naming convention violations
@@ -36,41 +36,63 @@ func (d *NamingDetector) Description() string {
 }
 
 // Detect analyzes naming conventions and returns violations
-func (d *NamingDetector) Detect(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation {
+func (d *NamingDetector) Detect(fileInfo *models.FileInfo, astInfo interface{}) []*models.Violation {
 	var violations []*models.Violation
 
 	if astInfo == nil {
+		return violations
+	}
+	
+	// Type assertion to get scanner.GoASTInfo
+	goAstInfo, ok := astInfo.(*types.GoASTInfo)
+	if !ok || goAstInfo == nil {
 		// For non-Go files, we have limited naming analysis
 		return violations
 	}
 
 	// Check function names
-	for _, function := range astInfo.Functions {
-		violations = append(violations, d.checkFunctionNaming(function, fileInfo.Path)...)
-		// Check parameter names
-		violations = append(violations, d.checkParameterNaming(function, fileInfo.Path)...)
+	if goAstInfo.Functions != nil {
+		for _, function := range goAstInfo.Functions {
+			if function != nil {
+				violations = append(violations, d.checkFunctionNaming(function, fileInfo.Path)...)
+				// Check parameter names
+				violations = append(violations, d.checkParameterNaming(function, fileInfo.Path)...)
+			}
+		}
 	}
 
 	// Check type names
-	for _, typeInfo := range astInfo.Types {
-		violations = append(violations, d.checkTypeNaming(typeInfo, fileInfo.Path)...)
+	if goAstInfo.Types != nil {
+		for _, typeInfo := range goAstInfo.Types {
+			if typeInfo != nil {
+				violations = append(violations, d.checkTypeNaming(typeInfo, fileInfo.Path)...)
+			}
+		}
 	}
 
 	// Check variable names
-	for _, variable := range astInfo.Variables {
-		violations = append(violations, d.checkVariableNaming(variable, fileInfo.Path)...)
+	if goAstInfo.Variables != nil {
+		for _, variable := range goAstInfo.Variables {
+			if variable != nil {
+				violations = append(violations, d.checkVariableNaming(variable, fileInfo.Path)...)
+			}
+		}
 	}
 
 	// Check constant names
-	for _, constant := range astInfo.Constants {
-		violations = append(violations, d.checkConstantNaming(constant, fileInfo.Path)...)
+	if goAstInfo.Constants != nil {
+		for _, constant := range goAstInfo.Constants {
+			if constant != nil {
+				violations = append(violations, d.checkConstantNaming(constant, fileInfo.Path)...)
+			}
+		}
 	}
 
 	return violations
 }
 
 // checkFunctionNaming analyzes function names for violations
-func (d *NamingDetector) checkFunctionNaming(fn *scanner.FunctionInfo, filePath string) []*models.Violation {
+func (d *NamingDetector) checkFunctionNaming(fn *types.FunctionInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check for non-descriptive names
@@ -127,7 +149,7 @@ func (d *NamingDetector) checkFunctionNaming(fn *scanner.FunctionInfo, filePath 
 }
 
 // checkParameterNaming analyzes parameter names for violations
-func (d *NamingDetector) checkParameterNaming(fn *scanner.FunctionInfo, filePath string) []*models.Violation {
+func (d *NamingDetector) checkParameterNaming(fn *types.FunctionInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	for _, param := range fn.Parameters {
@@ -170,7 +192,7 @@ func (d *NamingDetector) checkParameterNaming(fn *scanner.FunctionInfo, filePath
 }
 
 // checkTypeNaming analyzes type names for violations
-func (d *NamingDetector) checkTypeNaming(typeInfo *scanner.TypeInfo, filePath string) []*models.Violation {
+func (d *NamingDetector) checkTypeNaming(typeInfo *types.TypeInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check for non-descriptive type names
@@ -212,7 +234,7 @@ func (d *NamingDetector) checkTypeNaming(typeInfo *scanner.TypeInfo, filePath st
 }
 
 // checkVariableNaming analyzes variable names for violations
-func (d *NamingDetector) checkVariableNaming(variable *scanner.VariableInfo, filePath string) []*models.Violation {
+func (d *NamingDetector) checkVariableNaming(variable *types.VariableInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check for single letter variables (if not allowed)
@@ -254,7 +276,7 @@ func (d *NamingDetector) checkVariableNaming(variable *scanner.VariableInfo, fil
 }
 
 // checkConstantNaming analyzes constant names for violations
-func (d *NamingDetector) checkConstantNaming(constant *scanner.ConstantInfo, filePath string) []*models.Violation {
+func (d *NamingDetector) checkConstantNaming(constant *types.ConstantInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check for improper Go constant naming
@@ -471,14 +493,14 @@ func (d *NamingDetector) getGoCasingSuggestion(name string, isExported bool, ite
 
 // Code snippet generation helpers
 
-func (d *NamingDetector) generateFunctionNameSnippet(fn *scanner.FunctionInfo) string {
+func (d *NamingDetector) generateFunctionNameSnippet(fn *types.FunctionInfo) string {
 	if fn.IsMethod && fn.ReceiverType != "" {
 		return fmt.Sprintf("func (%s) %s", fn.ReceiverType, fn.Name)
 	}
 	return fmt.Sprintf("func %s", fn.Name)
 }
 
-func (d *NamingDetector) generateParameterSnippet(fn *scanner.FunctionInfo, paramName string) string {
+func (d *NamingDetector) generateParameterSnippet(fn *types.FunctionInfo, paramName string) string {
 	for _, param := range fn.Parameters {
 		if param.Name == paramName {
 			return fmt.Sprintf("%s %s", param.Name, param.Type)

@@ -2,13 +2,12 @@ package violations
 
 import (
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
 )
 
 // Detector defines the interface for violation detection
 type Detector interface {
 	// Detect analyzes the provided file information and returns violations
-	Detect(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation
+	Detect(fileInfo *models.FileInfo, astInfo interface{}) []*models.Violation
 	
 	// Name returns the name of this detector
 	Name() string
@@ -40,7 +39,7 @@ func (r *DetectorRegistry) GetDetectors() []Detector {
 }
 
 // DetectAll runs all detectors against the provided file information
-func (r *DetectorRegistry) DetectAll(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation {
+func (r *DetectorRegistry) DetectAll(fileInfo *models.FileInfo, astInfo interface{}) []*models.Violation {
 	var allViolations []*models.Violation
 	
 	for _, detector := range r.detectors {

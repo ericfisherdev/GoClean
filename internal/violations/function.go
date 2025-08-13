@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/scanner"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 // FunctionDetector detects function-related violations
@@ -35,23 +35,36 @@ func (d *FunctionDetector) Description() string {
 }
 
 // Detect analyzes functions and returns violations
-func (d *FunctionDetector) Detect(fileInfo *models.FileInfo, astInfo *scanner.GoASTInfo) []*models.Violation {
+func (d *FunctionDetector) Detect(fileInfo *models.FileInfo, astInfo interface{}) []*models.Violation {
 	var violations []*models.Violation
 
 	if astInfo == nil {
+		return violations
+	}
+	
+	// Type assertion to get types.GoASTInfo
+	goAstInfo, ok := astInfo.(*types.GoASTInfo)
+	if !ok || goAstInfo == nil {
 		// For non-Go files, we can't do detailed function analysis
 		return violations
 	}
 
-	for _, function := range astInfo.Functions {
-		violations = append(violations, d.checkFunction(function, fileInfo.Path)...)
+	// Check if Functions slice is nil
+	if goAstInfo.Functions == nil {
+		return violations
+	}
+
+	for _, function := range goAstInfo.Functions {
+		if function != nil {
+			violations = append(violations, d.checkFunction(function, fileInfo.Path)...)
+		}
 	}
 
 	return violations
 }
 
 // checkFunction analyzes a single function for violations
-func (d *FunctionDetector) checkFunction(fn *scanner.FunctionInfo, filePath string) []*models.Violation {
+func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string) []*models.Violation {
 	var violations []*models.Violation
 
 	// Check function length
@@ -187,7 +200,7 @@ func (d *FunctionDetector) calculateNestingDepth(fn *ast.FuncDecl) int {
 }
 
 // generateFunctionSignature creates a code snippet showing the function signature
-func (d *FunctionDetector) generateFunctionSignature(fn *scanner.FunctionInfo) string {
+func (d *FunctionDetector) generateFunctionSignature(fn *types.FunctionInfo) string {
 	var signature strings.Builder
 	
 	if fn.IsMethod && fn.ReceiverType != "" {

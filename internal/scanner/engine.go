@@ -6,25 +6,28 @@ import (
 	"time"
 
 	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/violations"
 )
 
 // Engine is the main scanning orchestrator
 type Engine struct {
-	fileWalker    *FileWalker
-	parser        *Parser
-	verbose       bool
-	maxWorkers    int
-	progressFn    func(string)
-	realTimeMode  bool
+	fileWalker         *FileWalker
+	parser             *Parser
+	violationDetector  *ViolationDetector
+	verbose            bool
+	maxWorkers         int
+	progressFn         func(string)
+	realTimeMode       bool
 }
 
 // NewEngine creates a new scanning engine
 func NewEngine(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool) *Engine {
 	return &Engine{
-		fileWalker: NewFileWalker(includePaths, excludePatterns, fileTypes, verbose),
-		parser:     NewParser(verbose),
-		verbose:    verbose,
-		maxWorkers: 10, // Default number of concurrent workers
+		fileWalker:        NewFileWalker(includePaths, excludePatterns, fileTypes, verbose),
+		parser:            NewParser(verbose),
+		violationDetector: NewViolationDetector(violations.DefaultDetectorConfig()),
+		verbose:           verbose,
+		maxWorkers:        10, // Default number of concurrent workers
 	}
 }
 
@@ -38,6 +41,9 @@ func (e *Engine) SetMaxWorkers(workers int) {
 // Scan performs the complete scanning operation
 func (e *Engine) Scan() (*models.ScanSummary, []*models.ScanResult, error) {
 	startTime := time.Now()
+	
+	// Reset violation detector caches for new scan
+	e.violationDetector.ResetDuplicationCache()
 	
 	if e.verbose {
 		fmt.Println("Starting file discovery...")
@@ -163,6 +169,9 @@ func (e *Engine) worker(wg *sync.WaitGroup, filesChan <-chan *models.FileInfo, r
 			}
 			
 			errorsChan <- fmt.Errorf("failed to parse %s: %w", file.Path, err)
+		} else {
+			// Detect violations for successfully parsed files
+			e.violationDetector.DetectViolations(result)
 		}
 		
 		resultsChan <- result
@@ -210,9 +219,17 @@ func (e *Engine) EnableRealTimeMode(enabled bool) {
 	e.realTimeMode = enabled
 }
 
+// SetViolationDetectorConfig sets a custom violation detector configuration
+func (e *Engine) SetViolationDetectorConfig(config *violations.DetectorConfig) {
+	e.violationDetector = NewViolationDetector(config)
+}
+
 // ScanWithProgress performs scanning with progress updates
 func (e *Engine) ScanWithProgress() (*models.ScanSummary, []*models.ScanResult, error) {
 	startTime := time.Now()
+	
+	// Reset violation detector caches for new scan
+	e.violationDetector.ResetDuplicationCache()
 	
 	if e.progressFn != nil {
 		e.progressFn("Starting file discovery...")
@@ -345,6 +362,9 @@ func (e *Engine) progressWorker(wg *sync.WaitGroup, filesChan <-chan *models.Fil
 			}
 			
 			errorsChan <- fmt.Errorf("failed to parse %s: %w", file.Path, err)
+		} else {
+			// Detect violations for successfully parsed files
+			e.violationDetector.DetectViolations(result)
 		}
 		
 		resultsChan <- result

@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 
 // Parser handles file parsing and basic analysis
@@ -250,7 +251,7 @@ func (p *Parser) looksLikeFunctionSignature(line string) bool {
 }
 
 // extractMetricsFromAST extracts file metrics from AST information
-func (p *Parser) extractMetricsFromAST(astInfo *GoASTInfo, fileInfo *models.FileInfo) *models.FileMetrics {
+func (p *Parser) extractMetricsFromAST(astInfo *types.GoASTInfo, fileInfo *models.FileInfo) *models.FileMetrics {
 	// Count lines by reading the file (needed for accurate line counts)
 	file, err := os.Open(fileInfo.Path)
 	if err != nil {
