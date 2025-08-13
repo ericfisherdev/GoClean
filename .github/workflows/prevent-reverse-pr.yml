@@ -1,0 +1,111 @@
+name: Prevent Reverse Pull Requests
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches:
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-pr-direction:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check if PR is from release to develop
+      id: check_direction
+      run: |
+        HEAD_REF="${{ github.event.pull_request.head.ref }}"
+        BASE_REF="${{ github.event.pull_request.base.ref }}"
+        
+        echo "Head branch: ${HEAD_REF}"
+        echo "Base branch: ${BASE_REF}"
+        
+        # Check if this is a release -> develop PR
+        if [[ "${HEAD_REF}" == "release" && "${BASE_REF}" == "develop" ]]; then
+          echo "reverse_pr=true" >> $GITHUB_OUTPUT
+          echo "❌ Detected reverse PR: release -> develop"
+        else
+          echo "reverse_pr=false" >> $GITHUB_OUTPUT
+          echo "✅ PR direction is correct"
+        fi
+
+    - name: Close reverse PR and add comment
+      if: steps.check_direction.outputs.reverse_pr == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Close the PR
+          await github.rest.pulls.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.payload.pull_request.number,
+            state: 'closed'
+          });
+
+          // Add explanatory comment
+          const comment = `🚫 **This pull request has been automatically closed**
+
+### ❌ Incorrect Branch Direction
+This PR attempts to merge from \`release\` → \`develop\`, which goes against our Git workflow.
+
+### ✅ Correct Git Flow
+Our repository follows this branching strategy:
+- **Feature branches** → \`develop\` (for new features)
+- **\`develop\`** → \`release\` (for releases)
+- **\`release\`** → \`main\` (for final releases)
+
+### 🔄 What you probably meant to do:
+If you want to:
+
+1. **Merge a release to main**: Create a PR from \`release\` → \`main\`
+2. **Start new development**: Create a feature branch from \`develop\`
+3. **Backport a fix**: Cherry-pick specific commits to \`develop\`
+
+### 📚 Git Workflow Reference:
+\`\`\`
+feature-branch ──→ develop ──→ release ──→ main
+                     ↑                      ↑
+               (new features)         (releases)
+\`\`\`
+
+### 🆘 Need Help?
+If this closure was incorrect or you need assistance with the proper workflow, please:
+- Comment on this PR explaining your intent
+- Contact the repository maintainers
+- Review the contribution guidelines
+
+---
+*This action was performed automatically to maintain proper Git workflow.*`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.payload.pull_request.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+          // Add labels for tracking
+          try {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ['invalid', 'workflow-violation', 'auto-closed']
+            });
+          } catch (error) {
+            console.log('Could not add labels (they may not exist)');
+          }
+
+    - name: Log action taken
+      run: |
+        if [[ "${{ steps.check_direction.outputs.reverse_pr }}" == "true" ]]; then
+          echo "🚫 Closed reverse PR #${{ github.event.pull_request.number }}"
+          echo "   From: ${{ github.event.pull_request.head.ref }}"
+          echo "   To: ${{ github.event.pull_request.base.ref }}"
+        else
+          echo "✅ PR direction is valid - no action needed"
+        fi
