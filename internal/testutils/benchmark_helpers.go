@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -135,9 +136,9 @@ func (m *MemoryUsage) Delta() int64 {
 	return int64(m.After) - int64(m.Before)
 }
 
-// getCurrentMemoryUsage gets current memory usage (simplified)
+// getCurrentMemoryUsage gets current memory usage using runtime.ReadMemStats
 func getCurrentMemoryUsage() uint64 {
-	// In a real implementation, this would use runtime.ReadMemStats
-	// For now, return 0 as a placeholder
-	return 0
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.Alloc
 }
