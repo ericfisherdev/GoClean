@@ -1,0 +1,516 @@
+package violations
+
+import (
+	"testing"
+
+	"github.com/ericfisherdev/goclean/internal/models"
+	"github.com/ericfisherdev/goclean/internal/scanner"
+)
+
+func TestNewNamingDetector(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	if detector == nil {
+		t.Fatal("Expected detector to be created")
+	}
+	
+	if detector.config == nil {
+		t.Error("Expected config to be initialized")
+	}
+	
+	if detector.Name() == "" {
+		t.Error("Expected detector to have a name")
+	}
+	
+	if detector.Description() == "" {
+		t.Error("Expected detector to have a description")
+	}
+}
+
+func TestNamingDetector_NonDescriptiveFunctionName(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Functions: []*scanner.FunctionInfo{
+			{
+				Name:      "data", // Non-descriptive
+				StartLine: 10,
+				IsExported: true,
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	found := false
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && v.Rule == "non-descriptive-function-name" {
+			found = true
+			if !contains(v.Message, "non-descriptive") {
+				t.Errorf("Expected message about non-descriptive name, got: %s", v.Message)
+			}
+		}
+	}
+	
+	if !found {
+		t.Error("Expected non-descriptive function name violation")
+	}
+}
+
+func TestNamingDetector_ImproperGoCasing(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Functions: []*scanner.FunctionInfo{
+			{
+				Name:       "my_function", // Should be myFunction or MyFunction
+				StartLine:  10,
+				IsExported: false,
+			},
+			{
+				Name:       "another_Func", // Inconsistent casing
+				StartLine:  20,
+				IsExported: true,
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	caseSViolations := 0
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && v.Rule == "go-function-case" {
+			caseSViolations++
+		}
+	}
+	
+	if caseSViolations != 2 {
+		t.Errorf("Expected 2 casing violations, got %d", caseSViolations)
+	}
+}
+
+func TestNamingDetector_SingleLetterParameters(t *testing.T) {
+	config := &DetectorConfig{
+		AllowSingleLetterVars: false, // Disallow single letter vars
+	}
+	detector := NewNamingDetector(config)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Functions: []*scanner.FunctionInfo{
+			{
+				Name:      "TestFunc",
+				StartLine: 10,
+				Parameters: []scanner.ParameterInfo{
+					{Name: "x", Type: "int"},    // Single letter (should violate if not allowed)
+					{Name: "data", Type: "string"}, // Acceptable
+					{Name: "i", Type: "int"},    // Common loop counter (might be acceptable)
+				},
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	singleLetterViolations := 0
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && v.Rule == "single-letter-parameter" {
+			singleLetterViolations++
+		}
+	}
+	
+	// Should have violations for single letter params when not allowed
+	if singleLetterViolations == 0 {
+		t.Error("Expected single letter parameter violations")
+	}
+}
+
+func TestNamingDetector_AllowSingleLetterParameters(t *testing.T) {
+	config := &DetectorConfig{
+		AllowSingleLetterVars: true, // Allow single letter vars
+	}
+	detector := NewNamingDetector(config)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Functions: []*scanner.FunctionInfo{
+			{
+				Name:      "TestFunc",
+				StartLine: 10,
+				Parameters: []scanner.ParameterInfo{
+					{Name: "x", Type: "int"},
+					{Name: "y", Type: "int"},
+					{Name: "i", Type: "int"},
+				},
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	// Should not have single letter violations when allowed
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && v.Rule == "single-letter-parameter" {
+			t.Error("Should not have single letter violations when allowed")
+		}
+	}
+}
+
+func TestNamingDetector_TypeNaming(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Types: []*scanner.TypeInfo{
+			{
+				Name:       "data",    // Non-descriptive
+				StartLine:  10,
+				IsExported: false,
+			},
+			{
+				Name:       "my_type", // Wrong casing
+				StartLine:  20,
+				IsExported: false,
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	typeViolations := 0
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && 
+		   (v.Rule == "non-descriptive-type-name" || v.Rule == "go-type-case") {
+			typeViolations++
+		}
+	}
+	
+	if typeViolations < 2 {
+		t.Errorf("Expected at least 2 type naming violations, got %d", typeViolations)
+	}
+}
+
+func TestNamingDetector_VariableNaming(t *testing.T) {
+	config := &DetectorConfig{
+		AllowSingleLetterVars: false,
+	}
+	detector := NewNamingDetector(config)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Variables: []*scanner.VariableInfo{
+			{
+				Name:       "x",        // Single letter (not allowed)
+				Line:       10,
+				IsExported: false,
+			},
+			{
+				Name:       "My_Var",   // Wrong casing
+				Line:       20,
+				IsExported: true,
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	variableViolations := 0
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && 
+		   (v.Rule == "single-letter-variable" || v.Rule == "go-variable-case") {
+			variableViolations++
+		}
+	}
+	
+	if variableViolations < 2 {
+		t.Errorf("Expected at least 2 variable naming violations, got %d", variableViolations)
+	}
+}
+
+func TestNamingDetector_ConstantNaming(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	fileInfo := &models.FileInfo{Path: "test.go"}
+	astInfo := &scanner.GoASTInfo{
+		Constants: []*scanner.ConstantInfo{
+			{
+				Name:       "my_constant", // Wrong casing
+				Line:       10,
+				IsExported: false,
+			},
+			{
+				Name:       "MAX_SIZE", // ALL_CAPS acceptable for constants
+				Line:       20,
+				IsExported: true,
+			},
+			{
+				Name:       "DefaultTimeout", // PascalCase acceptable for exported
+				Line:       30,
+				IsExported: true,
+			},
+		},
+	}
+	
+	violations := detector.Detect(fileInfo, astInfo)
+	
+	constantViolations := 0
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNaming && v.Rule == "go-constant-case" {
+			constantViolations++
+		}
+	}
+	
+	// Should only violate the first one (my_constant)
+	if constantViolations != 1 {
+		t.Errorf("Expected 1 constant naming violation, got %d", constantViolations)
+	}
+}
+
+func TestNamingDetector_NoAST(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	fileInfo := &models.FileInfo{Path: "test.js"} // Non-Go file
+	
+	violations := detector.Detect(fileInfo, nil)
+	
+	if len(violations) != 0 {
+		t.Errorf("Expected no violations for non-Go files, got %d", len(violations))
+	}
+}
+
+func TestIsNonDescriptiveName(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"data", true},
+		{"info", true},
+		{"item", true},
+		{"temp", true},
+		{"tmp", true},
+		{"foo", true},
+		{"bar", true},
+		{"x", true},
+		{"a1", true},
+		{"getUserData", false},
+		{"processRequest", false},
+		{"counter", false},
+		{"userName", false},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isNonDescriptiveName(tt.name)
+			if result != tt.expected {
+				t.Errorf("isNonDescriptiveName(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsSingleLetterVar(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"x", true},
+		{"i", true},
+		{"A", true},
+		{"xy", false},
+		{"x1", false},
+		{"", false},
+		{"123", false},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isSingleLetterVar(tt.name)
+			if result != tt.expected {
+				t.Errorf("isSingleLetterVar(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsCommonShortParam(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"i", true},
+		{"j", true},
+		{"x", true},
+		{"y", true},
+		{"ok", true},
+		{"id", true},
+		{"r", true},
+		{"w", true},
+		{"data", false},
+		{"count", false},
+		{"xyz", false},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isCommonShortParam(tt.name)
+			if result != tt.expected {
+				t.Errorf("isCommonShortParam(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasInappropriateAbbreviation(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"processMgr", true},
+		{"calcTotal", true},
+		{"getUserStr", true},
+		{"getAddr", true},
+		{"processManager", false},
+		{"calculateTotal", false},
+		{"getUserString", false},
+		{"getAddress", false},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.hasInappropriateAbbreviation(tt.name)
+			if result != tt.expected {
+				t.Errorf("hasInappropriateAbbreviation(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsProperGoFunctionCase(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name       string
+		isExported bool
+		expected   bool
+	}{
+		// Exported functions
+		{"GetUser", true, true},
+		{"ProcessData", true, true},
+		{"HTTPHandler", true, true},
+		{"getUserData", true, false}, // Should start with uppercase
+		{"get_user", true, false},    // Should not have underscores
+		
+		// Unexported functions
+		{"getUserData", false, true},
+		{"processData", false, true},
+		{"httpHandler", false, true},
+		{"GetUserData", false, false}, // Should start with lowercase
+		{"get_user", false, false},    // Should not have underscores
+		
+		// Edge cases
+		{"", true, false},
+		{"", false, false},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isProperGoFunctionCase(tt.name, tt.isExported)
+			if result != tt.expected {
+				t.Errorf("isProperGoFunctionCase(%q, %v) = %v, expected %v", 
+					tt.name, tt.isExported, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsCamelCase(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"getUserData", true},
+		{"GetUserData", true},
+		{"HTTPHandler", true}, // Acronym acceptable
+		{"XMLParser", true},   // Acronym acceptable
+		{"get_user_data", false}, // Underscores not allowed
+		{"getUser_Data", false},  // Mixed style not allowed
+		{"getUSERData", false},   // All caps in middle not allowed (unless acronym)
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isCamelCase(tt.name)
+			if result != tt.expected {
+				t.Errorf("isCamelCase(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsAllCapsWithUnderscores(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	tests := []struct {
+		name     string
+		expected bool
+	}{
+		{"MAX_SIZE", true},
+		{"DEFAULT_TIMEOUT", true},
+		{"API_KEY", true},
+		{"maxSize", false},
+		{"Max_Size", false},
+		{"max_size", false},
+		{"MAX_SIZE_123", true},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.isAllCapsWithUnderscores(tt.name)
+			if result != tt.expected {
+				t.Errorf("isAllCapsWithUnderscores(%q) = %v, expected %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGenerateCodeSnippets(t *testing.T) {
+	detector := NewNamingDetector(nil)
+	
+	// Test function snippet generation
+	fn := &scanner.FunctionInfo{
+		Name:         "TestFunc",
+		IsMethod:     false,
+		ReceiverType: "",
+	}
+	
+	snippet := detector.generateFunctionNameSnippet(fn)
+	expected := "func TestFunc"
+	if snippet != expected {
+		t.Errorf("generateFunctionNameSnippet() = %q, expected %q", snippet, expected)
+	}
+	
+	// Test method snippet generation
+	method := &scanner.FunctionInfo{
+		Name:         "Method",
+		IsMethod:     true,
+		ReceiverType: "*Struct",
+	}
+	
+	methodSnippet := detector.generateFunctionNameSnippet(method)
+	expectedMethod := "func (*Struct) Method"
+	if methodSnippet != expectedMethod {
+		t.Errorf("generateFunctionNameSnippet() = %q, expected %q", methodSnippet, expectedMethod)
+	}
+}
