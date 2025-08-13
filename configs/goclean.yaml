@@ -1,0 +1,74 @@
+scan:
+  paths:
+    - "./src"
+    - "./internal"
+    - "./cmd"
+  exclude:
+    - "vendor/"
+    - "node_modules/"
+    - "*.test.go"
+    - ".git/"
+    - "bin/"
+    - "tmp/"
+  file_types:
+    - ".go"
+    - ".js"
+    - ".ts"
+    - ".py"
+    - ".java"
+    - ".cs"
+
+thresholds:
+  function_lines: 25
+  cyclomatic_complexity: 8
+  parameters: 4
+  nesting_depth: 3
+  class_lines: 150
+  duplicate_lines: 6
+
+output:
+  html:
+    path: "./reports/clean-code-report.html"
+    auto_refresh: true
+    refresh_interval: 10
+    theme: "auto"
+  markdown:
+    enabled: true
+    path: "./reports/violations.md"
+    include_examples: true
+  console:
+    enabled: true
+    verbose: false
+
+logging:
+  level: "info"
+  format: "structured"
+  file: ""
+
+rules:
+  function_analysis:
+    enabled: true
+    check_length: true
+    check_complexity: true
+    check_parameters: true
+    check_nesting: true
+  
+  naming_conventions:
+    enabled: true
+    check_descriptive_names: true
+    check_consistency: true
+    check_boolean_names: true
+    check_magic_numbers: true
+  
+  code_structure:
+    enabled: true
+    check_class_size: true
+    check_duplication: true
+    check_god_objects: true
+  
+  documentation:
+    enabled: true
+    check_missing_docs: true
+    check_outdated_comments: true
+    check_commented_code: true
+    check_todo_fixme: true
