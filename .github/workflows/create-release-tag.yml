@@ -1,0 +1,229 @@
+name: Create Release Tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - release
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  create-release-tag:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract version from VERSION file
+      id: get_version
+      run: |
+        # Use the get-version.sh script for consistent version extraction
+        VERSION=$(.github/scripts/get-version.sh)
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+        echo "📦 Detected version: ${VERSION}"
+
+    - name: Validate version format
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        echo "🔍 Validating version format: ${VERSION}"
+        
+        # Additional validation beyond the script
+        if [[ "${VERSION}" =~ ^0\.0\.0$ ]]; then
+          echo "❌ ERROR: Version cannot be 0.0.0" >&2
+          exit 1
+        fi
+        
+        echo "✅ Version format is valid"
+
+    - name: Check if tag already exists
+      id: check_tag
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        TAG_NAME="v${VERSION}"
+        
+        if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "⚠️  Tag ${TAG_NAME} already exists"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "✅ Tag ${TAG_NAME} does not exist - ready to create"
+        fi
+        
+        echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+    - name: Get last tag for comparison
+      id: last_tag
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "last_tag=${LAST_TAG}" >> $GITHUB_OUTPUT
+        echo "📋 Last tag was: ${LAST_TAG}"
+
+    - name: Create annotated tag
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        # Create detailed tag message
+        TAG_MESSAGE="Release ${VERSION}
+
+Created from PR #${PR_NUMBER}: ${PR_TITLE}
+
+Previous version: ${LAST_TAG}
+Release branch: ${GITHUB_REF_NAME}
+Commit: ${GITHUB_SHA:0:7}
+Triggered by: @${GITHUB_ACTOR}
+
+This tag will trigger the automated release workflow."
+        
+        # Create the annotated tag
+        git tag -a "${TAG_NAME}" -m "${TAG_MESSAGE}"
+        
+        echo "🏷️  Created annotated tag: ${TAG_NAME}"
+
+    - name: Push tag to trigger release
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
+        
+        # Push the tag (this will trigger the release.yml workflow)
+        git push origin "${TAG_NAME}"
+        
+        echo "🚀 Pushed tag ${TAG_NAME} - release workflow will begin shortly"
+
+    - name: Create draft release
+      if: steps.check_tag.outputs.exists == 'false'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
+        
+        # Generate release notes
+        RELEASE_NOTES="## GoClean ${VERSION}
+
+### Changes
+This release was created from PR #${PR_NUMBER}: ${PR_TITLE}
+
+### Previous Version
+${LAST_TAG} → ${TAG_NAME}
+
+### Installation
+Download the appropriate binary for your platform from the assets below.
+
+### What's Changed
+- See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG_NAME}/CHANGELOG.md) for detailed changes
+- Compare changes: [\`${LAST_TAG}...${TAG_NAME}\`](https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...${TAG_NAME})
+
+---
+*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*"
+
+        # Create draft release
+        gh release create "${TAG_NAME}" \
+          --draft \
+          --title "GoClean ${VERSION}" \
+          --notes "${RELEASE_NOTES}" \
+          --latest
+        
+        echo "📝 Created draft release: ${TAG_NAME}"
+        echo "🔗 Release URL: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME}"
+
+    - name: Comment on PR with success
+      if: steps.check_tag.outputs.exists == 'false'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ steps.get_version.outputs.VERSION }}';
+          const tagName = '${{ steps.check_tag.outputs.tag_name }}';
+          const lastTag = '${{ steps.last_tag.outputs.last_tag }}';
+          
+          const body = `🎉 **Release ${tagName} has been triggered!**
+
+### What happens next:
+1. ✅ Tag \`${tagName}\` has been created and pushed
+2. ✅ Draft release has been created
+3. 🔄 Release workflow is building binaries for all platforms
+4. 📦 Release will be published automatically when build completes
+
+### Links:
+- 🏷️ [View Tag](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tagName})
+- 🔍 [Compare Changes](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${lastTag}...${tagName})
+- ⚡ [Monitor Build Progress](https://github.com/${context.repo.owner}/${context.repo.repo}/actions)
+
+### Version Info:
+- **Previous:** ${lastTag}
+- **Current:** ${tagName}
+- **Source:** VERSION file
+
+*The release will be available shortly with downloadable binaries for all supported platforms.*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.payload.pull_request.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+    - name: Handle existing tag
+      if: steps.check_tag.outputs.exists == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ steps.get_version.outputs.VERSION }}';
+          const tagName = '${{ steps.check_tag.outputs.tag_name }}';
+          
+          const body = `⚠️ **Tag ${tagName} already exists**
+
+The version \`${version}\` in the VERSION file corresponds to an existing release.
+
+### To create a new release:
+1. Update the \`VERSION\` file with a new version number
+2. Commit the change to this PR
+3. Merge the PR again
+
+### Existing Release:
+- 🏷️ [View Existing Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tagName})
+
+*No new release was created.*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.payload.pull_request.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+    - name: Summary
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
+        TAG_EXISTS="${{ steps.check_tag.outputs.exists }}"
+        
+        echo "🏁 Workflow Summary:"
+        echo "   📦 Version: ${VERSION}"
+        echo "   🏷️  Tag: ${TAG_NAME}"
+        
+        if [[ "${TAG_EXISTS}" == "false" ]]; then
+          echo "   ✅ Status: Release triggered successfully"
+          echo "   🔗 Monitor: https://github.com/${GITHUB_REPOSITORY}/actions"
+        else
+          echo "   ⚠️  Status: Tag already exists - no action taken"
+        fi
