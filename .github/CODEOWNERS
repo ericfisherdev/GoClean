@@ -1,0 +1,27 @@
+# GoClean Code Owners
+#
+# This file defines who has approval authority for different parts of the codebase.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global code owners - these users are required reviewers for any changes
+# unless overridden by more specific rules below
+* @ericfisherdev
+
+# Release-critical files require additional scrutiny
+# These files affect production releases and require code owner approval
+go.mod @ericfisherdev
+go.sum @ericfisherdev
+Makefile @ericfisherdev
+configs/ @ericfisherdev
+
+# Core application code
+cmd/ @ericfisherdev
+internal/ @ericfisherdev
+
+# Configuration and workflow files
+.github/ @ericfisherdev
+*.md @ericfisherdev
+
+# Security-sensitive files
+.gitignore @ericfisherdev
+LICENSE @ericfisherdev
