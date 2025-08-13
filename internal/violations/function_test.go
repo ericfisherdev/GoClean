@@ -1,6 +1,10 @@
 package violations
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/ericfisherdev/goclean/internal/models"
@@ -400,17 +404,220 @@ func TestSeverityCalculation(t *testing.T) {
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && 
-		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		findSubstring(s, substr)))
-}
+func TestFunctionDetector_NestingDepth(t *testing.T) {
+	config := &DetectorConfig{
+		MaxNestingDepth: 2,
+	}
+	detector := NewFunctionDetector(config)
 
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
+	// Create code with excessive nesting
+	code := `package main
+
+func deeplyNestedFunction() {
+	if true {
+		if true {
+			if true { // This exceeds MaxNestingDepth of 2
+				println("deeply nested")
+			}
 		}
 	}
-	return false
+}`
+
+	astInfo := parseGoCodeForFunction(t, code)
+	fileInfo := &models.FileInfo{
+		Path:     "test.go",
+		Language: "Go",
+	}
+
+	violations := detector.Detect(fileInfo, astInfo)
+
+	// Should detect nesting depth violation
+	found := false
+	for _, v := range violations {
+		if v.Type == models.ViolationTypeNestingDepth {
+			found = true
+			if !strings.Contains(v.Message, "nesting depth") {
+				t.Errorf("Expected nesting depth message, got: %s", v.Message)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected to find nesting depth violation")
+	}
+}
+
+func TestFunctionDetector_CalculateNestingDepth(t *testing.T) {
+	detector := NewFunctionDetector(nil)
+
+	tests := []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "simple function",
+			code: `package main
+func simple() {
+	println("hello")
+}`,
+			expected: 0,
+		},
+		{
+			name: "single if",
+			code: `package main
+func singleIf() {
+	if true {
+		println("nested")
+	}
+}`,
+			expected: 1,
+		},
+		{
+			name: "nested if statements",
+			code: `package main
+func nestedIfs() {
+	if true {
+		if true {
+			println("double nested")
+		}
+	}
+}`,
+			expected: 2,
+		},
+		{
+			name: "for loop with if",
+			code: `package main
+func forWithIf() {
+	for i := 0; i < 10; i++ {
+		if i%2 == 0 {
+			println(i)
+		}
+	}
+}`,
+			expected: 2,
+		},
+		{
+			name: "switch statement",
+			code: `package main
+func switchStatement() {
+	switch x := 1; x {
+	case 1:
+		if true {
+			println("nested in switch")
+		}
+	}
+}`,
+			expected: 1, // Switch increases depth by 1, case is not a separate nesting level
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			astInfo := parseGoCodeForFunction(t, test.code)
+			if len(astInfo.Functions) == 0 {
+				t.Fatal("No functions found in parsed code")
+			}
+			
+			fn := astInfo.Functions[0]
+			if fn.ASTNode == nil {
+				t.Fatal("Function AST node is nil")
+			}
+			
+			depth := detector.calculateNestingDepth(fn.ASTNode)
+			if depth != test.expected {
+				t.Errorf("Expected nesting depth %d, got %d", test.expected, depth)
+			}
+		})
+	}
+}
+
+func TestFunctionDetector_GetNestingDepthSeverity(t *testing.T) {
+	config := &DetectorConfig{
+		MaxNestingDepth: 3,
+	}
+	detector := NewFunctionDetector(config)
+
+	tests := []struct {
+		depth    int
+		expected models.Severity
+	}{
+		{3, models.SeverityLow},    // At threshold
+		{4, models.SeverityLow},    // Just above threshold (1.33x)
+		{5, models.SeverityMedium}, // 1.67x threshold  
+		{6, models.SeverityMedium}, // 2x threshold (but condition uses >, so still Medium)
+		{7, models.SeverityHigh},   // Above 2x threshold
+		{9, models.SeverityHigh},   // Way above threshold
+	}
+
+	for _, test := range tests {
+		result := detector.getSeverityForNestingDepth(test.depth)
+		if result != test.expected {
+			t.Errorf("getSeverityForNestingDepth(%d) = %v, expected %v", test.depth, result, test.expected)
+		}
+	}
+}
+
+func TestFunctionDetector_GetNestingDepthSuggestion(t *testing.T) {
+	detector := NewFunctionDetector(nil)
+
+	suggestion := detector.getNestingDepthSuggestion("testFunction", 5)
+	if suggestion == "" {
+		t.Error("Expected non-empty suggestion")
+	}
+	if !strings.Contains(suggestion, "testFunction") {
+		t.Error("Expected suggestion to contain function name")
+	}
+	if !strings.Contains(suggestion, "5") {
+		t.Error("Expected suggestion to contain depth value")
+	}
+}
+
+// parseGoCodeForFunction is a helper function to parse Go code for testing
+func parseGoCodeForFunction(t *testing.T, code string) *scanner.GoASTInfo {
+	fileSet := token.NewFileSet()
+	file, err := parser.ParseFile(fileSet, "test.go", code, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("Failed to parse Go code: %v", err)
+	}
+
+	astInfo := &scanner.GoASTInfo{
+		FilePath:    "test.go",
+		PackageName: file.Name.Name,
+		AST:         file,
+		FileSet:     fileSet,
+		Functions:   make([]*scanner.FunctionInfo, 0),
+		Types:       make([]*scanner.TypeInfo, 0),
+		Imports:     make([]*scanner.ImportInfo, 0),
+		Variables:   make([]*scanner.VariableInfo, 0),
+		Constants:   make([]*scanner.ConstantInfo, 0),
+	}
+
+	// Analyze the AST to populate function information
+	ast.Inspect(file, func(n ast.Node) bool {
+		if funcDecl, ok := n.(*ast.FuncDecl); ok && funcDecl.Name != nil {
+			pos := fileSet.Position(funcDecl.Pos())
+			end := fileSet.Position(funcDecl.End())
+			
+			funcInfo := &scanner.FunctionInfo{
+				Name:        funcDecl.Name.Name,
+				StartLine:   pos.Line,
+				EndLine:     end.Line,
+				StartColumn: pos.Column,
+				EndColumn:   end.Column,
+				IsExported:  ast.IsExported(funcDecl.Name.Name),
+				IsMethod:    funcDecl.Recv != nil,
+				ASTNode:     funcDecl,
+			}
+			
+			astInfo.Functions = append(astInfo.Functions, funcInfo)
+		}
+		return true
+	})
+
+	return astInfo
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }

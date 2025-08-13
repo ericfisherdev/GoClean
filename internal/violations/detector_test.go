@@ -152,6 +152,84 @@ func TestDefaultDetectorConfig(t *testing.T) {
 	if !config.RequireCommentsForPublic {
 		t.Error("Expected RequireCommentsForPublic to be true")
 	}
+	
+	if config.SeverityConfig == nil {
+		t.Error("Expected SeverityConfig to be set")
+	}
+}
+
+func TestDetectorConfig_GetSeverityClassifier(t *testing.T) {
+	config := DefaultDetectorConfig()
+	
+	classifier := config.GetSeverityClassifier()
+	if classifier == nil {
+		t.Error("Expected severity classifier to be created")
+	}
+	
+	// Test with nil severity config
+	configWithNilSeverity := &DetectorConfig{
+		SeverityConfig: nil,
+	}
+	classifier2 := configWithNilSeverity.GetSeverityClassifier()
+	if classifier2 == nil {
+		t.Error("Expected severity classifier to be created even with nil config")
+	}
+}
+
+func TestDetectorConfig_ClassifyViolationSeverity(t *testing.T) {
+	config := DefaultDetectorConfig()
+	
+	// Test basic severity classification
+	severity := config.ClassifyViolationSeverity(
+		models.ViolationTypeFunctionLength,
+		30, 20, // 1.5x threshold -> Medium
+		nil,
+	)
+	
+	if severity != models.SeverityMedium {
+		t.Errorf("Expected Medium severity, got %v", severity)
+	}
+	
+	// Test with context
+	context := &ViolationContext{
+		IsPublic: true,
+	}
+	severityWithContext := config.ClassifyViolationSeverity(
+		models.ViolationTypeFunctionLength,
+		30, 20,
+		context,
+	)
+	
+	// Should be higher due to public context boost
+	if severityWithContext <= severity {
+		t.Error("Expected public context to boost severity")
+	}
+}
+
+func TestDetectorConfig_ClassifyViolationSeverityFloat(t *testing.T) {
+	config := DefaultDetectorConfig()
+	
+	// Test floating point severity classification
+	severity := config.ClassifyViolationSeverityFloat(
+		models.ViolationTypeFunctionLength,
+		3.0, 2.0, // 1.5x threshold -> Medium
+		nil,
+	)
+	
+	if severity != models.SeverityMedium {
+		t.Errorf("Expected Medium severity, got %v", severity)
+	}
+	
+	// Test edge case
+	lowSeverity := config.ClassifyViolationSeverityFloat(
+		models.ViolationTypeFunctionLength,
+		1.9, 2.0, // Below threshold -> Low
+		nil,
+	)
+	
+	if lowSeverity != models.SeverityLow {
+		t.Errorf("Expected Low severity, got %v", lowSeverity)
+	}
 }
 
 // mockDetector implements the Detector interface for testing
