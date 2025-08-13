@@ -383,13 +383,29 @@ View detailed report: ./reports/clean-code-report.html
 
 ### Ignoring Violations
 
-For legitimate exceptions, use code comments:
+You can ignore violations for specific lines or entire files.
+
+#### In-Code Comments
+
+For legitimate exceptions on a specific line, use code comments:
 
 ```go
 // goclean:ignore function-length "Legacy function, refactoring scheduled"
 func legacyComplexFunction() {
     // Complex implementation...
 }
+```
+
+#### File-Level Exclusions
+
+Use configuration to exclude entire files or directories:
+
+```yaml
+scan:
+  exclude:
+    - "legacy/"
+    - "generated/"
+    - "vendor/"
 ```
 
 ## Troubleshooting

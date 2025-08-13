@@ -1,64 +1,35 @@
 # API Reference
 
-This document provides comprehensive API documentation for GoClean's public interfaces and types.
+> **Disclaimer**: The programmatic API for GoClean is not yet stable and is subject to change. The packages documented here are in the `internal` directory, which is not intended for public use according to Go conventions. This documentation is provided for advanced users and contributors. A stable public API in a `pkg` directory is planned for a future release.
+
+This document provides API documentation for GoClean's internal packages.
 
 ## Table of Contents
 
-1. [Package Overview](#package-overview)
-2. [Configuration API](#configuration-api)
-3. [Scanner API](#scanner-api)
-4. [Violation Detection API](#violation-detection-api)
-5. [Reporter API](#reporter-api)
-6. [Models and Types](#models-and-types)
-7. [CLI Integration](#cli-integration)
-8. [Error Handling](#error-handling)
+1. [Overview](#overview)
+2. [Core Packages](#core-packages)
+3. [Scanner Engine API (`internal/scanner`)](#scanner-engine-api-internalscanner)
+4. [Configuration API (`internal/config`)](#configuration-api-internalconfig)
+5. [Data Models (`internal/models`)](#data-models-internalmodels)
+6. [Example Usage](#example-usage)
 
-## Package Overview
+## Overview
 
-GoClean provides a programmatic API for integrating clean code analysis into other tools and applications.
+Programmatic access to GoClean's functionality is available through its internal packages. The main entry point for scanning is the `scanner.Engine`.
 
-### Main Packages
+## Core Packages
 
-- `github.com/ericfisherdev/goclean/pkg/goclean` - Main public API
-- `github.com/ericfisherdev/goclean/pkg/config` - Configuration management
-- `github.com/ericfisherdev/goclean/pkg/models` - Data structures
-- `github.com/ericfisherdev/goclean/pkg/violations` - Violation types
+-   `github.com/ericfisherdev/goclean/internal/scanner`: Contains the core scanning engine, file walker, and parser.
+-   `github.com/ericfisherdev/goclean/internal/config`: Handles loading and managing configuration.
+-   `github.com/ericfisherdev/goclean/internal/models`: Defines the data structures for violations, reports, and file information.
+-   `github.com/ericfisherdev/goclean/internal/violations`: Contains the logic for detecting specific code violations.
+-   `github.com/ericfisherdev/goclean/internal/reporters`: Includes the report generators for HTML, Markdown, and console output.
 
-### Basic Usage
+## Scanner Engine API (`internal/scanner`)
 
-```go
-package main
+The `Engine` is the main orchestrator for scanning files.
 
-import (
-    "context"
-    "fmt"
-    "log"
-    
-    "github.com/ericfisherdev/goclean/pkg/goclean"
-    "github.com/ericfisherdev/goclean/pkg/config"
-)
-
-func main() {
-    // Load configuration
-    cfg, err := config.Load("goclean.yaml")
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Create analyzer
-    analyzer := goclean.New(cfg)
-    
-    // Analyze code
-    result, err := analyzer.Analyze(context.Background(), []string{"./src"})
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Process results
-    fmt.Printf("Found %d violations in %d files\n", 
-        len(result.Violations), result.FilesScanned)
-}
-```
+### `scanner.Engine`
 
 ## Configuration API
 

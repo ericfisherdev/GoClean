@@ -101,7 +101,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - [Installation Instructions](docs/user-guide.md#installation)
 - [Configuration Examples](docs/configuration.md#configuration-examples)
 - [Adding Custom Detectors](docs/developer-guide.md#adding-new-features)
-- [CI/CD Integration](docs/api-reference.md#integration-examples)
+- [CI/CD Integration](docs/user-guide.md#best-practices)
 
 ## Architecture
 
@@ -160,16 +160,27 @@ package main
 
 import (
     "context"
+    "fmt"
+    "log"
+    
     "github.com/ericfisherdev/goclean/pkg/goclean"
     "github.com/ericfisherdev/goclean/pkg/config"
 )
 
 func main() {
-    cfg, _ := config.Load("goclean.yaml")
-    analyzer := goclean.New(cfg)
-    result, _ := analyzer.Analyze(context.Background(), []string{"./src"})
+    cfg, err := config.Load("goclean.yaml")
+    if err != nil {
+        log.Fatal("Failed to load config:", err)
+    }
     
-    fmt.Printf("Found %d violations\n", len(result.Violations))
+    analyzer := goclean.New(cfg)
+    result, err := analyzer.Analyze(context.Background(), []string{"./src"})
+    if err != nil {
+        log.Fatal("Analysis failed:", err)
+    }
+    
+    fmt.Printf("Found %d violations in %d files\n", 
+        len(result.Violations), result.FilesScanned)
 }
 ```
 
@@ -219,7 +230,7 @@ make lint
 - 📝 [Documentation](docs/)
 - 🐛 [Bug Reports](https://github.com/ericfisherdev/goclean/issues)
 - 💬 [Discussions](https://github.com/ericfisherdev/goclean/discussions)
-- 📧 [Email Support](mailto:ericfisherdev@example.com)
+- 📧 [Email Support](mailto:ericfisherdev@example.com) <!-- TODO: Update placeholder email -->
 
 ## License
 
