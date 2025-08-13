@@ -80,7 +80,7 @@ func benchmarkStartupTime(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		start := time.Now()
 		
-		cmd := exec.Command("./goclean", "--help")
+		cmd := exec.Command("./bin/goclean", "--help")
 		cmd.Dir = "."
 		err := cmd.Run()
 		if err != nil {
@@ -126,7 +126,7 @@ func TestFunction%d() {
 	for i := 0; i < b.N; i++ {
 		start := time.Now()
 		
-		cmd := exec.Command("./goclean", "scan", "--path", testDir, "--output-format", "console")
+		cmd := exec.Command("./bin/goclean", "scan", testDir)
 		cmd.Dir = "."
 		err := cmd.Run()
 		if err != nil {
@@ -163,7 +163,7 @@ func benchmarkMemoryUsage(b *testing.B) {
 	b.ReportAllocs()
 	
 	for i := 0; i < b.N; i++ {
-		cmd := exec.Command("./goclean", "scan", "--path", testDir, "--output-format", "console")
+		cmd := exec.Command("./bin/goclean", "scan", testDir)
 		cmd.Dir = "."
 		err := cmd.Run()
 		if err != nil {
@@ -193,8 +193,8 @@ func benchmarkReportGeneration(b *testing.B) {
 		start := time.Now()
 		
 		outputPath := fmt.Sprintf("%s/report-%d.html", b.TempDir(), i)
-		cmd := exec.Command("./goclean", "scan", "--path", testDir, 
-			"--output-format", "html", "--output-path", outputPath)
+		cmd := exec.Command("./bin/goclean", "scan", testDir, 
+			"--format", "html", "--output", outputPath)
 		cmd.Dir = "."
 		err := cmd.Run()
 		if err != nil {
