@@ -67,6 +67,9 @@ type DetectorConfig struct {
 	AllowSingleLetterVars bool
 	RequireCamelCase     bool
 	RequireCommentsForPublic bool
+	
+	// Severity classification config
+	SeverityConfig *SeverityConfig
 }
 
 // DefaultDetectorConfig returns the default configuration
@@ -81,5 +84,26 @@ func DefaultDetectorConfig() *DetectorConfig {
 		AllowSingleLetterVars: false,
 		RequireCamelCase:     true,
 		RequireCommentsForPublic: true,
+		SeverityConfig:       DefaultSeverityConfig(),
 	}
+}
+
+// GetSeverityClassifier returns a severity classifier instance for the detector config
+func (c *DetectorConfig) GetSeverityClassifier() *SeverityClassifier {
+	if c.SeverityConfig == nil {
+		return NewSeverityClassifier(DefaultSeverityConfig())
+	}
+	return NewSeverityClassifier(c.SeverityConfig)
+}
+
+// ClassifyViolationSeverity provides a convenience method for consistent severity classification
+func (c *DetectorConfig) ClassifyViolationSeverity(violationType models.ViolationType, actualValue, threshold int, context *ViolationContext) models.Severity {
+	classifier := c.GetSeverityClassifier()
+	return classifier.ClassifySeverity(violationType, actualValue, threshold, context)
+}
+
+// ClassifyViolationSeverityFloat provides severity classification for floating-point values
+func (c *DetectorConfig) ClassifyViolationSeverityFloat(violationType models.ViolationType, actualValue, threshold float64, context *ViolationContext) models.Severity {
+	classifier := c.GetSeverityClassifier()
+	return classifier.ClassifySeverityFloat(violationType, actualValue, threshold, context)
 }
