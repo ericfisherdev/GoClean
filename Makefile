@@ -32,7 +32,7 @@ build:
 # Run tests
 test:
 	@echo "Running tests..."
-	$(GOTEST) -v ./...
+	GOCLEAN_TEST_MODE=1 $(GOTEST) -v ./...
 
 # Run tests with coverage
 test-coverage:
