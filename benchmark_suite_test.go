@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -147,8 +146,6 @@ func TestFunction%d() {
 }
 
 func benchmarkMemoryUsage(b *testing.B) {
-	targetMemoryMB := 100.0 // MB
-	
 	// Create a larger test directory
 	testDir := b.TempDir()
 	fileCount := 1000
