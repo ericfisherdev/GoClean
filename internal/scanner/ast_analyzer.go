@@ -26,13 +26,13 @@ func NewASTAnalyzer(verbose bool) *ASTAnalyzer {
 }
 
 // AnalyzeGoFile performs AST-based analysis of a Go source file
-func (a *ASTAnalyzer) AnalyzeGoFile(filePath string) (*types.GoASTInfo, error) {
+func (a *ASTAnalyzer) AnalyzeGoFile(filePath string, content []byte) (*types.GoASTInfo, error) {
 	if a.verbose {
 		fmt.Printf("Analyzing Go file with AST: %s\n", filePath)
 	}
 
 	// Parse the Go file
-	src, err := parser.ParseFile(a.fileSet, filePath, nil, parser.ParseComments)
+	src, err := parser.ParseFile(a.fileSet, filePath, content, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Go file %s: %w", filePath, err)
 	}

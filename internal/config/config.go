@@ -158,7 +158,7 @@ func GetDefaultConfig() *Config {
 		Output: OutputConfig{
 			HTML: HTMLConfig{
 				Path:            "./reports/clean-code-report.html",
-				AutoRefresh:     true,
+				AutoRefresh:     false,
 				RefreshInterval: 10,
 				Theme:           "auto",
 			},

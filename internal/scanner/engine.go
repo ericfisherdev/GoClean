@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -18,16 +19,19 @@ type Engine struct {
 	maxWorkers         int
 	progressFn         func(string)
 	realTimeMode       bool
+	workerBufferSize   int
 }
 
 // NewEngine creates a new scanning engine
 func NewEngine(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool) *Engine {
+	numCPU := runtime.NumCPU()
 	return &Engine{
 		fileWalker:        NewFileWalker(includePaths, excludePatterns, fileTypes, verbose),
 		parser:            NewParser(verbose),
 		violationDetector: NewViolationDetector(violations.DefaultDetectorConfig()),
 		verbose:           verbose,
-		maxWorkers:        10, // Default number of concurrent workers
+		maxWorkers:        numCPU, // Default to number of CPU cores
+		workerBufferSize:  numCPU * 2, // Buffer size for better throughput
 	}
 }
 
@@ -95,10 +99,10 @@ func (e *Engine) Scan() (*models.ScanSummary, []*models.ScanResult, error) {
 
 // scanFiles scans multiple files concurrently
 func (e *Engine) scanFiles(files []*models.FileInfo) ([]*models.ScanResult, error) {
-	// Create channels for work distribution
-	filesChan := make(chan *models.FileInfo, len(files))
-	resultsChan := make(chan *models.ScanResult, len(files))
-	errorsChan := make(chan error, len(files))
+	// Create channels for work distribution with optimized buffer sizes
+	filesChan := make(chan *models.FileInfo, e.workerBufferSize)
+	resultsChan := make(chan *models.ScanResult, e.workerBufferSize)
+	errorsChan := make(chan error, e.workerBufferSize)
 	
 	// Start workers
 	var wg sync.WaitGroup
@@ -283,10 +287,10 @@ func (e *Engine) ScanWithProgress() (*models.ScanSummary, []*models.ScanResult, 
 
 // scanFilesWithProgress scans files with progress updates
 func (e *Engine) scanFilesWithProgress(files []*models.FileInfo) ([]*models.ScanResult, error) {
-	// Create channels for work distribution
-	filesChan := make(chan *models.FileInfo, len(files))
-	resultsChan := make(chan *models.ScanResult, len(files))
-	errorsChan := make(chan error, len(files))
+	// Create channels for work distribution with optimized buffer sizes
+	filesChan := make(chan *models.FileInfo, e.workerBufferSize)
+	resultsChan := make(chan *models.ScanResult, e.workerBufferSize)
+	errorsChan := make(chan error, e.workerBufferSize)
 	
 	// Start workers
 	var wg sync.WaitGroup

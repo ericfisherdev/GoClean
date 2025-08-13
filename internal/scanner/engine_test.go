@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -26,8 +27,9 @@ func TestNewEngine(t *testing.T) {
 		t.Error("Expected verbose to be true")
 	}
 
-	if engine.maxWorkers != 10 {
-		t.Errorf("Expected default max workers 10, got %d", engine.maxWorkers)
+	expectedWorkers := runtime.NumCPU()
+	if engine.maxWorkers != expectedWorkers {
+		t.Errorf("Expected default max workers %d, got %d", expectedWorkers, engine.maxWorkers)
 	}
 
 	if engine.fileWalker == nil {

@@ -29,7 +29,7 @@ thresholds:
 output:
   html:
     path: "./reports/clean-code-report.html"
-    auto_refresh: true
+    auto_refresh: false
     refresh_interval: 10
     theme: "auto"
   markdown:
