@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -59,8 +60,8 @@ func (a *ASTAnalyzer) AnalyzeGoFile(filePath string, content []byte) (*types.GoA
 		return true
 	})
 
-	if a.verbose {
-		fmt.Printf("AST analysis complete for %s: %d functions, %d types, %d imports\n",
+	if a.verbose && os.Getenv("GOCLEAN_TEST_MODE") == "" {
+		fmt.Fprintf(os.Stderr, "AST analysis complete for %s: %d functions, %d types, %d imports\n",
 			filepath.Base(filePath), len(astInfo.Functions), len(astInfo.Types), len(astInfo.Imports))
 	}
 

@@ -74,8 +74,8 @@ func (p *Parser) parseGoFileWithAST(fileInfo *models.FileInfo) (*models.ScanResu
 		ASTInfo:    astInfo, // Store AST info for violation detection
 	}
 
-	if p.verbose {
-		fmt.Printf("AST parsed %s: %d lines, %d functions, %d types\n",
+	if p.verbose && os.Getenv("GOCLEAN_TEST_MODE") == "" {
+		fmt.Fprintf(os.Stderr, "AST parsed %s: %d lines, %d functions, %d types\n",
 			fileInfo.Path, metrics.TotalLines, len(astInfo.Functions), len(astInfo.Types))
 	}
 
