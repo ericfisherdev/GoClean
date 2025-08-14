@@ -321,9 +321,9 @@ output:
 	// Scan returns exit code 1 when violations are found, which is expected
 	require.Error(t, err, "Scan command should return error code when violations found")
 	
-	// Verify reports were generated (using default paths since config might not control output paths)
-	htmlReport := filepath.Join(tempDir, "reports", "clean-code-report.html")
-	markdownReport := filepath.Join(tempDir, "reports", "violations.md")
+	// Verify reports were generated (using paths from config file)
+	htmlReport := filepath.Join(reportsDir, "test.html")
+	markdownReport := filepath.Join(reportsDir, "test.md")
 	
 	assert.FileExists(t, htmlReport, "HTML report should be generated")
 	assert.FileExists(t, markdownReport, "Markdown report should be generated")
@@ -337,7 +337,7 @@ output:
 	markdownContent, err := os.ReadFile(markdownReport)
 	require.NoError(t, err)
 	assert.Contains(t, string(markdownContent), "LongFunction", "Markdown report should contain function name")
-	assert.Contains(t, string(markdownContent), "function_length", "Markdown report should contain violation type")
+	assert.Contains(t, string(markdownContent), "Long Functions", "Markdown report should contain violation type")
 }
 
 // TestCLIWithCustomThresholds tests CLI with various threshold configurations
