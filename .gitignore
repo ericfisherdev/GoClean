@@ -4,8 +4,10 @@
 *.dll
 *.so
 *.dylib
-goclean
+/goclean
 goclean.exe
+bin/goclean
+bin/goclean.exe
 
 # Test binary, built with `go test -c`
 *.test
