@@ -6,6 +6,7 @@ package violations
 import (
 	"bufio"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -79,13 +80,21 @@ func (e *CodeExtractor) buildSnippet(lines []string, targetLine int, endLine int
 		return ""
 	}
 
+	// Clamp to sane bounds
+	if targetLine < 1 {
+		targetLine = 1
+	}
+	if endLine < targetLine {
+		endLine = targetLine
+	}
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
 	// Convert to 0-based indexing
 	targetIdx := targetLine - 1
 	endIdx := endLine - 1
 
-	if endIdx <= 0 || endIdx < targetIdx {
-		endIdx = targetIdx
-	}
+	// endIdx is already >= targetIdx here
 
 	// Calculate the range including context
 	startIdx := targetIdx - e.contextLines
@@ -142,13 +151,14 @@ func (e *CodeExtractor) addHTMLHighlighting(snippet string, targetLine int, endL
 	var result strings.Builder
 
 	for _, line := range lines {
+		escaped := html.EscapeString(line)
 		if strings.HasPrefix(line, "→") {
 			// This is a violation line, wrap it with highlighting
 			result.WriteString(`<span class="violation-line">`)
-			result.WriteString(line)
+			result.WriteString(escaped)
 			result.WriteString("</span>\n")
 		} else {
-			result.WriteString(line)
+			result.WriteString(escaped)
 			result.WriteString("\n")
 		}
 	}

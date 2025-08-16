@@ -438,7 +438,7 @@ func (d *NamingDetector) isGenericDataParameter(paramName string, fn *types.Func
 	
 	// If the parameter type suggests it's the main data (slice, interface{}, etc.)
 	for _, param := range fn.Parameters {
-		if param.Name == paramName {
+		if strings.EqualFold(param.Name, paramName) {
 			paramType := strings.ToLower(param.Type)
 			if strings.Contains(paramType, "[]") ||           // Slice types
 			   strings.Contains(paramType, "interface") ||    // Generic interfaces

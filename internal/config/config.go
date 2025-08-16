@@ -35,9 +35,9 @@ type ScanConfig struct {
 	Exclude          []string `yaml:"exclude"`
 	FileTypes        []string `yaml:"file_types"`
 	
-	// New test file handling options
-	SkipTestFiles    bool     `yaml:"skip_test_files"`    // Default: true
-	AggressiveMode   bool     `yaml:"aggressive_mode"`    // Default: false
+	// New test file handling options - using pointers to detect explicit setting
+	SkipTestFiles    *bool    `yaml:"skip_test_files"`    // Default: true
+	AggressiveMode   *bool    `yaml:"aggressive_mode"`    // Default: false
 	CustomTestPatterns []string `yaml:"custom_test_patterns"`
 }
 
@@ -163,8 +163,8 @@ func GetDefaultConfig() *Config {
 				".h",
 				".hpp",
 			},
-			SkipTestFiles:  true,  // Skip test files by default
-			AggressiveMode: false, // Normal mode by default
+			SkipTestFiles:  boolPtr(true),  // Skip test files by default
+			AggressiveMode: boolPtr(false), // Normal mode by default
 			CustomTestPatterns: []string{},
 		},
 		Thresholds: Thresholds{
@@ -236,13 +236,12 @@ func mergeWithDefaults(config *Config) {
 		config.Scan.FileTypes = defaults.Scan.FileTypes
 	}
 	
-	// For boolean fields, we need to check if they were explicitly set in the config file
-	// Since YAML unmarshaling will set them to false if not present, we need special handling
-	// For now, we'll assume they should use defaults if the config file doesn't specify them
-	if !config.Scan.AggressiveMode && len(config.Scan.CustomTestPatterns) == 0 {
-		// If neither aggressive mode is set nor custom test patterns are provided,
-		// use the default SkipTestFiles behavior
+	// Handle boolean pointers - only set defaults when nil (not explicitly set)
+	if config.Scan.SkipTestFiles == nil {
 		config.Scan.SkipTestFiles = defaults.Scan.SkipTestFiles
+	}
+	if config.Scan.AggressiveMode == nil {
+		config.Scan.AggressiveMode = defaults.Scan.AggressiveMode
 	}
 
 	// Merge thresholds
@@ -365,6 +364,27 @@ func validateOutputPath(path string) error {
 	file.Close()
 
 	return nil
+}
+
+// boolPtr returns a pointer to the given boolean value
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+// GetSkipTestFiles safely returns the SkipTestFiles value with default fallback
+func (s *ScanConfig) GetSkipTestFiles() bool {
+	if s.SkipTestFiles == nil {
+		return true // default value
+	}
+	return *s.SkipTestFiles
+}
+
+// GetAggressiveMode safely returns the AggressiveMode value with default fallback
+func (s *ScanConfig) GetAggressiveMode() bool {
+	if s.AggressiveMode == nil {
+		return false // default value
+	}
+	return *s.AggressiveMode
 }
 
 // GetConfigPaths returns standard configuration file paths

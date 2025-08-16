@@ -551,8 +551,9 @@ func (d *GoStandardNamingDetector) isInterface(typeInfo *types.TypeInfo) bool {
 
 // shouldHaveErSuffix checks if an interface should have -er suffix
 func (d *GoStandardNamingDetector) shouldHaveErSuffix(typeInfo *types.TypeInfo) bool {
-	// This is a simplified check - ideally we'd analyze the interface methods
-	return typeInfo.IsExported && !strings.HasSuffix(typeInfo.Name, "er") && !strings.HasSuffix(typeInfo.Name, "or")
+	// Only single-method interfaces conventionally use -er suffix
+	return typeInfo.IsExported && typeInfo.MethodCount == 1 && 
+		!strings.HasSuffix(typeInfo.Name, "er") && !strings.HasSuffix(typeInfo.Name, "or")
 }
 
 // checkInterfaceNaming validates interface naming patterns

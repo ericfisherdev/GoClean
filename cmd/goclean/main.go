@@ -83,8 +83,8 @@ Examples:
 		
 		// Handle test file configuration
 		if aggressive || includeTests {
-			cfg.Scan.AggressiveMode = true
-			cfg.Scan.SkipTestFiles = false
+			cfg.Scan.AggressiveMode = &[]bool{true}[0]
+			cfg.Scan.SkipTestFiles = &[]bool{false}[0]
 		}
 		
 		// Add custom test patterns if provided
@@ -137,7 +137,7 @@ Examples:
 		
 		// Create and configure scanner engine with test file configuration
 		engine := scanner.NewEngineWithConfig(scanPaths, excludePatterns, fileTypesList, verbose,
-			cfg.Scan.SkipTestFiles, cfg.Scan.AggressiveMode, cfg.Scan.CustomTestPatterns)
+			cfg.Scan.GetSkipTestFiles(), cfg.Scan.GetAggressiveMode(), cfg.Scan.CustomTestPatterns)
 		
 		// Set progress callback for real-time updates
 		progressCallback := func(message string) {

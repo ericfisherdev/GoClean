@@ -433,18 +433,15 @@ func (d *MagicNumberDetector) isMathematicalContext(funcName string) bool {
 
 // findContainingFunction finds the name of the function containing the magic number
 func (d *MagicNumberDetector) findContainingFunction(parent ast.Node, grandparent ast.Node) string {
-	// Walk up the AST to find a function declaration
-	current := parent
-	for current != nil {
-		if funcDecl, ok := current.(*ast.FuncDecl); ok {
-			if funcDecl.Name != nil {
-				return funcDecl.Name.Name
-			}
-		}
-		// Move up one level (this is a simplified approach)
-		current = grandparent
-		grandparent = nil
+	// This would require maintaining a proper parent chain during AST traversal
+	// For now, check both parent and grandparent
+	if funcDecl, ok := parent.(*ast.FuncDecl); ok && funcDecl.Name != nil {
+		return funcDecl.Name.Name
 	}
+	if funcDecl, ok := grandparent.(*ast.FuncDecl); ok && funcDecl.Name != nil {
+		return funcDecl.Name.Name
+	}
+	// TODO: Implement proper parent chain tracking in walkWithFullContext
 	return ""
 }
 
@@ -539,9 +536,9 @@ func (d *MagicNumberDetector) isStandardLibraryBitSizeContext(callExpr *ast.Call
 		"strconv.ParseFloat":  {1}, // strconv.ParseFloat(s, bitSize)
 		"strconv.ParseInt":    {2}, // strconv.ParseInt(s, base, bitSize)
 		"strconv.ParseUint":   {2}, // strconv.ParseUint(s, base, bitSize)
-		"strconv.FormatFloat": {2}, // strconv.FormatFloat(f, fmt, prec, bitSize)
-		"strconv.FormatInt":   {1}, // strconv.FormatInt(i, base)
-		"strconv.FormatUint":  {1}, // strconv.FormatUint(i, base)
+		"strconv.FormatFloat": {3}, // strconv.FormatFloat(f, fmt, prec, bitSize)
+		"strconv.FormatInt":   {},  // strconv.FormatInt(i, base) - no bit size param
+		"strconv.FormatUint":  {},  // strconv.FormatUint(i, base) - no bit size param
 		"math.Float32bits":    {},  // No bit size param, but handles 32-bit
 		"math.Float64bits":    {},  // No bit size param, but handles 64-bit
 	}

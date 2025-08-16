@@ -45,9 +45,8 @@ func DefaultTestPatterns() *TestFilePatterns {
 			"_example_test.go",
 		},
 		JSTestPatterns: []string{
-			".test.js", ".test.ts", ".test.jsx", ".test.tsx",
-			".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx",
-			"__tests__/*.js", "__tests__/*.ts",
+			"*.test.js", "*.test.ts", "*.test.jsx", "*.test.tsx",
+			"*.spec.js", "*.spec.ts", "*.spec.jsx", "*.spec.tsx",
 			"*.test.mjs", "*.spec.mjs",
 		},
 		PHPTestPatterns: []string{
@@ -89,8 +88,9 @@ func DefaultTestPatterns() *TestFilePatterns {
 
 // IsTestFile determines if a file is a test file based on its path and name
 func (tp *TestFilePatterns) IsTestFile(filePath string) bool {
-	fileName := filepath.Base(filePath)
-	dir := filepath.Dir(filePath)
+	normalized := filepath.ToSlash(filePath)
+	fileName := filepath.Base(normalized)
+	dir := filepath.Dir(normalized)
 	
 	// Check Go test patterns
 	for _, suffix := range tp.GoTestSuffixes {
@@ -101,12 +101,18 @@ func (tp *TestFilePatterns) IsTestFile(filePath string) bool {
 	
 	// Check JavaScript/TypeScript patterns
 	for _, pattern := range tp.JSTestPatterns {
-		if matched, _ := filepath.Match(pattern, fileName); matched {
-			return true
+		// treat patterns as suffixes (e.g., "*.test.js" => ".test.js")
+		if strings.HasPrefix(pattern, "*") {
+			suffix := strings.TrimPrefix(pattern, "*")
+			if strings.HasSuffix(fileName, suffix) {
+				return true
+			}
 		}
-		if strings.Contains(filePath, strings.TrimSuffix(pattern, "/*")) {
-			return true
-		}
+	}
+	// common JS test directories
+	if strings.Contains(dir+TestDirSeparator, TestDirSeparator+"__tests__/") ||
+		strings.Contains(dir+TestDirSeparator, TestDirSeparator+"__test__/") {
+		return true
 	}
 	
 	// Check PHP patterns

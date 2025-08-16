@@ -37,7 +37,7 @@ func TestNamingDetector_NonDescriptiveFunctionName(t *testing.T) {
 	for _, v := range violations {
 		if v.Type == models.ViolationTypeNaming && v.Rule == "non-descriptive-function-name" {
 			found = true
-			if !contains(v.Message, "non-descriptive") {
+			if !strings.Contains(v.Message, "non-descriptive") {
 				t.Errorf("Expected message about non-descriptive name, got: %s", v.Message)
 			}
 		}

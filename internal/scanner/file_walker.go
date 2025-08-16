@@ -109,7 +109,7 @@ func (fw *FileWalker) walkPath(rootPath string) ([]*models.FileInfo, error) {
 		}
 		
 		// Check if test file should be skipped
-		if fw.shouldSkipTestFile(path) {
+		if fw.shouldSkipTestFile(filepath.ToSlash(path)) {
 			if fw.verbose {
 				fmt.Printf("Skipping test file: %s\n", path)
 			}
