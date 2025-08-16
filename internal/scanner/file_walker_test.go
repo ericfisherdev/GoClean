@@ -109,7 +109,7 @@ func TestWalkWithSubdirectories(t *testing.T) {
 
 	// Create subdirectories
 	srcDir := filepath.Join(tmpDir, "src")
-	testDir := filepath.Join(tmpDir, "tests")
+	testDir := filepath.Join(tmpDir, "examples")
 	vendorDir := filepath.Join(tmpDir, "vendor")
 
 	for _, dir := range []string{srcDir, testDir, vendorDir} {
@@ -122,7 +122,7 @@ func TestWalkWithSubdirectories(t *testing.T) {
 	// Create test files in subdirectories
 	files := map[string]string{
 		filepath.Join(srcDir, "main.go"):     "Go file",
-		filepath.Join(testDir, "test.go"):    "Go test file",
+		filepath.Join(testDir, "example.go"): "Go example file",
 		filepath.Join(vendorDir, "lib.go"):   "Vendor file",
 		filepath.Join(tmpDir, "root.go"):     "Root file",
 	}
@@ -145,12 +145,29 @@ func TestWalkWithSubdirectories(t *testing.T) {
 	// Should find 3 files (excluding vendor/)
 	if len(foundFiles) != 3 {
 		t.Errorf("Expected 3 files, got %d", len(foundFiles))
+		for i, file := range foundFiles {
+			t.Logf("Found file %d: %s", i+1, file.Path)
+		}
 	}
 
-	// Verify no vendor files
+	// Verify no vendor files and verify expected files are found
+	foundPaths := make(map[string]bool)
 	for _, file := range foundFiles {
+		foundPaths[file.Path] = true
 		if filepath.Dir(file.Path) == vendorDir {
 			t.Errorf("Found file in excluded vendor directory: %s", file.Path)
+		}
+	}
+	
+	expectedFiles := []string{
+		filepath.Join(tmpDir, "root.go"),
+		filepath.Join(srcDir, "main.go"),
+		filepath.Join(testDir, "example.go"),
+	}
+	
+	for _, expected := range expectedFiles {
+		if !foundPaths[expected] {
+			t.Errorf("Expected file %s was not found", expected)
 		}
 	}
 }

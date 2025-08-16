@@ -94,10 +94,39 @@ jobs:
       run: |
         TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
         
-        # Push the tag (this will trigger the release.yml workflow)
+        # Push the tag
         git push origin "${TAG_NAME}"
         
-        echo "🚀 Pushed tag ${TAG_NAME} - release workflow will begin shortly"
+        echo "🚀 Pushed tag ${TAG_NAME}"
+
+    - name: Set up Go for release build
+      if: steps.check_tag.outputs.exists == 'false'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Run tests before release
+      if: steps.check_tag.outputs.exists == 'false'
+      run: make test
+
+    - name: Build release binaries
+      if: steps.check_tag.outputs.exists == 'false'
+      run: make release-build
+      env:
+        VERSION: ${{ steps.get_version.outputs.VERSION }}
+
+    - name: Package release
+      if: steps.check_tag.outputs.exists == 'false'
+      run: make release-package
+      env:
+        VERSION: ${{ steps.get_version.outputs.VERSION }}
+
+    - name: Generate checksums
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        cd releases/${{ steps.get_version.outputs.VERSION }}
+        sha256sum * > checksums.txt
+        cat checksums.txt
 
     - name: Create draft release
       if: steps.check_tag.outputs.exists == 'false'
@@ -115,17 +144,17 @@ jobs:
         trap "rm -f ${RELEASE_NOTES_FILE}" EXIT
         
         # Write release notes to temporary file with proper newlines
-        printf "## GoClean %s\n\n### Changes\nThis release was created from PR #%s: %s\n\n### Previous Version\n%s → %s\n\n### Installation\nDownload the appropriate binary for your platform from the assets below.\n\n### What's Changed\n- See [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md) for detailed changes\n- Compare changes: [\`%s...%s\`](https://github.com/%s/compare/%s...%s)\n\n---\n*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*" \
-               "${VERSION}" "${PR_NUMBER}" "${PR_TITLE}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${LAST_TAG}" "${TAG_NAME}" > "${RELEASE_NOTES_FILE}"
+        printf "## GoClean %s\n\n### Changes\nThis release was created from PR #%s: %s\n\n### Previous Version\n%s → %s\n\n### Installation\nDownload the appropriate binary for your platform from the assets below.\n\n#### Linux (x64)\n\`\`\`bash\nwget https://github.com/%s/releases/download/%s/goclean-%s-linux-amd64.tar.gz\ntar -xzf goclean-%s-linux-amd64.tar.gz\nsudo mv goclean-linux-amd64 /usr/local/bin/goclean\n\`\`\`\n\n#### macOS (Intel)\n\`\`\`bash\nwget https://github.com/%s/releases/download/%s/goclean-%s-darwin-amd64.tar.gz\ntar -xzf goclean-%s-darwin-amd64.tar.gz\nsudo mv goclean-darwin-amd64 /usr/local/bin/goclean\n\`\`\`\n\n#### macOS (Apple Silicon)\n\`\`\`bash\nwget https://github.com/%s/releases/download/%s/goclean-%s-darwin-arm64.tar.gz\ntar -xzf goclean-%s-darwin-arm64.tar.gz\nsudo mv goclean-darwin-arm64 /usr/local/bin/goclean\n\`\`\`\n\n#### Windows\nDownload \`goclean-%s-windows-amd64.zip\`, extract, and add \`goclean-windows-amd64.exe\` to your PATH.\n\n### Verification\n\`\`\`bash\ngoclean version\n\`\`\`\n\n### What's Changed\n- See [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md) for detailed changes\n- Compare changes: [\`%s...%s\`](https://github.com/%s/compare/%s...%s)" \
+               "${VERSION}" "${PR_NUMBER}" "${PR_TITLE}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${VERSION}" "${VERSION}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${VERSION}" "${VERSION}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${VERSION}" "${VERSION}" "${VERSION}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${LAST_TAG}" "${TAG_NAME}" > "${RELEASE_NOTES_FILE}"
 
-        # Create draft release using notes file
+        # Create release with binaries
         gh release create "${TAG_NAME}" \
-          --draft \
           --title "GoClean ${VERSION}" \
           --notes-file "${RELEASE_NOTES_FILE}" \
-          --latest
+          --latest \
+          releases/${VERSION}/*
         
-        echo "📝 Created draft release: ${TAG_NAME}"
+        echo "📦 Created release with binaries: ${TAG_NAME}"
         echo "🔗 Release URL: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME}"
 
     - name: Comment on PR with success
@@ -137,21 +166,21 @@ jobs:
           const tagName = '${{ steps.check_tag.outputs.tag_name }}';
           const lastTag = '${{ steps.last_tag.outputs.last_tag }}';
           
-          const body = "🎉 **Release " + tagName + " has been triggered!**\n\n" +
-                       "### What happens next:\n" +
+          const body = "🎉 **Release " + tagName + " has been published!**\n\n" +
+                       "### What was completed:\n" +
                        "1. ✅ Tag `" + tagName + "` has been created and pushed\n" +
-                       "2. ✅ Draft release has been created\n" +
-                       "3. 🔄 Release workflow is building binaries for all platforms\n" +
-                       "4. 📦 Release will be published automatically when build completes\n\n" +
+                       "2. ✅ Platform binaries built for Linux, macOS, and Windows\n" +
+                       "3. ✅ Release published with downloadable assets\n" +
+                       "4. ✅ Checksums generated for verification\n\n" +
                        "### Links:\n" +
-                       "- 🏷️ [View Tag](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/releases/tag/" + tagName + ")\n" +
-                       "- 🔍 [Compare Changes](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/compare/" + lastTag + "..." + tagName + ")\n" +
-                       "- ⚡ [Monitor Build Progress](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/actions)\n\n" +
+                       "- 🏷️ [View Release](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/releases/tag/" + tagName + ")\n" +
+                       "- 📦 [Download Binaries](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/releases/tag/" + tagName + ")\n" +
+                       "- 🔍 [Compare Changes](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/compare/" + lastTag + "..." + tagName + ")\n\n" +
                        "### Version Info:\n" +
                        "- **Previous:** " + lastTag + "\n" +
                        "- **Current:** " + tagName + "\n" +
                        "- **Source:** VERSION file\n\n" +
-                       "*The release will be available shortly with downloadable binaries for all supported platforms.*";
+                       "*Platform binaries are now available for download! 🚀*";
 
           github.rest.issues.createComment({
             issue_number: context.payload.pull_request.number,
