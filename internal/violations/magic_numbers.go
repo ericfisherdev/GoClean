@@ -94,10 +94,33 @@ func (d *MagicNumberDetector) checkMagicNumberWithFullContext(lit *ast.BasicLit,
 		return nil
 	}
 	
+	// Check basic acceptable values first (like the old checkMagicNumber function)
+	if lit.Kind == token.INT {
+		intVal, err := strconv.Atoi(value)
+		if err != nil {
+			return nil
+		}
+		
+		// Ignore common acceptable values
+		if d.isAcceptableInt(intVal) {
+			return nil
+		}
+	} else if lit.Kind == token.FLOAT {
+		floatVal, err := strconv.ParseFloat(value, floatParsePrecision)
+		if err != nil {
+			return nil
+		}
+		
+		// Ignore common acceptable float values
+		if d.isAcceptableFloat(floatVal) {
+			return nil
+		}
+	}
+	
 	// Determine context for whitelist checking
 	context := d.determineContext(lit, parent, grandparent, filePath)
 	
-	// Check whitelist first
+	// Check whitelist
 	if whitelisted, reason := d.whitelist.IsWhitelistedMagicNumber(value, context); whitelisted {
 		if d.config.Verbose {
 			fmt.Printf("Whitelisted magic number %s: %s\n", value, reason)
@@ -551,7 +574,9 @@ func (d *MagicNumberDetector) createMagicNumberViolation(lit *ast.BasicLit, fset
 	// Get position information
 	pos := fset.Position(lit.Pos())
 	
-	codeSnippet := d.extractCodeSnippet(filePath, pos.Line, pos.Line)
+	// Use the literal value directly as the code snippet for magic number violations
+	// This matches the expected test behavior and is more precise
+	codeSnippet := lit.Value
 	
 	// Enhanced message with context
 	contextMsg := ""

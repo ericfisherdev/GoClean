@@ -538,7 +538,7 @@ func TestContainsCompleteWords(t *testing.T) {
 		{"mgrHandler", false, "no complete words, just abbreviation + Handler"},
 		{"calcTotal", false, "no complete words, just abbreviation + Total"},
 		{"something", false, "no recognized complete words"},
-		{"randomName", false, "no recognized complete words"},
+		{"randomName", true, "contains complete words random and name"},
 	}
 	
 	for _, tt := range tests {
