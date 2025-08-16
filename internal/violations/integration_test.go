@@ -1,9 +1,11 @@
 package violations
 import (
+	"go/ast"
 	"go/parser"
+	"go/token"
 	"testing"
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 func TestDetectorRegistry_IntegrationTest(t *testing.T) {
 	// Create a registry with all detectors

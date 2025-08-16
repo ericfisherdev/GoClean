@@ -1,10 +1,12 @@
 package violations
 import (
+	"go/ast"
 	"go/parser"
+	"go/token"
 	"strings"
 	"testing"
 	"github.com/ericfisherdev/goclean/internal/models"
-	"github.com/ericfisherdev/goclean/internal/
+	"github.com/ericfisherdev/goclean/internal/types"
 )
 func TestNewStructureDetector(t *testing.T) {
 	detector := NewStructureDetector(nil)

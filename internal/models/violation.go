@@ -11,6 +11,7 @@ const (
 	SeverityCritical
 )
 
+// String returns the string representation of the Severity level.
 func (s Severity) String() string {
 	switch s {
 	case SeverityInfo:

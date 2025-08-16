@@ -46,6 +46,14 @@
             --border-color: #444;
         }
 
+        /* Apply dark theme to body and html */
+        .dark-theme,
+        .dark-theme body,
+        .dark-theme html {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
         .light-theme, :root {
             --bg-primary: #ffffff;
             --bg-secondary: #f8f9fa;
@@ -269,25 +277,223 @@
                 page-break-inside: avoid;
             }
         }
-        /* Consolidated styles */
+        /* Comprehensive Dark Theme Styles */
         .dark-theme .card {
-            background-color: var(--bg-secondary);
-            border-color: var(--border-color);
-            color: var(--text-primary);
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
         }
+        
+        .dark-theme .card-header {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .dark-theme .card-body {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+        
         .dark-theme .table {
-            color: var(--text-primary);
+            color: var(--text-primary) !important;
+            background-color: var(--bg-secondary) !important;
         }
+        
         .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > td,
         .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > th {
-            background-color: var(--bg-secondary);
+            background-color: var(--bg-tertiary) !important;
+        }
+        
+        .dark-theme .table th,
+        .dark-theme .table td {
+            border-color: var(--border-color) !important;
+        }
+        
+        /* Form elements */
+        .dark-theme .form-control,
+        .dark-theme .form-select {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .dark-theme .form-control:focus,
+        .dark-theme .form-select:focus {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--primary-color) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+        }
+        
+        /* Buttons */
+        .dark-theme .btn-outline-primary {
+            color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+        
+        .dark-theme .btn-outline-primary:hover {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+        
+        .dark-theme .btn-outline-secondary {
+            color: var(--text-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        .dark-theme .btn-outline-secondary:hover {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Accordion */
+        .dark-theme .accordion-item {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        .dark-theme .accordion-button {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        .dark-theme .accordion-button:not(.collapsed) {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+        
+        .dark-theme .accordion-button:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+        }
+        
+        .dark-theme .accordion-body {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Alerts */
+        .dark-theme .alert-info {
+            background-color: rgba(13, 202, 240, 0.1) !important;
+            border-color: rgba(13, 202, 240, 0.2) !important;
+            color: #9eeaf9 !important;
+        }
+        
+        .dark-theme .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-color: rgba(255, 193, 7, 0.2) !important;
+            color: #ffecb5 !important;
+        }
+        
+        .dark-theme .alert-success {
+            background-color: rgba(25, 135, 84, 0.1) !important;
+            border-color: rgba(25, 135, 84, 0.2) !important;
+            color: #a3d9a5 !important;
+        }
+        
+        /* Small text and muted elements */
+        .dark-theme .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        .dark-theme small,
+        .dark-theme .small {
+            color: var(--text-secondary) !important;
+        }
+        
+        /* Badges need to maintain their original colors for meaning */
+        .dark-theme .badge {
+            color: white !important;
+        }
+        
+        /* Navbar enhancements for dark theme */
+        .dark-theme .navbar-dark .navbar-brand,
+        .dark-theme .navbar-dark .navbar-text {
+            color: var(--text-primary) !important;
+        }
+        
+        /* Input group styling */
+        .dark-theme .input-group-text {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Dropdown menus */
+        .dark-theme .dropdown-menu {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        .dark-theme .dropdown-item {
+            color: var(--text-primary) !important;
+        }
+        
+        .dark-theme .dropdown-item:hover,
+        .dark-theme .dropdown-item:focus {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Code and pre elements */
+        .dark-theme code {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .dark-theme pre {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        /* Links */
+        .dark-theme a {
+            color: #66b3ff !important;
+        }
+        
+        .dark-theme a:hover {
+            color: #4da6ff !important;
+        }
+        
+        /* Ensure container and body background */
+        .dark-theme .container,
+        .dark-theme .container-fluid {
+            background-color: transparent !important;
         }
         .code-snippet {
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
             font-size: 0.85em;
             border-radius: var(--border-radius);
             background: var(--bg-secondary);
+            font-family: 'SF Mono', Monaco, 'Inconsolata', 'Fira Code', 'Droid Sans Mono', Consolas, 'Courier New', monospace;
+            line-height: 1.4;
+            white-space: pre;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        .violation-line {
+            background-color: #ffebee !important;
+            color: #c62828;
+            font-weight: 500;
+            position: relative;
+        }
+        .dark-theme .violation-line {
+            background-color: #4a1a1a !important;
+            color: #ff8a80;
+        }
+        .violation-line::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #dc3545;
         }
         .auto-refresh-indicator {
             position: fixed;
@@ -362,7 +568,7 @@
         </div>
     </nav>
 
-    <div class="container-fluid py-4 fade-in" id="main-content">
+    <div class="container py-4 fade-in" id="main-content" style="max-width: 1400px;">
         <!-- Summary Cards -->
         <div class="row mb-4">
             <div class="col-md-3">

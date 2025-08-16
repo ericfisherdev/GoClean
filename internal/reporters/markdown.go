@@ -1,3 +1,4 @@
+// Package reporters provides output formatters for clean code analysis reports.
 package reporters
 
 import (

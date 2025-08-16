@@ -11,20 +11,50 @@ import (
 
 // FileWalker handles directory traversal and file discovery
 type FileWalker struct {
-	includePaths []string
-	excludePatterns []string
-	fileTypes    []string
-	verbose      bool
+	includePaths      []string
+	excludePatterns   []string
+	fileTypes         []string
+	verbose           bool
+	skipTestFiles     bool
+	aggressiveMode    bool
+	testPatterns      *TestFilePatterns
+	customTestPatterns []string
 }
 
 // NewFileWalker creates a new FileWalker instance
 func NewFileWalker(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool) *FileWalker {
 	return &FileWalker{
-		includePaths: includePaths,
-		excludePatterns: excludePatterns,
-		fileTypes:    fileTypes,
-		verbose:      verbose,
+		includePaths:      includePaths,
+		excludePatterns:   excludePatterns,
+		fileTypes:         fileTypes,
+		verbose:           verbose,
+		skipTestFiles:     true, // Default to skipping test files
+		aggressiveMode:    false,
+		testPatterns:      DefaultTestPatterns(),
+		customTestPatterns: []string{},
 	}
+}
+
+// NewFileWalkerWithConfig creates a new FileWalker with test file configuration
+func NewFileWalkerWithConfig(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool, 
+	skipTestFiles bool, aggressiveMode bool, customTestPatterns []string) *FileWalker {
+	walker := &FileWalker{
+		includePaths:       includePaths,
+		excludePatterns:    excludePatterns,
+		fileTypes:          fileTypes,
+		verbose:            verbose,
+		skipTestFiles:      skipTestFiles,
+		aggressiveMode:     aggressiveMode,
+		testPatterns:       DefaultTestPatterns(),
+		customTestPatterns: customTestPatterns,
+	}
+	
+	// Add custom test patterns if provided
+	if len(customTestPatterns) > 0 {
+		walker.testPatterns.AddCustomPatterns(customTestPatterns)
+	}
+	
+	return walker
 }
 
 // Walk traverses the specified paths and returns a list of files to scan
@@ -78,6 +108,14 @@ func (fw *FileWalker) walkPath(rootPath string) ([]*models.FileInfo, error) {
 			return nil
 		}
 		
+		// Check if test file should be skipped
+		if fw.shouldSkipTestFile(path) {
+			if fw.verbose {
+				fmt.Printf("Skipping test file: %s\n", path)
+			}
+			return nil
+		}
+		
 		// Check file type filter
 		if !fw.isAllowedFileType(path) {
 			return nil
@@ -122,6 +160,22 @@ func (fw *FileWalker) shouldExclude(path string) bool {
 		}
 	}
 	return false
+}
+
+// shouldSkipTestFile determines if a test file should be skipped based on configuration
+func (fw *FileWalker) shouldSkipTestFile(path string) bool {
+	// If in aggressive mode, don't skip any test files
+	if fw.aggressiveMode {
+		return false
+	}
+	
+	// If not skipping test files, don't skip
+	if !fw.skipTestFiles {
+		return false
+	}
+	
+	// Check if this is a test file
+	return fw.testPatterns.IsTestFile(path)
 }
 
 // matchesPattern checks if a path matches a pattern.

@@ -1,3 +1,6 @@
+// Package config provides configuration management for GoClean.
+// It handles loading, parsing, and validating configuration files,
+// as well as providing default values for scanning thresholds and output options.
 package config
 
 import (
@@ -6,6 +9,16 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Default threshold constants
+const (
+	DefaultFunctionLines        = 25
+	DefaultCyclomaticComplexity = 8
+	DefaultParameters           = 4
+	DefaultNestingDepth         = 3
+	DefaultClassLines           = 150
+	DefaultRefreshInterval      = 10
 )
 
 // Config represents the application configuration
@@ -18,9 +31,14 @@ type Config struct {
 
 // ScanConfig contains scanning-related settings
 type ScanConfig struct {
-	Paths     []string `yaml:"paths"`
-	Exclude   []string `yaml:"exclude"`
-	FileTypes []string `yaml:"file_types"`
+	Paths            []string `yaml:"paths"`
+	Exclude          []string `yaml:"exclude"`
+	FileTypes        []string `yaml:"file_types"`
+	
+	// New test file handling options
+	SkipTestFiles    bool     `yaml:"skip_test_files"`    // Default: true
+	AggressiveMode   bool     `yaml:"aggressive_mode"`    // Default: false
+	CustomTestPatterns []string `yaml:"custom_test_patterns"`
 }
 
 // Thresholds contains clean code thresholds
@@ -128,8 +146,6 @@ func GetDefaultConfig() *Config {
 			Exclude: []string{
 				"vendor/",
 				"node_modules/",
-				"*.test.go",
-				"*_test.go",
 				".git/",
 				"testdata/",
 				"build/",
@@ -147,19 +163,22 @@ func GetDefaultConfig() *Config {
 				".h",
 				".hpp",
 			},
+			SkipTestFiles:  true,  // Skip test files by default
+			AggressiveMode: false, // Normal mode by default
+			CustomTestPatterns: []string{},
 		},
 		Thresholds: Thresholds{
-			FunctionLines:        25,
-			CyclomaticComplexity: 8,
-			Parameters:           4,
-			NestingDepth:         3,
-			ClassLines:           150,
+			FunctionLines:        DefaultFunctionLines,
+			CyclomaticComplexity: DefaultCyclomaticComplexity,
+			Parameters:           DefaultParameters,
+			NestingDepth:         DefaultNestingDepth,
+			ClassLines:           DefaultClassLines,
 		},
 		Output: OutputConfig{
 			HTML: HTMLConfig{
 				Path:            "./reports/clean-code-report.html",
 				AutoRefresh:     false,
-				RefreshInterval: 10,
+				RefreshInterval: DefaultRefreshInterval,
 				Theme:           "auto",
 			},
 			Markdown: MarkdownConfig{
@@ -215,6 +234,15 @@ func mergeWithDefaults(config *Config) {
 	}
 	if len(config.Scan.FileTypes) == 0 {
 		config.Scan.FileTypes = defaults.Scan.FileTypes
+	}
+	
+	// For boolean fields, we need to check if they were explicitly set in the config file
+	// Since YAML unmarshaling will set them to false if not present, we need special handling
+	// For now, we'll assume they should use defaults if the config file doesn't specify them
+	if !config.Scan.AggressiveMode && len(config.Scan.CustomTestPatterns) == 0 {
+		// If neither aggressive mode is set nor custom test patterns are provided,
+		// use the default SkipTestFiles behavior
+		config.Scan.SkipTestFiles = defaults.Scan.SkipTestFiles
 	}
 
 	// Merge thresholds

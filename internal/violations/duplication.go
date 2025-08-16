@@ -4,17 +4,26 @@ import (
 	"crypto/md5"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/token"
 	"strings"
+	"sync"
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/types"
+)
+
+// Duplication detection constants
+const (
+	MinFunctionLinesForDuplication = 5
+	SameFileLineThreshold          = 10
 )
 
 // DuplicationDetector detects code duplication across files
 type DuplicationDetector struct {
 	config    *DetectorConfig
 	hashCache map[string][]CodeBlock
+	mutex     sync.RWMutex
 }
 
 // CodeBlock represents a block of code for duplication analysis
@@ -64,9 +73,9 @@ func (d *DuplicationDetector) Detect(fileInfo *models.FileInfo, astInfo interfac
 			if funcDecl, ok := n.(*ast.FuncDecl); ok && funcDecl.Body != nil {
 				body := extractFunctionBody(funcDecl, goAstInfo.FileSet)
 				
-				// Only check functions with more than 5 lines
+				// Only check functions with more than minimum required lines
 				lines := strings.Split(body, "\n")
-				if len(lines) < 5 {
+				if len(lines) < MinFunctionLinesForDuplication {
 					return true
 				}
 				
@@ -85,12 +94,14 @@ func (d *DuplicationDetector) Detect(fileInfo *models.FileInfo, astInfo interfac
 					Hash:      hash,
 				}
 				
-				// Check if we've seen this code block before
-				if existing, found := d.hashCache[hash]; found {
+				// Check if we've seen this code block before (with thread safety)
+				d.mutex.Lock()
+				existing, found := d.hashCache[hash]
+				if found {
 					for _, existingBlock := range existing {
-						// Don't report duplicates in the same file within 10 lines (could be intentional patterns)
+						// Don't report duplicates in the same file within threshold lines (could be intentional patterns)
 						if existingBlock.File == block.File && 
-						   abs(existingBlock.StartLine - block.StartLine) < 10 {
+						   abs(existingBlock.StartLine - block.StartLine) < SameFileLineThreshold {
 							continue
 						}
 						
@@ -110,6 +121,7 @@ func (d *DuplicationDetector) Detect(fileInfo *models.FileInfo, astInfo interfac
 				
 				// Add to cache
 				d.hashCache[hash] = append(d.hashCache[hash], block)
+				d.mutex.Unlock()
 			}
 			return true
 		})
@@ -185,12 +197,23 @@ func extractFunctionBody(funcDecl *ast.FuncDecl, fset *token.FileSet) string {
 		return ""
 	}
 	
-	start := fset.Position(funcDecl.Body.Pos())
-	end := fset.Position(funcDecl.Body.End())
+	// Create a new function declaration with just the body for formatting
+	// This removes the function name to focus on the actual code structure
+	tempFunc := &ast.FuncDecl{
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{},
+		},
+		Body: funcDecl.Body,
+	}
 	
-	// This is a simplified extraction - in a real implementation,
-	// you might want to use go/format to get the actual source code
-	return fmt.Sprintf("func %s() { /* lines %d-%d */ }", funcDecl.Name.Name, start.Line, end.Line)
+	// Format the function body to get the actual source code
+	var buf strings.Builder
+	if err := format.Node(&buf, fset, tempFunc.Body); err != nil {
+		// Fallback to a simple representation if formatting fails
+		return fmt.Sprintf("/* function body with %d statements */", len(funcDecl.Body.List))
+	}
+	
+	return buf.String()
 }
 
 // Reset clears the hash cache (useful when starting a new scan)

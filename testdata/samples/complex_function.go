@@ -1,3 +1,4 @@
+// Package samples provides test cases demonstrating various clean code violations.
 package samples
 
 // ComplexFunction has high cyclomatic complexity for testing

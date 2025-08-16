@@ -1,3 +1,4 @@
+// Package violations provides detectors for various clean code violations in Go source code.
 package violations
 
 import (

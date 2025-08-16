@@ -109,8 +109,8 @@ func TestDefaultDetectorConfig(t *testing.T) {
 	if config.MaxMethods != 20 {
 		t.Errorf("Expected MaxMethods 20, got %d", config.MaxMethods)
 	}
-	if config.AllowSingleLetterVars {
-		t.Error("Expected AllowSingleLetterVars to be false")
+	if !config.AllowSingleLetterVars {
+		t.Error("Expected AllowSingleLetterVars to be true")
 	}
 	if !config.RequireCamelCase {
 		t.Error("Expected RequireCamelCase to be true")

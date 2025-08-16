@@ -1,3 +1,4 @@
+// Package violations provides detectors for various clean code violations in Go source code.
 package violations
 
 import (
@@ -67,6 +68,11 @@ type DetectorConfig struct {
 	RequireCamelCase     bool
 	RequireCommentsForPublic bool
 	
+	// Test file handling
+	AggressiveMode       bool
+	SkipTestFiles        bool
+	Verbose              bool
+	
 	// Severity classification config
 	SeverityConfig *SeverityConfig
 }
@@ -80,9 +86,12 @@ func DefaultDetectorConfig() *DetectorConfig {
 		MaxNestingDepth:      3,
 		MaxClassLines:        150,
 		MaxMethods:          20,
-		AllowSingleLetterVars: false,
+		AllowSingleLetterVars: true,
 		RequireCamelCase:     true,
 		RequireCommentsForPublic: true,
+		AggressiveMode:       false,
+		SkipTestFiles:        true,
+		Verbose:              false,
 		SeverityConfig:       DefaultSeverityConfig(),
 	}
 }

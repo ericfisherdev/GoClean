@@ -1,3 +1,4 @@
+// Package models defines data structures for representing code analysis reports and violations.
 package models
 
 import (

@@ -1,3 +1,4 @@
+// Package samples provides test cases demonstrating various clean code violations.
 package samples
 
 // BadNaming demonstrates poor naming conventions
@@ -19,6 +20,7 @@ func ProcessDataAndStuff(data []byte) {
 // MAGIC_NUMBER demonstrates magic numbers
 const MAGIC_NUMBER = 42
 
+// CalculateSomething demonstrates vague function naming and magic number usage.
 func CalculateSomething() int {
 	return MAGIC_NUMBER * 100 // Another magic number
 }
