@@ -233,55 +233,36 @@ func (d *MagicNumberDetector) isAcceptableFloat(value float64) bool {
 }
 
 // walkWithFullContext walks the AST while tracking parent and grandparent nodes
-func (d *MagicNumberDetector) walkWithFullContext(node ast.Node, parent ast.Node, grandparent ast.Node, fn func(ast.Node, ast.Node, ast.Node) bool) {
-	if node == nil {
+func (d *MagicNumberDetector) walkWithFullContext(root ast.Node, _ ast.Node, _ ast.Node, fn func(ast.Node, ast.Node, ast.Node) bool) {
+	if root == nil {
 		return
 	}
-	
-	if !fn(node, parent, grandparent) {
-		return
-	}
-	
-	// Walk children with current node as parent and previous parent as grandparent
-	switch n := node.(type) {
-	case *ast.File:
-		for _, decl := range n.Decls {
-			d.walkWithFullContext(decl, node, parent, fn)
+	var ancestors []ast.Node
+	ast.Inspect(root, func(n ast.Node) bool {
+		if n == nil {
+			// Post-order pop
+			if len(ancestors) > 0 {
+				ancestors = ancestors[:len(ancestors)-1]
+			}
+			return false
 		}
-	case *ast.GenDecl:
-		for _, spec := range n.Specs {
-			d.walkWithFullContext(spec, node, parent, fn)
+		// Determine parent and grandparent from the stack
+		var parent, grandparent ast.Node
+		if l := len(ancestors); l >= 1 {
+			parent = ancestors[l-1]
 		}
-	case *ast.ValueSpec:
-		for _, value := range n.Values {
-			d.walkWithFullContext(value, node, parent, fn)
+		if l := len(ancestors); l >= 2 {
+			grandparent = ancestors[l-2]
 		}
-	case *ast.FuncDecl:
-		if n.Body != nil {
-			d.walkWithFullContext(n.Body, node, parent, fn)
+		// Push current node
+		ancestors = append(ancestors, n)
+		// Invoke callback; if it returns false, pop and skip children
+		if !fn(n, parent, grandparent) {
+			ancestors = ancestors[:len(ancestors)-1]
+			return false
 		}
-	case *ast.BlockStmt:
-		for _, stmt := range n.List {
-			d.walkWithFullContext(stmt, node, parent, fn)
-		}
-	case *ast.AssignStmt:
-		for _, expr := range n.Rhs {
-			d.walkWithFullContext(expr, node, parent, fn)
-		}
-	case *ast.ExprStmt:
-		d.walkWithFullContext(n.X, node, parent, fn)
-	case *ast.CallExpr:
-		for _, arg := range n.Args {
-			d.walkWithFullContext(arg, node, parent, fn)
-		}
-	case *ast.BinaryExpr:
-		d.walkWithFullContext(n.X, node, parent, fn)
-		d.walkWithFullContext(n.Y, node, parent, fn)
-	case *ast.UnaryExpr:
-		d.walkWithFullContext(n.X, node, parent, fn)
-	case *ast.ParenExpr:
-		d.walkWithFullContext(n.X, node, parent, fn)
-	}
+		return true
+	})
 }
 
 // isInAcceptableFullContext checks if a literal is in a context where it shouldn't be flagged
@@ -546,12 +527,6 @@ func (d *MagicNumberDetector) isStandardLibraryBitSizeContext(callExpr *ast.Call
 	positions, exists := bitSizeFunctions[funcName]
 	if !exists {
 		return false
-	}
-
-	// For functions without bit size parameters, check if the literal is a valid bit size
-	if len(positions) == 0 {
-		value := lit.Value
-		return value == "32" || value == "64"
 	}
 
 	// Check if the literal is at one of the bit size parameter positions

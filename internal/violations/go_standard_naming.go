@@ -16,6 +16,15 @@ const (
 	goStandardNamingRule = "go-standard-naming"
 )
 
+var commonInitialisms = map[string]struct{}{
+	"API": {}, "ASCII": {}, "CPU": {}, "CSS": {}, "DNS": {}, "EOF": {}, "GUID": {},
+	"HTML": {}, "HTTP": {}, "HTTPS": {}, "ID": {}, "IP": {}, "JSON": {}, "LHS": {},
+	"QPS": {}, "RAM": {}, "RHS": {}, "RPC": {}, "SLA": {}, "SMTP": {}, "SQL": {},
+	"SSH": {}, "TCP": {}, "TLS": {}, "TTL": {}, "UDP": {}, "UI": {}, "UID": {},
+	"UUID": {}, "URI": {}, "URL": {}, "UTF8": {}, "VM": {}, "XML": {}, "XMPP": {},
+	"XSRF": {}, "XSS": {},
+}
+
 // GoStandardNamingDetector enforces Go standard naming conventions
 type GoStandardNamingDetector struct {
 	config        *DetectorConfig
@@ -49,6 +58,11 @@ func (d *GoStandardNamingDetector) Detect(fileInfo *models.FileInfo, astInfo int
 
 	// Only analyze Go files
 	if !strings.HasSuffix(fileInfo.Path, ".go") {
+		return violations
+	}
+
+	// Optionally skip test files
+	if d.config != nil && d.config.SkipTestFiles && strings.HasSuffix(fileInfo.Path, "_test.go") {
 		return violations
 	}
 
@@ -336,18 +350,36 @@ func (d *GoStandardNamingDetector) checkVariableNaming(variable *types.VariableI
 	}
 
 	// Check for error variable naming convention
-	if d.isErrorType(variable.Type) && !strings.HasSuffix(variable.Name, "Err") && variable.Name != "err" {
-		violations = append(violations, &models.Violation{
-			Type:        models.ViolationTypeNaming,
-			Severity:    models.SeverityLow,
-			Message:     fmt.Sprintf("Error variable '%s' should end with 'Err' or be named 'err'", variable.Name),
-			File:        filePath,
-			Line:        variable.Line,
-			Column:      variable.Column,
-			Rule:        goStandardNamingRule,
-			Suggestion:  "Use 'err' for local error variables or suffix with 'Err' for others",
-			CodeSnippet: fmt.Sprintf("var %s error", variable.Name),
-		})
+	if d.isErrorType(variable.Type) {
+		if variable.IsExported {
+			// Exported sentinel errors conventionally use 'Err' prefix (e.g., ErrNotFound)
+			if !strings.HasPrefix(variable.Name, "Err") {
+				violations = append(violations, &models.Violation{
+					Type:        models.ViolationTypeNaming,
+					Severity:    models.SeverityLow,
+					Message:     fmt.Sprintf("Exported error variable '%s' should be prefixed with 'Err'", variable.Name),
+					File:        filePath,
+					Line:        variable.Line,
+					Column:      variable.Column,
+					Rule:        goStandardNamingRule,
+					Suggestion:  "Use 'ErrX' style for exported sentinel errors (e.g., ErrNotFound); use 'err' for local error variables",
+					CodeSnippet: fmt.Sprintf("var %s error", variable.Name),
+				})
+			}
+		} else if variable.Name != "err" {
+			// Local errors should be named 'err'
+			violations = append(violations, &models.Violation{
+				Type:        models.ViolationTypeNaming,
+				Severity:    models.SeverityLow,
+				Message:     fmt.Sprintf("Local error variable '%s' should be named 'err'", variable.Name),
+				File:        filePath,
+				Line:        variable.Line,
+				Column:      variable.Column,
+				Rule:        goStandardNamingRule,
+				Suggestion:  "Name local error variables 'err'",
+				CodeSnippet: fmt.Sprintf("var %s error", variable.Name),
+			})
+		}
 	}
 
 	return violations
@@ -494,15 +526,30 @@ func (d *GoStandardNamingDetector) suggestCorrectExportCasing(name string, isExp
 
 // hasInvalidConsecutiveCase checks for invalid consecutive uppercase letters
 func (d *GoStandardNamingDetector) hasInvalidConsecutiveCase(name string) bool {
-	consecutiveUpper := 0
-	for _, r := range name {
+	// Treat runs of 3+ uppercase letters as valid if they are common initialisms (HTTP, URL, JSON, etc.)
+	runStart := -1
+	for i, r := range name {
 		if unicode.IsUpper(r) {
-			consecutiveUpper++
-			if consecutiveUpper > 2 { // Allow for common acronyms like HTTP, URL
-				return true
+			if runStart == -1 {
+				runStart = i
 			}
-		} else {
-			consecutiveUpper = 0
+			continue
+		}
+		if runStart != -1 {
+			if i-runStart >= 3 {
+				seq := name[runStart:i]
+				if _, ok := commonInitialisms[seq]; !ok {
+					return true
+				}
+			}
+			runStart = -1
+		}
+	}
+	// Trailing run
+	if runStart != -1 && len(name)-runStart >= 3 {
+		seq := name[runStart:]
+		if _, ok := commonInitialisms[seq]; !ok {
+			return true
 		}
 	}
 	return false

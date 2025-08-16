@@ -27,6 +27,9 @@ type TestFilePatterns struct {
 	// C#/.NET test files
 	DotNetTestPatterns []string
 	
+	// User-provided patterns
+	CustomPatterns []string
+	
 	// Additional test directories
 	TestDirectories []string
 }
@@ -77,6 +80,7 @@ func DefaultTestPatterns() *TestFilePatterns {
 			"*Spec.cs",
 			"*.Spec.cs",
 		},
+		CustomPatterns: []string{},
 		TestDirectories: []string{
 			"test/", "tests/", "testing/", "spec/", "specs/",
 			"__test__/", "__tests__/", "__testing__/",
@@ -152,15 +156,35 @@ func (tp *TestFilePatterns) IsTestFile(filePath string) bool {
 			return true
 		}
 	}
+
+	// Check custom user-provided patterns
+	for _, pattern := range tp.CustomPatterns {
+		// Treat leading-* patterns as suffixes
+		if strings.HasPrefix(pattern, "*") && !strings.Contains(pattern, "/") {
+			if strings.HasSuffix(fileName, strings.TrimPrefix(pattern, "*")) {
+				return true
+			}
+			continue
+		}
+		// Otherwise, try glob matching against path or name depending on whether it contains a directory
+		target := fileName
+		if strings.Contains(pattern, "/") {
+			target = normalized
+		}
+		// Basic '**' fallback: collapse to '*' (documented approximation)
+		glob := strings.ReplaceAll(pattern, "**", "*")
+		if matched, _ := filepath.Match(glob, target); matched {
+			return true
+		}
+	}
 	
 	return false
 }
 
 // AddCustomPatterns allows adding custom test patterns to the existing set
 func (tp *TestFilePatterns) AddCustomPatterns(customPatterns []string) {
-	// Add custom patterns to Go test suffixes for now
-	// This could be enhanced to categorize by language type
-	tp.GoTestSuffixes = append(tp.GoTestSuffixes, customPatterns...)
+	// Keep as general patterns (suffix or glob)
+	tp.CustomPatterns = append(tp.CustomPatterns, customPatterns...)
 }
 
 // GetAllPatterns returns all patterns as a flat slice for debugging
