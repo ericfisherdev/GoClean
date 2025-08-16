@@ -6,7 +6,7 @@
 # It reads from the VERSION file in the repository root.
 #
 # Usage: ./get-version.sh
-# Output: Version string (e.g., "0.2.0")
+# Output: Version string (e.g., "2025.08.16.2")
 #
 # Exit codes:
 #   0 - Success
@@ -31,10 +31,10 @@ fi
 # Read version from file
 VERSION=$(cat "${VERSION_FILE}" | tr -d '[:space:]')
 
-# Validate version format (semantic versioning)
-if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\.\-]+)?(\+[a-zA-Z0-9\.\-]+)?$ ]]; then
+# Validate version format (CalVer: YYYY.MM.DD.PATCH)
+if [[ ! "${VERSION}" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]]; then
     echo "ERROR: Invalid version format: ${VERSION}" >&2
-    echo "Version must follow semantic versioning (e.g., 1.2.3, 1.2.3-beta.1)" >&2
+    echo "Version must follow CalVer format YYYY.MM.DD.PATCH (e.g., 2025.08.16.2)" >&2
     exit 2
 fi
 
