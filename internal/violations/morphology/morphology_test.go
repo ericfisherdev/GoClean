@@ -439,3 +439,107 @@ func BenchmarkProgrammingTermAnalyzer_AnalyzeTerm(b *testing.B) {
 		analyzer.AnalyzeProgrammingTerm(term)
 	}
 }
+
+// TestProgrammingTermAnalyzer_UnicodeSupport tests Unicode handling in camelCase detection and word component extraction
+func TestProgrammingTermAnalyzer_UnicodeSupport(t *testing.T) {
+	engine := NewMorphologyEngine()
+	analyzer := NewProgrammingTermAnalyzer(engine)
+	
+	testCases := []struct {
+		term               string
+		expectedComponents []string
+		description        string
+	}{
+		{"GödelNumber", []string{"gödel", "number"}, "German umlaut should be handled correctly"},
+		{"ΔTime", []string{"δ", "time"}, "Greek letters should be handled correctly"},
+		{"naïveBayes", []string{"naïve", "bayes"}, "French accent should be handled correctly"},
+		{"HTTPServer", []string{"http", "server"}, "Acronym followed by word should split correctly"},
+		{"userID", []string{"user", "id"}, "Word followed by acronym should split correctly"},
+		{"SHA256Sum", []string{"sha", "256", "sum"}, "Acronym-number-word should split correctly"},
+		{"userID123", []string{"user", "id", "123"}, "Word-acronym-number should split correctly"},
+		{"getUser2Factor", []string{"get", "user", "2", "factor"}, "Number in middle should create boundary"},
+		{"XMLHttpRequest", []string{"xml", "http", "request"}, "Multiple acronyms should split correctly"},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.term, func(t *testing.T) {
+			result := analyzer.AnalyzeProgrammingTerm(tc.term)
+			
+			if len(result.WordComponents) != len(tc.expectedComponents) {
+				t.Errorf("For term '%s': expected %d components %v, got %d: %v", 
+					tc.term, len(tc.expectedComponents), tc.expectedComponents, 
+					len(result.WordComponents), result.WordComponents)
+				return
+			}
+			
+			for i, expected := range tc.expectedComponents {
+				if i < len(result.WordComponents) && result.WordComponents[i] != expected {
+					t.Errorf("For term '%s': expected component[%d]='%s', got '%s'", 
+						tc.term, i, expected, result.WordComponents[i])
+				}
+			}
+		})
+	}
+}
+
+// TestProgrammingTermAnalyzer_CamelCaseUnicode tests Unicode support in camelCase detection
+func TestProgrammingTermAnalyzer_CamelCaseUnicode(t *testing.T) {
+	engine := NewMorphologyEngine()
+	analyzer := NewProgrammingTermAnalyzer(engine)
+	
+	testCases := []struct {
+		term           string
+		expectedCamel  bool
+		description    string
+	}{
+		{"naïveBayes", true, "French accent in camelCase should be detected"},
+		{"getUserNaïve", true, "camelCase with Unicode should be detected"},
+		{"δTime", true, "Lowercase Unicode first character should be camelCase"},
+		{"gödelNumber", true, "Lowercase Unicode first character should be camelCase"},
+		{"ΔTime", false, "Uppercase Greek first character should not be camelCase"},
+		{"αβγTest", true, "Lowercase Greek followed by uppercase should be camelCase"},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.term, func(t *testing.T) {
+			result := analyzer.AnalyzeProgrammingTerm(tc.term)
+			
+			if result.IsCamelCase != tc.expectedCamel {
+				t.Errorf("For term '%s': expected IsCamelCase=%v, got %v", 
+					tc.term, tc.expectedCamel, result.IsCamelCase)
+			}
+		})
+	}
+}
+
+// TestProgrammingTermAnalyzer_NilMorphEngineHandling tests that nil morphEngine is handled gracefully
+func TestProgrammingTermAnalyzer_NilMorphEngineHandling(t *testing.T) {
+	// Create analyzer with nil morphEngine
+	analyzer := NewProgrammingTermAnalyzer(nil)
+	
+	testCases := []string{
+		"getUserById",
+		"HTTPServer", 
+		"validate",
+		"naïveBayes",
+	}
+	
+	for _, term := range testCases {
+		t.Run(term, func(t *testing.T) {
+			// This should not panic even with nil morphEngine
+			result := analyzer.AnalyzeProgrammingTerm(term)
+			
+			// Should still have basic analysis
+			if result == nil {
+				t.Errorf("Expected non-nil result for term '%s' even with nil morphEngine", term)
+				return
+			}
+			
+			// Morphological info should be empty when morphEngine is nil
+			if len(result.MorphologicalInfo) != 0 {
+				t.Errorf("Expected empty MorphologicalInfo when morphEngine is nil, got %v", 
+					result.MorphologicalInfo)
+			}
+		})
+	}
+}

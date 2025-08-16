@@ -59,7 +59,7 @@ func (p *ProgrammingTermAnalyzer) AnalyzeProgrammingTerm(term string) *Programmi
 	}
 
 	// Perform morphological analysis if not an acronym
-	if !result.IsAcronym {
+	if !result.IsAcronym && p.morphEngine != nil {
 		for _, component := range result.WordComponents {
 			morphInfo := p.morphEngine.AnalyzeWord(component)
 			result.MorphologicalInfo = append(result.MorphologicalInfo, morphInfo)
@@ -332,22 +332,27 @@ func (p *ProgrammingTermAnalyzer) isCamelCase(term string) bool {
 		return false
 	}
 
+	runes := []rune(term)
+	if len(runes) == 0 {
+		return false
+	}
+
 	// First character should be lowercase
-	if !unicode.IsLower(rune(term[0])) {
+	if !unicode.IsLower(runes[0]) {
 		return false
 	}
 
 	// Should contain at least one uppercase letter (if more than one word)
 	hasUpper := false
-	for _, char := range term[1:] {
-		if unicode.IsUpper(char) {
+	for i := 1; i < len(runes); i++ {
+		if unicode.IsUpper(runes[i]) {
 			hasUpper = true
 			break
 		}
 	}
 
 	// Single word is valid camelCase
-	if !hasUpper && len(term) > 1 {
+	if !hasUpper && len(runes) > 1 {
 		return true
 	}
 
@@ -436,16 +441,47 @@ func (p *ProgrammingTermAnalyzer) extractWordComponents(term string) []string {
 	} else if p.isKebabCase(term) {
 		components = strings.Split(term, "-")
 	} else {
-		// Handle camelCase and PascalCase
+		// Handle camelCase and PascalCase with proper Unicode support
+		runes := []rune(term)
+		if len(runes) == 0 {
+			return components
+		}
+
 		var currentWord strings.Builder
-		for i, char := range term {
-			if i > 0 && unicode.IsUpper(char) && unicode.IsLower(rune(term[i-1])) {
-				// Transition from lowercase to uppercase
-				if currentWord.Len() > 0 {
-					components = append(components, strings.ToLower(currentWord.String()))
-					currentWord.Reset()
+		for i := 0; i < len(runes); i++ {
+			char := runes[i]
+			
+			// Check for word boundaries
+			shouldSplit := false
+			if i > 0 {
+				prevChar := runes[i-1]
+				
+				// Lower to upper transition (camelCase boundary)
+				if unicode.IsLower(prevChar) && unicode.IsUpper(char) {
+					shouldSplit = true
+				}
+				
+				// Acronym handling: Upper to upper followed by lower (HTTPServer -> HTTP Server)
+				if i < len(runes)-1 && unicode.IsUpper(prevChar) && unicode.IsUpper(char) && unicode.IsLower(runes[i+1]) {
+					shouldSplit = true
+				}
+				
+				// Letter to digit transition (userID123 -> user ID 123)
+				if unicode.IsLetter(prevChar) && unicode.IsDigit(char) {
+					shouldSplit = true
+				}
+				
+				// Digit to letter transition (SHA256Sum -> SHA 256 Sum)
+				if unicode.IsDigit(prevChar) && unicode.IsLetter(char) {
+					shouldSplit = true
 				}
 			}
+			
+			if shouldSplit && currentWord.Len() > 0 {
+				components = append(components, strings.ToLower(currentWord.String()))
+				currentWord.Reset()
+			}
+			
 			currentWord.WriteRune(unicode.ToLower(char))
 		}
 
