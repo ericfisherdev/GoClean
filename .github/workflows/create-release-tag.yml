@@ -80,8 +80,9 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
-        # Create detailed tag message
-        TAG_MESSAGE="Release ${VERSION}\\n\\nCreated from PR #${PR_NUMBER}: ${PR_TITLE}\\n\\nPrevious version: ${LAST_TAG}\\nRelease branch: ${GITHUB_REF_NAME}\\nCommit: ${GITHUB_SHA:0:7}\\nTriggered by: @${GITHUB_ACTOR}\\n\\nThis tag will trigger the automated release workflow."
+        # Create detailed tag message with printf for proper newlines
+        TAG_MESSAGE=$(printf "Release %s\n\nCreated from PR #%s: %s\n\nPrevious version: %s\nRelease branch: %s\nCommit: %s\nTriggered by: @%s\n\nThis tag will trigger the automated release workflow." \
+                     "${VERSION}" "${PR_NUMBER}" "${PR_TITLE}" "${LAST_TAG}" "${GITHUB_REF_NAME}" "${GITHUB_SHA:0:7}" "${GITHUB_ACTOR}")
         
         # Create the annotated tag
         git tag -a "${TAG_NAME}" -m "${TAG_MESSAGE}"
@@ -109,14 +110,19 @@ jobs:
         PR_NUMBER="${{ github.event.pull_request.number }}"
         LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
         
-        # Generate release notes
-        RELEASE_NOTES="## GoClean ${VERSION}\\n\\n### Changes\\nThis release was created from PR #${PR_NUMBER}: ${PR_TITLE}\\n\\n### Previous Version\\n${LAST_TAG} → ${TAG_NAME}\\n\\n### Installation\\nDownload the appropriate binary for your platform from the assets below.\\n\\n### What's Changed\\n- See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG_NAME}/CHANGELOG.md) for detailed changes\\n- Compare changes: [\\\`${LAST_TAG}...${TAG_NAME}\\\`](https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...${TAG_NAME})\\n\\n---\\n*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*"
+        # Create temporary file for release notes with proper formatting
+        RELEASE_NOTES_FILE=$(mktemp)
+        trap "rm -f ${RELEASE_NOTES_FILE}" EXIT
+        
+        # Write release notes to temporary file with proper newlines
+        printf "## GoClean %s\n\n### Changes\nThis release was created from PR #%s: %s\n\n### Previous Version\n%s → %s\n\n### Installation\nDownload the appropriate binary for your platform from the assets below.\n\n### What's Changed\n- See [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md) for detailed changes\n- Compare changes: [\`%s...%s\`](https://github.com/%s/compare/%s...%s)\n\n---\n*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*" \
+               "${VERSION}" "${PR_NUMBER}" "${PR_TITLE}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${TAG_NAME}" "${LAST_TAG}" "${TAG_NAME}" "${GITHUB_REPOSITORY}" "${LAST_TAG}" "${TAG_NAME}" > "${RELEASE_NOTES_FILE}"
 
-        # Create draft release
+        # Create draft release using notes file
         gh release create "${TAG_NAME}" \
           --draft \
           --title "GoClean ${VERSION}" \
-          --notes "${RELEASE_NOTES}" \
+          --notes-file "${RELEASE_NOTES_FILE}" \
           --latest
         
         echo "📝 Created draft release: ${TAG_NAME}"
