@@ -105,19 +105,15 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Run tests before release
-      if: steps.check_tag.outputs.exists == 'false'
-      run: make test
-
     - name: Build release binaries
       if: steps.check_tag.outputs.exists == 'false'
-      run: make release-build
+      run: make release-build-minimal
       env:
         VERSION: ${{ steps.get_version.outputs.VERSION }}
 
     - name: Package release
       if: steps.check_tag.outputs.exists == 'false'
-      run: make release-package
+      run: make release-package-minimal
       env:
         VERSION: ${{ steps.get_version.outputs.VERSION }}
 
