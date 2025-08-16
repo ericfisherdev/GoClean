@@ -3,6 +3,7 @@
 package scanner
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -113,46 +114,66 @@ func (tp *TestFilePatterns) IsTestFile(filePath string) bool {
 			}
 		}
 	}
-	// common JS test directories
-	if strings.Contains(dir+TestDirSeparator, TestDirSeparator+"__tests__/") ||
-		strings.Contains(dir+TestDirSeparator, TestDirSeparator+"__test__/") {
+	// common JS test directories (handles root-level and nested)
+	safeDir := TestDirSeparator + strings.Trim(dir, TestDirSeparator) + TestDirSeparator
+	if strings.Contains(safeDir, TestDirSeparator+"__tests__"+TestDirSeparator) ||
+		strings.Contains(safeDir, TestDirSeparator+"__test__"+TestDirSeparator) {
 		return true
 	}
 	
 	// Check PHP patterns
 	for _, pattern := range tp.PHPTestPatterns {
-		if matched, _ := filepath.Match(pattern, fileName); matched {
+		target := fileName
+		if strings.Contains(pattern, "/") {
+			target = normalized
+		}
+		glob := strings.ReplaceAll(pattern, "**", "*")
+		if matched, _ := path.Match(glob, target); matched {
 			return true
 		}
 	}
 	
 	// Check Python patterns
 	for _, pattern := range tp.PythonTestPatterns {
-		if matched, _ := filepath.Match(pattern, fileName); matched {
+		target := fileName
+		if strings.Contains(pattern, "/") {
+			target = normalized
+		}
+		glob := strings.ReplaceAll(pattern, "**", "*")
+		if matched, _ := path.Match(glob, target); matched {
 			return true
 		}
 	}
 	
 	// Check Java patterns
 	for _, pattern := range tp.JavaTestPatterns {
-		if matched, _ := filepath.Match(pattern, fileName); matched {
-			return true
+		target := fileName
+		if strings.Contains(pattern, "/") {
+			target = normalized
 		}
-		if strings.Contains(filePath, "src/test/") {
+		glob := strings.ReplaceAll(pattern, "**", "*")
+		if matched, _ := path.Match(glob, target); matched {
 			return true
 		}
 	}
 	
 	// Check .NET patterns
 	for _, pattern := range tp.DotNetTestPatterns {
-		if matched, _ := filepath.Match(pattern, fileName); matched {
+		target := fileName
+		if strings.Contains(pattern, "/") {
+			target = normalized
+		}
+		glob := strings.ReplaceAll(pattern, "**", "*")
+		if matched, _ := path.Match(glob, target); matched {
 			return true
 		}
 	}
 	
-	// Check test directories
+	// Check test directories (handles root-level and nested)
+	safeDir = TestDirSeparator + strings.Trim(dir, TestDirSeparator) + TestDirSeparator
 	for _, testDir := range tp.TestDirectories {
-		if strings.Contains(dir+TestDirSeparator, TestDirSeparator+testDir) {
+		needle := TestDirSeparator + strings.Trim(testDir, TestDirSeparator) + TestDirSeparator
+		if strings.Contains(safeDir, needle) {
 			return true
 		}
 	}
@@ -173,7 +194,7 @@ func (tp *TestFilePatterns) IsTestFile(filePath string) bool {
 		}
 		// Basic '**' fallback: collapse to '*' (documented approximation)
 		glob := strings.ReplaceAll(pattern, "**", "*")
-		if matched, _ := filepath.Match(glob, target); matched {
+		if matched, _ := path.Match(glob, target); matched {
 			return true
 		}
 	}
