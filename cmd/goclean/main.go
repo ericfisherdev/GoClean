@@ -44,7 +44,7 @@ Features:
 - Configurable violation thresholds
 - Markdown output for AI analysis
 - Comprehensive clean code violation detection`,
-	Version: "2025.08.16.3",
+	Version: "2025.08.16.7",
 }
 
 // scanCmd represents the scan command
