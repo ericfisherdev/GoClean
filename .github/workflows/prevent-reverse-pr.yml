@@ -47,39 +47,32 @@ jobs:
           });
 
           // Add explanatory comment
-          const comment = `🚫 **This pull request has been automatically closed**
-
-### ❌ Incorrect Branch Direction
-This PR attempts to merge from \`release\` → \`develop\`, which goes against our Git workflow.
-
-### ✅ Correct Git Flow
-Our repository follows this branching strategy:
-- **Feature branches** → \`develop\` (for new features)
-- **\`develop\`** → \`release\` (for releases)
-- **\`release\`** → \`main\` (for final releases)
-
-### 🔄 What you probably meant to do:
-If you want to:
-
-1. **Merge a release to main**: Create a PR from \`release\` → \`main\`
-2. **Start new development**: Create a feature branch from \`develop\`
-3. **Backport a fix**: Cherry-pick specific commits to \`develop\`
-
-### 📚 Git Workflow Reference:
-\`\`\`
-feature-branch ──→ develop ──→ release ──→ main
-                     ↑                      ↑
-               (new features)         (releases)
-\`\`\`
-
-### 🆘 Need Help?
-If this closure was incorrect or you need assistance with the proper workflow, please:
-- Comment on this PR explaining your intent
-- Contact the repository maintainers
-- Review the contribution guidelines
-
----
-*This action was performed automatically to maintain proper Git workflow.*`;
+          const comment = "🚫 **This pull request has been automatically closed**\n\n" +
+                          "### ❌ Incorrect Branch Direction\n" +
+                          "This PR attempts to merge from `release` → `develop`, which goes against our Git workflow.\n\n" +
+                          "### ✅ Correct Git Flow\n" +
+                          "Our repository follows this branching strategy:\n" +
+                          "- **Feature branches** → `develop` (for new features)\n" +
+                          "- **`develop`** → `release` (for releases)\n" +
+                          "- **`release`** → `main` (for final releases)\n\n" +
+                          "### 🔄 What you probably meant to do:\n" +
+                          "If you want to:\n\n" +
+                          "1. **Merge a release to main**: Create a PR from `release` → `main`\n" +
+                          "2. **Start new development**: Create a feature branch from `develop`\n" +
+                          "3. **Backport a fix**: Cherry-pick specific commits to `develop`\n\n" +
+                          "### 📚 Git Workflow Reference:\n" +
+                          "```\n" +
+                          "feature-branch ──→ develop ──→ release ──→ main\n" +
+                          "                     ↑                      ↑\n" +
+                          "               (new features)         (releases)\n" +
+                          "```\n\n" +
+                          "### 🆘 Need Help?\n" +
+                          "If this closure was incorrect or you need assistance with the proper workflow, please:\n" +
+                          "- Comment on this PR explaining your intent\n" +
+                          "- Contact the repository maintainers\n" +
+                          "- Review the contribution guidelines\n\n" +
+                          "---\n" +
+                          "*This action was performed automatically to maintain proper Git workflow.*";
 
           await github.rest.issues.createComment({
             issue_number: context.payload.pull_request.number,

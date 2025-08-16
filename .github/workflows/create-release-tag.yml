@@ -79,20 +79,8 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         
-        # Create detailed tag message using heredoc
-        TAG_MESSAGE=$(cat << EOF
-Release ${VERSION}
-
-Created from PR #${PR_NUMBER}: ${PR_TITLE}
-
-Previous version: ${LAST_TAG}
-Release branch: ${GITHUB_REF_NAME}
-Commit: ${GITHUB_SHA:0:7}
-Triggered by: @${GITHUB_ACTOR}
-
-This tag will trigger the automated release workflow.
-EOF
-)
+        # Create detailed tag message
+        TAG_MESSAGE="Release ${VERSION}\\n\\nCreated from PR #${PR_NUMBER}: ${PR_TITLE}\\n\\nPrevious version: ${LAST_TAG}\\nRelease branch: ${GITHUB_REF_NAME}\\nCommit: ${GITHUB_SHA:0:7}\\nTriggered by: @${GITHUB_ACTOR}\\n\\nThis tag will trigger the automated release workflow."
         
         # Create the annotated tag
         git tag -a "${TAG_NAME}" -m "${TAG_MESSAGE}"
@@ -120,27 +108,8 @@ EOF
         PR_TITLE="${{ github.event.pull_request.title }}"
         LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
         
-        # Generate release notes using heredoc
-        RELEASE_NOTES=$(cat << EOF
-## GoClean ${VERSION}
-
-### Changes
-This release was created from PR #${PR_NUMBER}: ${PR_TITLE}
-
-### Previous Version
-${LAST_TAG} → ${TAG_NAME}
-
-### Installation
-Download the appropriate binary for your platform from the assets below.
-
-### What's Changed
-- See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG_NAME}/CHANGELOG.md) for detailed changes
-- Compare changes: [\`${LAST_TAG}...${TAG_NAME}\`](https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...${TAG_NAME})
-
----
-*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*
-EOF
-)
+        # Generate release notes
+        RELEASE_NOTES="## GoClean ${VERSION}\\n\\n### Changes\\nThis release was created from PR #${PR_NUMBER}: ${PR_TITLE}\\n\\n### Previous Version\\n${LAST_TAG} → ${TAG_NAME}\\n\\n### Installation\\nDownload the appropriate binary for your platform from the assets below.\\n\\n### What's Changed\\n- See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG_NAME}/CHANGELOG.md) for detailed changes\\n- Compare changes: [\\\`${LAST_TAG}...${TAG_NAME}\\\`](https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...${TAG_NAME})\\n\\n---\\n*This is a draft release. The release workflow is building binaries and will publish automatically once complete.*"
 
         # Create draft release
         gh release create "${TAG_NAME}" \
@@ -161,25 +130,21 @@ EOF
           const tagName = '${{ steps.check_tag.outputs.tag_name }}';
           const lastTag = '${{ steps.last_tag.outputs.last_tag }}';
           
-          const body = `🎉 **Release ${tagName} has been triggered!**
-
-### What happens next:
-1. ✅ Tag \`${tagName}\` has been created and pushed
-2. ✅ Draft release has been created
-3. 🔄 Release workflow is building binaries for all platforms
-4. 📦 Release will be published automatically when build completes
-
-### Links:
-- 🏷️ [View Tag](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tagName})
-- 🔍 [Compare Changes](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${lastTag}...${tagName})
-- ⚡ [Monitor Build Progress](https://github.com/${context.repo.owner}/${context.repo.repo}/actions)
-
-### Version Info:
-- **Previous:** ${lastTag}
-- **Current:** ${tagName}
-- **Source:** VERSION file
-
-*The release will be available shortly with downloadable binaries for all supported platforms.*`;
+          const body = "🎉 **Release " + tagName + " has been triggered!**\n\n" +
+                       "### What happens next:\n" +
+                       "1. ✅ Tag `" + tagName + "` has been created and pushed\n" +
+                       "2. ✅ Draft release has been created\n" +
+                       "3. 🔄 Release workflow is building binaries for all platforms\n" +
+                       "4. 📦 Release will be published automatically when build completes\n\n" +
+                       "### Links:\n" +
+                       "- 🏷️ [View Tag](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/releases/tag/" + tagName + ")\n" +
+                       "- 🔍 [Compare Changes](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/compare/" + lastTag + "..." + tagName + ")\n" +
+                       "- ⚡ [Monitor Build Progress](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/actions)\n\n" +
+                       "### Version Info:\n" +
+                       "- **Previous:** " + lastTag + "\n" +
+                       "- **Current:** " + tagName + "\n" +
+                       "- **Source:** VERSION file\n\n" +
+                       "*The release will be available shortly with downloadable binaries for all supported platforms.*";
 
           github.rest.issues.createComment({
             issue_number: context.payload.pull_request.number,
@@ -196,19 +161,15 @@ EOF
           const version = '${{ steps.get_version.outputs.VERSION }}';
           const tagName = '${{ steps.check_tag.outputs.tag_name }}';
           
-          const body = `⚠️ **Tag ${tagName} already exists**
-
-The version \`${version}\` in the VERSION file corresponds to an existing release.
-
-### To create a new release:
-1. Update the \`VERSION\` file with a new version number
-2. Commit the change to this PR
-3. Merge the PR again
-
-### Existing Release:
-- 🏷️ [View Existing Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tagName})
-
-*No new release was created.*`;
+          const body = "⚠️ **Tag " + tagName + " already exists**\n\n" +
+                       "The version `" + version + "` in the VERSION file corresponds to an existing release.\n\n" +
+                       "### To create a new release:\n" +
+                       "1. Update the `VERSION` file with a new version number\n" +
+                       "2. Commit the change to this PR\n" +
+                       "3. Merge the PR again\n\n" +
+                       "### Existing Release:\n" +
+                       "- 🏷️ [View Existing Release](https://github.com/" + context.repo.owner + "/" + context.repo.repo + "/releases/tag/" + tagName + ")\n\n" +
+                       "*No new release was created.*";
 
           github.rest.issues.createComment({
             issue_number: context.payload.pull_request.number,
