@@ -25,9 +25,12 @@ reviews:
   
   # Custom labeling instructions
   labeling_instructions:
-    - "Apply 'Review Approved' label if the PR has no more suggested coderabbit changes"
-    - "Apply 'CR Review Pending' label if a review was submitted to coderabbit but hasn't been completed"
-    - "Apply 'CR Review Failed' label if changes are requested by coderabbit"
+    - label: "Review Approved"
+      instructions: "Apply when the PR has no more suggested coderabbit changes and all reviews pass"
+    - label: "CR Review Pending"
+      instructions: "Apply when a review was submitted to coderabbit but hasn't been completed yet"
+    - label: "CR Review Failed"
+      instructions: "Apply when changes are requested by coderabbit"
   
   # Request changes workflow - auto-approve after comments are resolved
   request_changes_workflow: true
