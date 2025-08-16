@@ -50,4 +50,57 @@ coverage.html
 
 # Temporary files
 tmp/
+=======
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/goclean
+goclean.exe
+bin/goclean
+bin/goclean.exe
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Report files
+reports/
+coverage.html
+/reports/*.html
+*.md
+!README.md
+!docs/*.md
+!CONTRIBUTING.md
+!.github/*.md
+!internal/reporters/templates/*.html
+
+# Temporary files
+tmp/
 temp/

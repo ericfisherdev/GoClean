@@ -28,6 +28,7 @@ var (
 	aggressive       bool
 	includeTests     bool
 	customTestPatterns []string
+
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -90,7 +91,7 @@ Examples:
 		if len(customTestPatterns) > 0 {
 			cfg.Scan.CustomTestPatterns = customTestPatterns
 		}
-		
+    
 		// Merge command-line flags with configuration
 		scanPaths := args
 		if len(scanPaths) == 0 {
@@ -266,7 +267,7 @@ func init() {
 	scanCmd.Flags().BoolVar(&aggressive, "aggressive", false, "Enable aggressive mode (scan test files and apply stricter rules)")
 	scanCmd.Flags().BoolVar(&includeTests, "include-tests", false, "Include test files in analysis (alias for --aggressive)")
 	scanCmd.Flags().StringSliceVar(&customTestPatterns, "test-patterns", []string{}, "Additional test file patterns to recognize")
-	
+
 	// Config subcommands
 	configCmd.AddCommand(configInitCmd)
 	
