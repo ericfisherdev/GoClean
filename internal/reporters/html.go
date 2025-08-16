@@ -1,3 +1,6 @@
+// Package reporters provides various output formats for GoClean analysis results.
+// It includes HTML, Markdown, and console reporters for displaying code violations
+// and metrics in different formats suitable for different use cases.
 package reporters
 
 import (
@@ -10,6 +13,13 @@ import (
 	"time"
 
 	"github.com/ericfisherdev/goclean/internal/models"
+)
+
+// File permission constants
+const (
+	DirPermissions  = 0755 // Standard directory permissions
+	FilePermissions = 0644 // Standard file permissions
+	PercentageBase  = 100  // Base for percentage calculations
 )
 
 //go:embed templates/*
@@ -47,7 +57,7 @@ func NewHTMLReporter(config *HTMLConfig) (*HTMLReporter, error) {
 func (h *HTMLReporter) Generate(report *models.Report) error {
 	// Ensure output directory exists
 	outputDir := filepath.Dir(h.config.OutputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, DirPermissions); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -99,7 +109,7 @@ func getTemplateFunctions() template.FuncMap {
 			if total == 0 {
 				return 0
 			}
-			return float64(part) / float64(total) * 100
+			return float64(part) / float64(total) * PercentageBase
 		},
 		"formatDuration": func(d time.Duration) string {
 			if d.Hours() >= 1 {
@@ -154,14 +164,39 @@ func getTemplateFunctions() template.FuncMap {
 			return slice[:n]
 		},
 		"formatCode": func(code string) template.HTML {
-			// Use Prism.js for proper syntax highlighting in the browser
-			return template.HTML(template.HTMLEscapeString(code))
+			// Process the code snippet to add HTML highlighting for violation lines
+			lines := strings.Split(code, "\n")
+			var result strings.Builder
+			
+			for _, line := range lines {
+				if strings.HasPrefix(line, "→") {
+					// This is a violation line, wrap it with highlighting
+					escapedLine := template.HTMLEscapeString(line)
+					result.WriteString(`<span class="violation-line">`)
+					result.WriteString(escapedLine)
+					result.WriteString("</span>\n")
+				} else {
+					// Regular line
+					escapedLine := template.HTMLEscapeString(line)
+					result.WriteString(escapedLine)
+					result.WriteString("\n")
+				}
+			}
+			
+			return template.HTML(strings.TrimSuffix(result.String(), "\n"))
 		},
 		"themeClass": func(theme string) string {
-			if theme == "dark" {
+			switch theme {
+			case "dark":
+				return "dark-theme"
+			case "light":
+				return "light-theme"
+			case "auto", "":
+				// Default to dark theme for better experience
+				return "dark-theme"
+			default:
 				return "dark-theme"
 			}
-			return ""
 		},
 		"severityBadge": func(s models.Severity) string {
 			switch s {

@@ -1,0 +1,44 @@
+# CodeRabbit Configuration for GoClean
+# Documentation: https://docs.coderabbit.ai/reference/yaml-template
+
+reviews:
+  # Review profile - can be "chill", "assertive", or "active"
+  profile: "chill"
+  
+  # Enable automatic reviews on all pull requests
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    # Empty base_branches array means review ALL PRs regardless of target branch
+    base_branches: [develop, release]
+    labels: []
+    ignore_title_keywords: []
+
+  # Generate high-level summaries for pull requests
+  high_level_summary: true
+  
+  # Request changes workflow - auto-approve after comments are resolved
+  request_changes_workflow: true
+  
+  # Set commit status during review process
+  commit_status: true
+
+# Pre-merge checks configuration
+pre_merge_checks:
+  title:
+    mode: "warning"
+  description:
+    mode: "warning"
+  issue_assessment:
+    mode: "warning"
+
+# Path filters for code review (optional - review all files by default)
+path_filters:
+  include: []
+  exclude:
+    - "*.md"
+    - "*.txt"
+    - "reports/**"
+    - "temp/**"
+    - "tmp/**"

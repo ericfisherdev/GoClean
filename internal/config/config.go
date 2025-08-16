@@ -1,3 +1,6 @@
+// Package config provides configuration management for GoClean.
+// It handles loading, parsing, and validating configuration files,
+// as well as providing default values for scanning thresholds and output options.
 package config
 
 import (
@@ -6,6 +9,16 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Default threshold constants
+const (
+	DefaultFunctionLines        = 25
+	DefaultCyclomaticComplexity = 8
+	DefaultParameters           = 4
+	DefaultNestingDepth         = 3
+	DefaultClassLines           = 150
+	DefaultRefreshInterval      = 10
 )
 
 // Config represents the application configuration
@@ -18,9 +31,14 @@ type Config struct {
 
 // ScanConfig contains scanning-related settings
 type ScanConfig struct {
-	Paths     []string `yaml:"paths"`
-	Exclude   []string `yaml:"exclude"`
-	FileTypes []string `yaml:"file_types"`
+	Paths            []string `yaml:"paths"`
+	Exclude          []string `yaml:"exclude"`
+	FileTypes        []string `yaml:"file_types"`
+	
+	// New test file handling options - using pointers to detect explicit setting
+	SkipTestFiles    *bool    `yaml:"skip_test_files"`    // Default: true
+	AggressiveMode   *bool    `yaml:"aggressive_mode"`    // Default: false
+	CustomTestPatterns []string `yaml:"custom_test_patterns"`
 }
 
 // Thresholds contains clean code thresholds
@@ -128,8 +146,6 @@ func GetDefaultConfig() *Config {
 			Exclude: []string{
 				"vendor/",
 				"node_modules/",
-				"*.test.go",
-				"*_test.go",
 				".git/",
 				"testdata/",
 				"build/",
@@ -147,19 +163,22 @@ func GetDefaultConfig() *Config {
 				".h",
 				".hpp",
 			},
+			SkipTestFiles:  boolPtr(true),  // Skip test files by default
+			AggressiveMode: boolPtr(false), // Normal mode by default
+			CustomTestPatterns: []string{},
 		},
 		Thresholds: Thresholds{
-			FunctionLines:        25,
-			CyclomaticComplexity: 8,
-			Parameters:           4,
-			NestingDepth:         3,
-			ClassLines:           150,
+			FunctionLines:        DefaultFunctionLines,
+			CyclomaticComplexity: DefaultCyclomaticComplexity,
+			Parameters:           DefaultParameters,
+			NestingDepth:         DefaultNestingDepth,
+			ClassLines:           DefaultClassLines,
 		},
 		Output: OutputConfig{
 			HTML: HTMLConfig{
 				Path:            "./reports/clean-code-report.html",
 				AutoRefresh:     false,
-				RefreshInterval: 10,
+				RefreshInterval: DefaultRefreshInterval,
 				Theme:           "auto",
 			},
 			Markdown: MarkdownConfig{
@@ -215,6 +234,14 @@ func mergeWithDefaults(config *Config) {
 	}
 	if len(config.Scan.FileTypes) == 0 {
 		config.Scan.FileTypes = defaults.Scan.FileTypes
+	}
+	
+	// Handle boolean pointers - only set defaults when nil (not explicitly set)
+	if config.Scan.SkipTestFiles == nil {
+		config.Scan.SkipTestFiles = defaults.Scan.SkipTestFiles
+	}
+	if config.Scan.AggressiveMode == nil {
+		config.Scan.AggressiveMode = defaults.Scan.AggressiveMode
 	}
 
 	// Merge thresholds
@@ -337,6 +364,27 @@ func validateOutputPath(path string) error {
 	file.Close()
 
 	return nil
+}
+
+// boolPtr returns a pointer to the given boolean value
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+// GetSkipTestFiles safely returns the SkipTestFiles value with default fallback
+func (s *ScanConfig) GetSkipTestFiles() bool {
+	if s.SkipTestFiles == nil {
+		return true // default value
+	}
+	return *s.SkipTestFiles
+}
+
+// GetAggressiveMode safely returns the AggressiveMode value with default fallback
+func (s *ScanConfig) GetAggressiveMode() bool {
+	if s.AggressiveMode == nil {
+		return false // default value
+	}
+	return *s.AggressiveMode
 }
 
 // GetConfigPaths returns standard configuration file paths

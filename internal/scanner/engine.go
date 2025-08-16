@@ -1,3 +1,6 @@
+// Package scanner provides the core scanning engine for GoClean.
+// It orchestrates file discovery, parsing, AST analysis, and violation detection
+// across multiple files and directories with concurrent processing capabilities.
 package scanner
 
 import (
@@ -8,6 +11,12 @@ import (
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/violations"
+)
+
+// Scanning progress constants
+const (
+	ProgressUpdateInterval = 10  // Update progress every N files
+	PercentageMultiplier   = 100 // For percentage calculations
 )
 
 // Engine is the main scanning orchestrator
@@ -32,6 +41,25 @@ func NewEngine(includePaths []string, excludePatterns []string, fileTypes []stri
 		verbose:           verbose,
 		maxWorkers:        numCPU, // Default to number of CPU cores
 		workerBufferSize:  numCPU * 2, // Buffer size for better throughput
+	}
+}
+
+// NewEngineWithConfig creates a new scanning engine with test file configuration
+func NewEngineWithConfig(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool,
+	skipTestFiles bool, aggressiveMode bool, customTestPatterns []string) *Engine {
+	numCPU := runtime.NumCPU()
+	
+	// Create detector config with test file awareness
+	detectorConfig := violations.DefaultDetectorConfig()
+	detectorConfig.AggressiveMode = aggressiveMode
+	
+	return &Engine{
+		fileWalker:        NewFileWalkerWithConfig(includePaths, excludePatterns, fileTypes, verbose, skipTestFiles, aggressiveMode, customTestPatterns),
+		parser:            NewParser(verbose),
+		violationDetector: NewViolationDetector(detectorConfig),
+		verbose:           verbose,
+		maxWorkers:        numCPU,
+		workerBufferSize:  numCPU * 2,
 	}
 }
 
@@ -141,8 +169,8 @@ func (e *Engine) scanFiles(files []*models.FileInfo) ([]*models.ScanResult, erro
 	for result := range resultsChan {
 		results = append(results, result)
 		processed++
-		if e.progressFn != nil && processed%10 == 0 { // Update every 10 files
-			percentage := float64(processed) / float64(total) * 100
+		if e.progressFn != nil && processed%ProgressUpdateInterval == 0 { // Update every N files
+			percentage := float64(processed) / float64(total) * PercentageMultiplier
 			e.progressFn(fmt.Sprintf("Progress: %d/%d files (%.1f%%)", processed, total, percentage))
 		}
 	}

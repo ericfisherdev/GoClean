@@ -8,7 +8,25 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/ericfisherdev/goclean/internal/config"
 	"github.com/ericfisherdev/goclean/internal/models"
+)
+
+// Console formatting constants
+const (
+	SeparatorLength       = 40
+	FileSeparatorLength   = 70
+	FinalSeparatorLength  = 50
+	DetailSeparatorLength = 80
+	TabwriterMinWidth     = 0
+	TabwriterTabWidth     = 0
+	TabwriterPadding      = 3
+	TabwriterPadChar      = ' '
+	TabwriterFlags        = 0
+	MaxDisplayedFiles     = 10
+	MaxFileNameLength     = 30
+	FileNameTruncateChars = 27
+	LowViolationThreshold = 5
 )
 
 // ConsoleReporter outputs reports to the console
@@ -51,9 +69,9 @@ func (c *ConsoleReporter) printHeader(report *models.Report) {
 // printSummary prints the scan summary
 func (c *ConsoleReporter) printSummary(summary *models.ScanSummary) {
 	fmt.Println(c.colorize("📊 SCAN SUMMARY", "section"))
-	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println(strings.Repeat("-", SeparatorLength))
 	
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
 	fmt.Fprintf(w, "Total Files:\t%d\n", summary.TotalFiles)
 	fmt.Fprintf(w, "Scanned Files:\t%d\n", summary.ScannedFiles)
 	fmt.Fprintf(w, "Skipped Files:\t%d\n", summary.SkippedFiles)
@@ -71,7 +89,7 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 	}
 
 	fmt.Println(c.colorize("📈 VIOLATIONS BY TYPE", "section"))
-	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println(strings.Repeat("-", SeparatorLength))
 	
 	// Sort violation types by count (descending)
 	type typeCount struct {
@@ -88,7 +106,7 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 		return sortedTypes[i].Count > sortedTypes[j].Count
 	})
 	
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
 	for _, tc := range sortedTypes {
 		fmt.Fprintf(w, "%s:\t%s\n", 
 			tc.Type.GetDisplayName(), 
@@ -98,9 +116,9 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 	fmt.Println()
 
 	fmt.Println(c.colorize("🚨 VIOLATIONS BY SEVERITY", "section"))
-	fmt.Println(strings.Repeat("-", 40))
+	fmt.Println(strings.Repeat("-", SeparatorLength))
 	
-	w = tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	w = tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
 	severities := []models.Severity{models.SeverityCritical, models.SeverityHigh, models.SeverityMedium, models.SeverityLow}
 	for _, severity := range severities {
 		if count, exists := stats.ViolationsBySeverity[severity]; exists && count > 0 {
@@ -120,19 +138,19 @@ func (c *ConsoleReporter) printTopViolatedFiles(topFiles []*models.FileViolation
 	}
 
 	fmt.Println(c.colorize("🔥 TOP VIOLATED FILES", "section"))
-	fmt.Println(strings.Repeat("-", 70))
+	fmt.Println(strings.Repeat("-", FileSeparatorLength))
 	
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
 	fmt.Fprintf(w, "FILE\tVIOLATIONS\tLINES\tRATE\n")
 	fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", 
-		strings.Repeat("-", 30),
-		strings.Repeat("-", 10), 
-		strings.Repeat("-", 5), 
-		strings.Repeat("-", 8))
+		strings.Repeat("-", MaxFileNameLength),
+		strings.Repeat("-", MaxDisplayedFiles), 
+		strings.Repeat("-", LowViolationThreshold), 
+		strings.Repeat("-", config.DefaultCyclomaticComplexity))
 	
 	displayCount := len(topFiles)
-	if displayCount > 10 {
-		displayCount = 10
+	if displayCount > MaxDisplayedFiles {
+		displayCount = MaxDisplayedFiles
 	}
 	
 	for i := 0; i < displayCount; i++ {
@@ -140,8 +158,8 @@ func (c *ConsoleReporter) printTopViolatedFiles(topFiles []*models.FileViolation
 		rate := float64(file.TotalViolations) / float64(file.Lines) * 100
 		
 		fileName := file.File
-		if len(fileName) > 30 {
-			fileName = "..." + fileName[len(fileName)-27:]
+		if len(fileName) > MaxFileNameLength {
+			fileName = "..." + fileName[len(fileName)-FileNameTruncateChars:]
 		}
 		
 		fmt.Fprintf(w, "%s\t%s\t%d\t%.1f%%\n",
@@ -162,7 +180,7 @@ func (c *ConsoleReporter) printDetailedViolations(report *models.Report) {
 	}
 
 	fmt.Println(c.colorize("📋 DETAILED VIOLATIONS", "section"))
-	fmt.Println(strings.Repeat("=", 80))
+	fmt.Println(strings.Repeat("=", DetailSeparatorLength))
 	
 	// Sort files by violation count
 	type fileViolations struct {
@@ -191,7 +209,7 @@ func (c *ConsoleReporter) printDetailedViolations(report *models.Report) {
 			c.colorize("📁", "file"),
 			c.colorize(fv.File, "filename"),
 			len(fv.Violations))
-		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println(strings.Repeat("-", DetailSeparatorLength))
 		
 		// Sort violations by line number
 		sort.Slice(fv.Violations, func(i, j int) bool {
@@ -240,7 +258,7 @@ func (c *ConsoleReporter) printViolation(v *models.Violation) {
 
 // printFooter prints the report footer
 func (c *ConsoleReporter) printFooter(report *models.Report) {
-	fmt.Println(strings.Repeat("=", 50))
+	fmt.Println(strings.Repeat("=", FinalSeparatorLength))
 	fmt.Printf("Report completed in %v\n", report.Summary.Duration.Round(time.Millisecond))
 	
 	if report.Summary.TotalViolations == 0 {
@@ -298,7 +316,7 @@ func (c *ConsoleReporter) colorizeViolationCount(count int) string {
 	switch {
 	case count == 0:
 		return c.colorize(text, "success")
-	case count < 5:
+	case count < LowViolationThreshold:
 		return c.colorize(text, "warning")
 	default:
 		return c.colorize(text, "error")

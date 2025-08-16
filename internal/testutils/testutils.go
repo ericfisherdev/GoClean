@@ -1,3 +1,4 @@
+// Package testutils provides test utilities and helpers for GoClean testing.
 package testutils
 
 import (

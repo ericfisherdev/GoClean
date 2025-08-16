@@ -1,3 +1,4 @@
+// Package main provides the GoClean command-line interface for clean code analysis.
 package main
 
 import (
@@ -22,6 +23,12 @@ var (
 	exclude     []string
 	fileTypes   []string
 	thresholds  map[string]int
+	
+	// Test file handling flags
+	aggressive       bool
+	includeTests     bool
+	customTestPatterns []string
+
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,7 +44,7 @@ Features:
 - Configurable violation thresholds
 - Markdown output for AI analysis
 - Comprehensive clean code violation detection`,
-	Version: "0.1.0",
+	Version: "2025.08.16.3",
 }
 
 // scanCmd represents the scan command
@@ -74,6 +81,17 @@ Examples:
 			}
 		}
 		
+		// Handle test file configuration
+		if aggressive || includeTests {
+			cfg.Scan.AggressiveMode = &[]bool{true}[0]
+			cfg.Scan.SkipTestFiles = &[]bool{false}[0]
+		}
+		
+		// Add custom test patterns if provided
+		if len(customTestPatterns) > 0 {
+			cfg.Scan.CustomTestPatterns = customTestPatterns
+		}
+    
 		// Merge command-line flags with configuration
 		scanPaths := args
 		if len(scanPaths) == 0 {
@@ -117,8 +135,9 @@ Examples:
 			os.Exit(1)
 		}
 		
-		// Create and configure scanner engine
-		engine := scanner.NewEngine(scanPaths, excludePatterns, fileTypesList, verbose)
+		// Create and configure scanner engine with test file configuration
+		engine := scanner.NewEngineWithConfig(scanPaths, excludePatterns, fileTypesList, verbose,
+			cfg.Scan.GetSkipTestFiles(), cfg.Scan.GetAggressiveMode(), cfg.Scan.CustomTestPatterns)
 		
 		// Set progress callback for real-time updates
 		progressCallback := func(message string) {
@@ -244,6 +263,11 @@ func init() {
 	scanCmd.Flags().StringVarP(&format, "format", "f", "html", "output format (html, markdown, json)")
 	scanCmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file path")
 	
+	// Test file handling flags
+	scanCmd.Flags().BoolVar(&aggressive, "aggressive", false, "Enable aggressive mode (scan test files and apply stricter rules)")
+	scanCmd.Flags().BoolVar(&includeTests, "include-tests", false, "Include test files in analysis (alias for --aggressive)")
+	scanCmd.Flags().StringSliceVar(&customTestPatterns, "test-patterns", []string{}, "Additional test file patterns to recognize")
+
 	// Config subcommands
 	configCmd.AddCommand(configInitCmd)
 	

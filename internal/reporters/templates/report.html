@@ -46,6 +46,14 @@
             --border-color: #444;
         }
 
+        /* Apply dark theme to body and html */
+        .dark-theme,
+        .dark-theme body,
+        .dark-theme html {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
         .light-theme, :root {
             --bg-primary: #ffffff;
             --bg-secondary: #f8f9fa;
@@ -269,25 +277,248 @@
                 page-break-inside: avoid;
             }
         }
-        /* Consolidated styles */
+        /* Comprehensive Dark Theme Styles - Relying on specificity over !important */
         .dark-theme .card {
             background-color: var(--bg-secondary);
             border-color: var(--border-color);
             color: var(--text-primary);
         }
-        .dark-theme .table {
+        
+        .dark-theme .card-header {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
             color: var(--text-primary);
         }
-        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > td,
-        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > th {
+        
+        .dark-theme .card-body {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .dark-theme .table {
+            color: var(--text-primary);
             background-color: var(--bg-secondary);
         }
+        
+        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > td,
+        .dark-theme .table-striped > tbody > tr:nth-of-type(odd) > th {
+            background-color: var(--bg-tertiary);
+        }
+        
+        .dark-theme .table th,
+        .dark-theme .table td {
+            border-color: var(--border-color);
+        }
+        
+        /* Form elements */
+        .dark-theme .form-control,
+        .dark-theme .form-select {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .dark-theme .form-control:focus,
+        .dark-theme .form-select:focus {
+            background-color: var(--bg-secondary);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Buttons */
+        .dark-theme .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .dark-theme .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .dark-theme .btn-outline-secondary {
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+        
+        .dark-theme .btn-outline-secondary:hover {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        /* Accordion */
+        .dark-theme .accordion-item {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+        
+        .dark-theme .accordion-button {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        .dark-theme .accordion-button:not(.collapsed) {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .dark-theme .accordion-button:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .dark-theme .accordion-body {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Alerts */
+        .dark-theme .alert-info {
+            background-color: rgba(13, 202, 240, 0.1);
+            border-color: rgba(13, 202, 240, 0.2);
+            color: #9eeaf9;
+        }
+        
+        .dark-theme .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.2);
+            color: #ffecb5;
+        }
+        
+        .dark-theme .alert-success {
+            background-color: rgba(25, 135, 84, 0.1);
+            border-color: rgba(25, 135, 84, 0.2);
+            color: #a3d9a5;
+        }
+        
+        /* Small text and muted elements */
+        .dark-theme .text-muted {
+            color: var(--text-muted);
+        }
+        
+        .dark-theme small,
+        .dark-theme .small {
+            color: var(--text-secondary);
+        }
+        
+        /* Navbar enhancements for dark theme */
+        .dark-theme .navbar-dark .navbar-brand,
+        .dark-theme .navbar-dark .navbar-text {
+            color: var(--text-primary);
+        }
+        
+        /* Input group styling */
+        .dark-theme .input-group-text {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        /* Dropdown menus */
+        .dark-theme .dropdown-menu {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+        
+        .dark-theme .dropdown-item {
+            color: var(--text-primary);
+        }
+        
+        .dark-theme .dropdown-item:hover,
+        .dark-theme .dropdown-item:focus {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        /* Code and pre elements */
+        .dark-theme code {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .dark-theme pre {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        /* Links */
+        .dark-theme a {
+            color: #66b3ff;
+        }
+        
+        .dark-theme a:hover {
+            color: #4da6ff;
+        }
+        
+        /* Third-party override section - Limited !important usage for external conflicts */
+        .dark-theme .badge {
+            color: white !important; /* Override Bootstrap badge colors for semantic meaning */
+        }
+        
+        .dark-theme .container,
+        .dark-theme .container-fluid {
+            background-color: transparent !important; /* Override Bootstrap container backgrounds */
+        }
         .code-snippet {
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
             font-size: 0.85em;
             border-radius: var(--border-radius);
             background: var(--bg-secondary);
+            font-family: 'SF Mono', Monaco, 'Inconsolata', 'Fira Code', 'Droid Sans Mono', Consolas, 'Courier New', monospace;
+            line-height: 1.4;
+            white-space: pre;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        .violation-line {
+            background-color: #ffebee !important;
+            color: #c62828;
+            font-weight: 600;
+            position: relative;
+            text-decoration: underline;
+            text-decoration-style: wavy;
+            text-decoration-color: #dc3545;
+            border-left: 6px solid #dc3545;
+            padding-left: 0.5rem;
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(220, 53, 69, 0.1) 2px,
+                rgba(220, 53, 69, 0.1) 4px
+            );
+        }
+        .dark-theme .violation-line {
+            background-color: #4a1a1a !important;
+            color: #ff8a80;
+            text-decoration-color: #ff8a80;
+            border-left-color: #ff8a80;
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 138, 128, 0.15) 2px,
+                rgba(255, 138, 128, 0.15) 4px
+            );
+        }
+        .violation-line::before {
+            content: '⚠';
+            position: absolute;
+            left: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.1em;
+            color: #dc3545;
+            font-weight: bold;
+            aria-hidden: true;
+        }
+        .dark-theme .violation-line::before {
+            color: #ff8a80;
         }
         .auto-refresh-indicator {
             position: fixed;
@@ -362,7 +593,7 @@
         </div>
     </nav>
 
-    <div class="container-fluid py-4 fade-in" id="main-content">
+    <div class="container py-4 fade-in" id="main-content" style="max-width: 1400px;">
         <!-- Summary Cards -->
         <div class="row mb-4">
             <div class="col-md-3">

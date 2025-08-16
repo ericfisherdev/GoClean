@@ -1,3 +1,4 @@
+// Package violations provides detectors for various clean code violations in Go source code.
 package violations
 
 import (
@@ -11,7 +12,8 @@ import (
 
 // FunctionDetector detects function-related violations
 type FunctionDetector struct {
-	config *DetectorConfig
+	config        *DetectorConfig
+	codeExtractor *CodeExtractor
 }
 
 // NewFunctionDetector creates a new function violation detector
@@ -20,7 +22,8 @@ func NewFunctionDetector(config *DetectorConfig) *FunctionDetector {
 		config = DefaultDetectorConfig()
 	}
 	return &FunctionDetector{
-		config: config,
+		config:        config,
+		codeExtractor: NewCodeExtractor(),
 	}
 }
 
@@ -69,6 +72,7 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 
 	// Check function length
 	if fn.LineCount > d.config.MaxFunctionLines {
+		codeSnippet := d.extractCodeSnippet(filePath, fn.StartLine, fn.EndLine)
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeFunctionLength,
 			Severity:    d.getSeverityForFunctionLength(fn.LineCount),
@@ -76,14 +80,16 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 			File:        filePath,
 			Line:        fn.StartLine,
 			Column:      fn.StartColumn,
+			EndLine:     fn.EndLine,
 			Rule:        "function-length",
 			Suggestion:  d.getFunctionLengthSuggestion(fn.Name, fn.LineCount),
-			CodeSnippet: d.generateFunctionSignature(fn),
+			CodeSnippet: codeSnippet,
 		})
 	}
 
 	// Check cyclomatic complexity
 	if fn.Complexity > d.config.MaxCyclomaticComplexity {
+		codeSnippet := d.extractCodeSnippet(filePath, fn.StartLine, fn.EndLine)
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeCyclomaticComplexity,
 			Severity:    d.getSeverityForComplexity(fn.Complexity),
@@ -91,15 +97,17 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 			File:        filePath,
 			Line:        fn.StartLine,
 			Column:      fn.StartColumn,
+			EndLine:     fn.EndLine,
 			Rule:        "cyclomatic-complexity",
 			Suggestion:  d.getComplexitySuggestion(fn.Name, fn.Complexity),
-			CodeSnippet: d.generateFunctionSignature(fn),
+			CodeSnippet: codeSnippet,
 		})
 	}
 
 	// Check parameter count
 	paramCount := len(fn.Parameters)
 	if paramCount > d.config.MaxParameters {
+		codeSnippet := d.extractCodeSnippet(filePath, fn.StartLine, fn.StartLine)
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeParameterCount,
 			Severity:    d.getSeverityForParameterCount(paramCount),
@@ -109,12 +117,13 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 			Column:      fn.StartColumn,
 			Rule:        "parameter-count",
 			Suggestion:  d.getParameterCountSuggestion(fn.Name, paramCount),
-			CodeSnippet: d.generateFunctionSignature(fn),
+			CodeSnippet: codeSnippet,
 		})
 	}
 
 	// Check for missing documentation on exported functions
 	if d.config.RequireCommentsForPublic && fn.IsExported && !fn.HasComments {
+		codeSnippet := d.extractCodeSnippet(filePath, fn.StartLine, fn.StartLine)
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeMissingDocumentation,
 			Severity:    models.SeverityMedium,
@@ -124,7 +133,7 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 			Column:      fn.StartColumn,
 			Rule:        "missing-documentation",
 			Suggestion:  fmt.Sprintf("Add a comment describing what function '%s' does", fn.Name),
-			CodeSnippet: d.generateFunctionSignature(fn),
+			CodeSnippet: codeSnippet,
 		})
 	}
 
@@ -132,6 +141,7 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 	if fn.ASTNode != nil {
 		nestingDepth := d.calculateNestingDepth(fn.ASTNode)
 		if nestingDepth > d.config.MaxNestingDepth {
+			codeSnippet := d.extractCodeSnippet(filePath, fn.StartLine, fn.EndLine)
 			violations = append(violations, &models.Violation{
 				Type:        models.ViolationTypeNestingDepth,
 				Severity:    d.getSeverityForNestingDepth(nestingDepth),
@@ -139,9 +149,10 @@ func (d *FunctionDetector) checkFunction(fn *types.FunctionInfo, filePath string
 				File:        filePath,
 				Line:        fn.StartLine,
 				Column:      fn.StartColumn,
+				EndLine:     fn.EndLine,
 				Rule:        "nesting-depth",
 				Suggestion:  d.getNestingDepthSuggestion(fn.Name, nestingDepth),
-				CodeSnippet: d.generateFunctionSignature(fn),
+				CodeSnippet: codeSnippet,
 			})
 		}
 	}
@@ -307,4 +318,26 @@ func (d *FunctionDetector) getNestingDepthSuggestion(funcName string, depth int)
 	return fmt.Sprintf("Function '%s' has nesting depth of %d. "+
 		"Consider using early returns, extracting nested logic into separate functions, "+
 		"or flattening conditional statements.", funcName, depth)
+}
+
+// extractCodeSnippet extracts a code snippet for the violation with context
+func (d *FunctionDetector) extractCodeSnippet(filePath string, startLine, endLine int) string {
+	if d.codeExtractor == nil {
+		return d.generateFallbackSnippet(startLine, endLine)
+	}
+	
+	snippet, err := d.codeExtractor.ExtractSnippet(filePath, startLine, endLine)
+	if err != nil {
+		return d.generateFallbackSnippet(startLine, endLine)
+	}
+	
+	return snippet
+}
+
+// generateFallbackSnippet creates a simple snippet when file reading fails
+func (d *FunctionDetector) generateFallbackSnippet(startLine, endLine int) string {
+	if endLine <= startLine {
+		return fmt.Sprintf("Line %d: <code snippet unavailable>", startLine)
+	}
+	return fmt.Sprintf("Lines %d-%d: <code snippet unavailable>", startLine, endLine)
 }

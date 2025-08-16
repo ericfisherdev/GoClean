@@ -26,6 +26,9 @@ func NewViolationDetector(config *violations.DetectorConfig) *ViolationDetector 
 	registry.RegisterDetector(violations.NewNamingDetector(config))
 	registry.RegisterDetector(violations.NewStructureDetector(config))
 	
+	// Register Go-specific detectors
+	registry.RegisterDetector(violations.NewGoStandardNamingDetector(config))
+	
 	// Register advanced detectors
 	registry.RegisterDetector(violations.NewMagicNumberDetector(config))
 	registry.RegisterDetector(violations.NewCommentedCodeDetector(config))

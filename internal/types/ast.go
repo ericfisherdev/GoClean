@@ -1,3 +1,4 @@
+// Package types defines Go AST-related types and interfaces for code analysis.
 package types
 
 import (

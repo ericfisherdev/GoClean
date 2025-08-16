@@ -1,3 +1,4 @@
+// Package violations provides detectors for various clean code violations in Go source code.
 package violations
 
 import (
@@ -12,13 +13,15 @@ import (
 
 // DocumentationDetector checks for missing or poor quality documentation
 type DocumentationDetector struct {
-	config *DetectorConfig
+	config        *DetectorConfig
+	codeExtractor *CodeExtractor
 }
 
 // NewDocumentationDetector creates a new documentation detector
 func NewDocumentationDetector(config *DetectorConfig) *DocumentationDetector {
 	return &DocumentationDetector{
-		config: config,
+		config:        config,
+		codeExtractor: NewCodeExtractor(),
 	}
 }
 

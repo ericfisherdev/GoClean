@@ -1,3 +1,4 @@
+// Package samples provides test cases demonstrating various clean code violations.
 package samples
 
 // DeeplyNested demonstrates deep nesting levels

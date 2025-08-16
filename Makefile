@@ -64,12 +64,7 @@ install:
 # Lint code
 lint:
 	@echo "Running linter..."
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
-	else \
-		echo "⚠️  golangci-lint not found, skipping linting step"; \
-		echo "Install golangci-lint for local development: https://golangci-lint.run/usage/install/"; \
-	fi
+	golangci-lint run
 
 # Format code
 fmt:

@@ -1,3 +1,4 @@
+// Package samples provides test cases demonstrating various clean code violations.
 package samples
 
 // FunctionWithManyParameters has too many parameters
@@ -33,6 +34,7 @@ type UserInfo struct {
 	ZipCode   string
 }
 
+// BetterFunction demonstrates improved design using a struct parameter instead of many individual parameters.
 func BetterFunction(user UserInfo) {
 	// Better design with fewer parameters
 }

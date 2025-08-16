@@ -1,3 +1,4 @@
+// Package violations provides detectors for various clean code violations in Go source code.
 package violations
 
 import (
@@ -8,6 +9,25 @@ import (
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/types"
+)
+
+// Structure analysis thresholds
+const (
+	MaxStructFields       = 15 // Maximum number of fields in a struct
+	MaxInterfaceMethods   = 5  // Maximum number of methods in an interface  
+	MaxStructMethods      = 15 // Maximum number of methods for a struct
+	
+	// Severity calculation constants
+	HighFieldCountThreshold   = 25 // Field count threshold for high severity
+	MediumFieldCountThreshold = 20 // Field count threshold for medium severity
+	
+	// Multipliers for severity calculations
+	SeverityMultiplierHigh   = 2.0 // Multiplier for high severity thresholds
+	SeverityMultiplierMedium = 1.5 // Multiplier for medium severity thresholds
+	
+	// Default line/column values
+	DefaultLine   = 1
+	DefaultColumn = 1
 )
 
 // StructureDetector detects code structure-related violations
@@ -91,7 +111,7 @@ func (d *StructureDetector) checkTypeStructure(typeInfo *types.TypeInfo, filePat
 	}
 
 	// Check struct field count for excessive fields
-	if typeInfo.Kind == "struct" && typeInfo.FieldCount > 15 { // Default threshold for field count
+	if typeInfo.Kind == "struct" && typeInfo.FieldCount > MaxStructFields {
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeClassSize,
 			Severity:    d.getSeverityForFieldCount(typeInfo.FieldCount),
@@ -108,7 +128,7 @@ func (d *StructureDetector) checkTypeStructure(typeInfo *types.TypeInfo, filePat
 	}
 
 	// Check interface method count
-	if typeInfo.Kind == "interface" && typeInfo.MethodCount > 5 { // Default threshold for interface methods
+	if typeInfo.Kind == "interface" && typeInfo.MethodCount > MaxInterfaceMethods {
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeClassSize,
 			Severity:    d.getSeverityForMethodCount(typeInfo.MethodCount),
@@ -153,8 +173,8 @@ func (d *StructureDetector) checkForGodObjects(goAstInfo *types.GoASTInfo, fileP
 	for receiverType, methods := range methodsByReceiver {
 		if len(methods) > d.config.MaxMethods {
 			typeInfo := receiverLineInfo[receiverType]
-			line := 1
-			column := 1
+			line := DefaultLine
+			column := DefaultColumn
 			if typeInfo != nil {
 				line = typeInfo.StartLine
 				column = typeInfo.StartColumn
@@ -267,30 +287,30 @@ func (d *StructureDetector) generateTypeSignature(typeInfo *types.TypeInfo) stri
 // Severity calculation methods
 
 func (d *StructureDetector) getSeverityForTypeSize(lineCount int) models.Severity {
-	if lineCount > d.config.MaxClassLines*2 {
+	if lineCount > int(float64(d.config.MaxClassLines)*SeverityMultiplierHigh) {
 		return models.SeverityHigh
 	}
-	if lineCount > int(float64(d.config.MaxClassLines)*1.5) {
+	if lineCount > int(float64(d.config.MaxClassLines)*SeverityMultiplierMedium) {
 		return models.SeverityMedium
 	}
 	return models.SeverityLow
 }
 
 func (d *StructureDetector) getSeverityForFieldCount(fieldCount int) models.Severity {
-	if fieldCount > 25 {
+	if fieldCount > HighFieldCountThreshold {
 		return models.SeverityHigh
 	}
-	if fieldCount > 20 {
+	if fieldCount > MediumFieldCountThreshold {
 		return models.SeverityMedium
 	}
 	return models.SeverityLow
 }
 
 func (d *StructureDetector) getSeverityForMethodCount(methodCount int) models.Severity {
-	if methodCount > d.config.MaxMethods*2 {
+	if methodCount > int(float64(d.config.MaxMethods)*SeverityMultiplierHigh) {
 		return models.SeverityHigh
 	}
-	if methodCount > int(float64(d.config.MaxMethods)*1.5) {
+	if methodCount > int(float64(d.config.MaxMethods)*SeverityMultiplierMedium) {
 		return models.SeverityMedium
 	}
 	return models.SeverityLow
