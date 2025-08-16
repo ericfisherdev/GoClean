@@ -12,11 +12,22 @@ reviews:
     drafts: false
     # Empty base_branches array means review ALL PRs regardless of target branch
     base_branches: [develop, release]
-    labels: []
+    # Only review PRs with the "Needs Review" label
+    labels: ["Needs Review"]
     ignore_title_keywords: []
 
   # Generate high-level summaries for pull requests
   high_level_summary: true
+  
+  # Enable label suggestions and auto-apply
+  suggested_labels: true
+  auto_apply_labels: true
+  
+  # Custom labeling instructions
+  labeling_instructions:
+    - "Apply 'Review Approved' label if the PR has no more suggested coderabbit changes"
+    - "Apply 'CR Review Pending' label if a review was submitted to coderabbit but hasn't been completed"
+    - "Apply 'CR Review Failed' label if changes are requested by coderabbit"
   
   # Request changes workflow - auto-approve after comments are resolved
   request_changes_workflow: true
