@@ -50,7 +50,6 @@ coverage.html
 
 # Temporary files
 tmp/
-=======
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -58,7 +57,7 @@ tmp/
 *.so
 *.dylib
 /goclean
-goclean.exe
+/goclean.exe
 bin/goclean
 bin/goclean.exe
 
