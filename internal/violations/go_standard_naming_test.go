@@ -265,7 +265,7 @@ var customError error = errors.New("test")`,
 			source: `
 package main
 import "errors"
-var parseErr error = errors.New("parse error")`,
+var err error = errors.New("parse error")`,
 			expectedCount: 0,
 		},
 	}

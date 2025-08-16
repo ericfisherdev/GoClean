@@ -353,7 +353,7 @@ func TestCLIWithCustomThresholds(t *testing.T) {
 	require.NoError(t, os.MkdirAll(srcDir, 0755))
 	
 	// Create test file with specific characteristics
-	testFile := filepath.Join(srcDir, "test.go")
+	testFile := filepath.Join(srcDir, "sample.go")
 	testCode := `package main
 
 // Medium length function (15 lines)
