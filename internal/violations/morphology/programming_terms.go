@@ -49,7 +49,14 @@ func (p *ProgrammingTermAnalyzer) AnalyzeProgrammingTerm(term string) *Programmi
 		SuggestedFixes:  []string{},
 		Confidence:      0.0,
 	}
-	
+
+	// Populate acronym expansion if applicable
+	if result.IsAcronym {
+		if exp, ok := p.acronyms[strings.ToUpper(term)]; ok {
+			result.AcronymExpansion = exp
+		}
+	}
+
 	// Perform morphological analysis if not an acronym
 	if !result.IsAcronym {
 		for _, component := range result.WordComponents {
@@ -182,7 +189,11 @@ func (p *ProgrammingTermAnalyzer) loadAcronymDatabase() {
 		"Impl":  "Implementation",
 	}
 	
-	p.acronyms = acronyms
+	// Canonicalize acronym keys to uppercase for consistent lookup
+	p.acronyms = make(map[string]string)
+	for k, v := range acronyms {
+		p.acronyms[strings.ToUpper(k)] = v
+	}
 }
 
 // loadCommonTermsDatabase initializes common programming terms

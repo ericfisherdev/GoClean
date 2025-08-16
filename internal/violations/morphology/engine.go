@@ -110,9 +110,12 @@ func (e *MorphologyEngine) AnalyzeWord(word string) *MorphInfo {
 		}
 	}
 	
+	// Normalize cache key to avoid duplicate analyses by case
+	key := strings.ToLower(word)
+
 	// Check cache first
 	e.cacheMutex.RLock()
-	if cached, exists := e.cache[word]; exists {
+	if cached, exists := e.cache[key]; exists {
 		e.cacheMutex.RUnlock()
 		return cached
 	}
@@ -123,7 +126,7 @@ func (e *MorphologyEngine) AnalyzeWord(word string) *MorphInfo {
 	
 	// Cache result
 	e.cacheMutex.Lock()
-	e.cache[word] = result
+	e.cache[key] = result
 	e.cacheMutex.Unlock()
 	
 	return result
@@ -139,8 +142,24 @@ func (e *MorphologyEngine) IsCompleteWord(word string) bool {
 func (e *MorphologyEngine) IsProbableAbbreviation(word string) bool {
 	analysis := e.AnalyzeWord(word)
 	
-	// Short words with no recognizable morphemes are likely abbreviations
-	if len(word) <= 3 && len(analysis.Morphemes) == 0 {
+	// Short words with no recognized morphemes are likely abbreviations
+	recognizedParts := 0
+	if analysis.Prefix != "" {
+		if _, ok := e.prefixDB[analysis.Prefix]; ok {
+			recognizedParts++
+		}
+	}
+	if analysis.Root != "" {
+		if _, ok := e.rootWordDB[analysis.Root]; ok {
+			recognizedParts++
+		}
+	}
+	if analysis.Suffix != "" {
+		if _, ok := e.suffixDB[analysis.Suffix]; ok {
+			recognizedParts++
+		}
+	}
+	if len(word) <= 3 && recognizedParts == 0 {
 		return true
 	}
 	
