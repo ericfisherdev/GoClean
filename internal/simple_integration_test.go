@@ -211,7 +211,7 @@ func TestMultiLanguageScanning(t *testing.T) {
 	
 	// Create files for different languages
 	testFiles := map[string]string{
-		"test.go": `package main
+		"sample.go": `package main
 
 func LongGoFunction() {
 	println("Line 1")
@@ -241,7 +241,7 @@ func LongGoFunction() {
 	println("Line 25")
 }
 `,
-		"test.js": `function longJavaScriptFunction() {
+		"sample.js": `function longJavaScriptFunction() {
     console.log("Line 1");
     console.log("Line 2");
     console.log("Line 3");
@@ -269,7 +269,7 @@ func LongGoFunction() {
     console.log("Line 25");
 }
 `,
-		"test.py": `def long_python_function():
+		"sample.py": `def long_python_function():
     print("Line 1")
     print("Line 2")
     print("Line 3")

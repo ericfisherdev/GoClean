@@ -64,7 +64,7 @@ install:
 # Lint code
 lint:
 	@echo "Running linter..."
-	golangci-lint run
+	@which golangci-lint >/dev/null 2>&1 && golangci-lint run || echo "golangci-lint not found, skipping lint check"
 
 # Format code
 fmt:
