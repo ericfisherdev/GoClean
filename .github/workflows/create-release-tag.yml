@@ -68,11 +68,12 @@ jobs:
 
     - name: Create annotated tag
       if: steps.check_tag.outputs.exists == 'false'
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
         TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
         PR_NUMBER="${{ github.event.pull_request.number }}"
-        PR_TITLE="${{ github.event.pull_request.title }}"
         LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
         
         # Configure git
@@ -101,11 +102,11 @@ jobs:
       if: steps.check_tag.outputs.exists == 'false'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
       run: |
         VERSION="${{ steps.get_version.outputs.VERSION }}"
         TAG_NAME="${{ steps.check_tag.outputs.tag_name }}"
         PR_NUMBER="${{ github.event.pull_request.number }}"
-        PR_TITLE="${{ github.event.pull_request.title }}"
         LAST_TAG="${{ steps.last_tag.outputs.last_tag }}"
         
         # Generate release notes

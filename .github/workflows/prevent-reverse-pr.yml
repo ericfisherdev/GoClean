@@ -17,9 +17,10 @@ jobs:
     steps:
     - name: Check if PR is from release to develop
       id: check_direction
+      env:
+        HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: |
-        HEAD_REF="${{ github.event.pull_request.head.ref }}"
-        BASE_REF="${{ github.event.pull_request.base.ref }}"
         
         echo "Head branch: ${HEAD_REF}"
         echo "Base branch: ${BASE_REF}"
@@ -94,11 +95,14 @@ jobs:
           }
 
     - name: Log action taken
+      env:
+        HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: |
         if [[ "${{ steps.check_direction.outputs.reverse_pr }}" == "true" ]]; then
           echo "🚫 Closed reverse PR #${{ github.event.pull_request.number }}"
-          echo "   From: ${{ github.event.pull_request.head.ref }}"
-          echo "   To: ${{ github.event.pull_request.base.ref }}"
+          echo "   From: ${HEAD_REF}"
+          echo "   To: ${BASE_REF}"
         else
           echo "✅ PR direction is valid - no action needed"
         fi
