@@ -3,17 +3,23 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/ericfisherdev/goclean/internal/config"
+	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/scanner"
 	"github.com/ericfisherdev/goclean/internal/reporters"
 )
 
 var (
 	// Version can be overridden at build time with -ldflags "-X main.Version=x.y.z"
-	Version = "2025.08.16.20"
+	Version = getVersionFromFile()
 	
 	// Global flags
 	cfgFile     string
@@ -31,6 +37,9 @@ var (
 	aggressive       bool
 	includeTests     bool
 	customTestPatterns []string
+	
+	// Console output flags
+	consoleViolations bool
 
 )
 
@@ -61,11 +70,14 @@ Examples:
   goclean scan ./src
   goclean scan ./src ./internal --exclude vendor/,node_modules/
   goclean scan . --format html --output ./reports/report.html
-  goclean scan . --verbose --config ./custom-config.yaml`,
+  goclean scan . --verbose --config ./custom-config.yaml
+  goclean scan . --console-violations  # AI-friendly output`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("GoClean v%s - Clean Code Analysis Tool\n", rootCmd.Version)
-		fmt.Println("Starting code analysis...")
+		if !consoleViolations {
+			fmt.Printf("GoClean v%s - Clean Code Analysis Tool\n", rootCmd.Version)
+			fmt.Println("Starting code analysis...")
+		}
 		
 		// Load configuration
 		cfg, err := config.Load(cfgFile)
@@ -112,7 +124,7 @@ Examples:
 		}
 		
 		// Display configuration
-		if verbose {
+		if verbose && !consoleViolations {
 			fmt.Printf("Scan paths: %v\n", scanPaths)
 			if len(excludePatterns) > 0 {
 				fmt.Printf("Exclude patterns: %v\n", excludePatterns)
@@ -144,7 +156,7 @@ Examples:
 		
 		// Set progress callback for real-time updates
 		progressCallback := func(message string) {
-			if verbose {
+			if verbose && !consoleViolations {
 				fmt.Printf("Progress: %s\n", message)
 			}
 		}
@@ -158,10 +170,20 @@ Examples:
 		}
 		
 		// Generate console report
-		fmt.Println()
-		err = reporterManager.GenerateConsoleReport(summary, results, verbose, true)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to generate console report: %v\n", err)
+		if consoleViolations {
+			// Generate structured violations output for AI agents
+			generateConsoleViolationsOutput(summary, results)
+			// Exit immediately with appropriate code for console violations mode
+			if summary.TotalViolations > 0 {
+				os.Exit(1)
+			}
+			return
+		} else {
+			fmt.Println()
+			err = reporterManager.GenerateConsoleReport(summary, results, verbose, true)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to generate console report: %v\n", err)
+			}
 		}
 		
 		// Generate file reports (HTML and/or Markdown)
@@ -255,6 +277,148 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+// getVersionFromFile reads the version from the VERSION file, falling back to a default if not found
+func getVersionFromFile() string {
+	const defaultVersion = "dev"
+	
+	// Try to find VERSION file in the current directory or parent directories
+	versionPaths := []string{
+		"VERSION",
+		"../VERSION",
+		"../../VERSION",
+	}
+	
+	for _, versionPath := range versionPaths {
+		if file, err := os.Open(versionPath); err == nil {
+			defer file.Close()
+			
+			content, err := io.ReadAll(file)
+			if err == nil {
+				version := strings.TrimSpace(string(content))
+				if version != "" {
+					return version
+				}
+			}
+		}
+	}
+	
+	// If VERSION file not found, try to find it relative to the executable
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		versionFile := filepath.Join(execDir, "VERSION")
+		if file, err := os.Open(versionFile); err == nil {
+			defer file.Close()
+			
+			content, err := io.ReadAll(file)
+			if err == nil {
+				version := strings.TrimSpace(string(content))
+				if version != "" {
+					return version
+				}
+			}
+		}
+	}
+	
+	return defaultVersion
+}
+
+// generateConsoleViolationsOutput outputs violations in a structured format for AI agents
+func generateConsoleViolationsOutput(summary *models.ScanSummary, results []*models.ScanResult) {
+	// Print basic scan summary first
+	fmt.Printf("=== GoClean Scan Results ===\n")
+	fmt.Printf("Total Files: %d\n", summary.TotalFiles)
+	fmt.Printf("Scanned Files: %d\n", summary.ScannedFiles)
+	fmt.Printf("Total Violations: %d\n", summary.TotalViolations)
+	fmt.Printf("Scan Duration: %v\n\n", summary.Duration)
+	
+	if summary.TotalViolations == 0 {
+		fmt.Println("✅ No violations found!")
+		return
+	}
+	
+	fmt.Println("=== Violations (Structured Format) ===")
+	
+	// Create tab writer for structured output
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	
+	// Write header
+	fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", "FILE", "LINE", "TYPE", "LEVEL", "MESSAGE")
+	
+	// Collect all violations from all files
+	var allViolations []*models.Violation
+	for _, result := range results {
+		for _, violation := range result.Violations {
+			allViolations = append(allViolations, violation)
+		}
+	}
+	
+	// Sort violations by file and then by line number
+	sort.Slice(allViolations, func(i, j int) bool {
+		if allViolations[i].File != allViolations[j].File {
+			return allViolations[i].File < allViolations[j].File
+		}
+		return allViolations[i].Line < allViolations[j].Line
+	})
+	
+	// Output each violation in tab-delimited format
+	for _, violation := range allViolations {
+		// Clean up message (remove newlines and tabs but preserve content)
+		message := strings.ReplaceAll(violation.Message, "\n", " ")
+		message = strings.ReplaceAll(message, "\t", " ")
+		
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n",
+			violation.File,
+			violation.Line,
+			string(violation.Type),
+			violation.Severity.String(),
+			message)
+	}
+	
+	// Flush the tabwriter
+	w.Flush()
+	
+	fmt.Printf("\n=== Summary by Type ===\n")
+	// Count violations by type
+	violationCounts := make(map[models.ViolationType]int)
+	for _, violation := range allViolations {
+		violationCounts[violation.Type]++
+	}
+	
+	// Sort by count descending
+	type typeCount struct {
+		Type  models.ViolationType
+		Count int
+	}
+	var sortedTypes []typeCount
+	for vtype, count := range violationCounts {
+		sortedTypes = append(sortedTypes, typeCount{Type: vtype, Count: count})
+	}
+	sort.Slice(sortedTypes, func(i, j int) bool {
+		return sortedTypes[i].Count > sortedTypes[j].Count
+	})
+	
+	for _, tc := range sortedTypes {
+		fmt.Printf("%-30s: %d\n", tc.Type.GetDisplayName(), tc.Count)
+	}
+	
+	fmt.Printf("\n=== Summary by Severity ===\n")
+	// Count violations by severity
+	severityCounts := make(map[models.Severity]int)
+	for _, violation := range allViolations {
+		severityCounts[violation.Severity]++
+	}
+	
+	// Output in order of severity
+	severities := []models.Severity{models.SeverityCritical, models.SeverityHigh, models.SeverityMedium, models.SeverityLow, models.SeverityInfo}
+	for _, severity := range severities {
+		if count, exists := severityCounts[severity]; exists && count > 0 {
+			fmt.Printf("%-10s: %d\n", severity.String(), count)
+		}
+	}
+	
+	fmt.Printf("\n⚠️  Total: %d violations found\n", summary.TotalViolations)
+}
+
 func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is goclean.yaml)")
@@ -270,6 +434,9 @@ func init() {
 	scanCmd.Flags().BoolVar(&aggressive, "aggressive", false, "Enable aggressive mode (scan test files and apply stricter rules)")
 	scanCmd.Flags().BoolVar(&includeTests, "include-tests", false, "Include test files in analysis (alias for --aggressive)")
 	scanCmd.Flags().StringSliceVar(&customTestPatterns, "test-patterns", []string{}, "Additional test file patterns to recognize")
+	
+	// Console output flags
+	scanCmd.Flags().BoolVar(&consoleViolations, "console-violations", false, "Output violations directly to console in structured format for AI agents")
 
 	// Config subcommands
 	configCmd.AddCommand(configInitCmd)
