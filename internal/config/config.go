@@ -27,6 +27,7 @@ type Config struct {
 	Thresholds  Thresholds    `yaml:"thresholds"`
 	Output      OutputConfig  `yaml:"output"`
 	Logging     LoggingConfig `yaml:"logging"`
+	Rust        RustConfig    `yaml:"rust"`
 }
 
 // ScanConfig contains scanning-related settings
@@ -75,6 +76,53 @@ type MarkdownConfig struct {
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
+}
+
+// RustConfig contains Rust-specific analysis settings
+type RustConfig struct {
+	// Ownership and borrowing analysis
+	EnableOwnershipAnalysis bool `yaml:"enable_ownership_analysis"`
+	MaxLifetimeParams       int  `yaml:"max_lifetime_params"`
+	DetectUnnecessaryClones bool `yaml:"detect_unnecessary_clones"`
+	
+	// Error handling analysis
+	EnableErrorHandlingCheck bool `yaml:"enable_error_handling_check"`
+	AllowUnwrap             bool `yaml:"allow_unwrap"`
+	AllowExpect             bool `yaml:"allow_expect"`
+	EnforceResultPropagation bool `yaml:"enforce_result_propagation"`
+	
+	// Pattern matching analysis
+	EnablePatternMatchCheck  bool `yaml:"enable_pattern_match_check"`
+	RequireExhaustiveMatch   bool `yaml:"require_exhaustive_match"`
+	MaxNestedMatchDepth      int  `yaml:"max_nested_match_depth"`
+	
+	// Trait and impl analysis
+	MaxTraitBounds          int  `yaml:"max_trait_bounds"`
+	MaxImplMethods          int  `yaml:"max_impl_methods"`
+	DetectOrphanInstances   bool `yaml:"detect_orphan_instances"`
+	
+	// Unsafe code analysis
+	AllowUnsafe             bool `yaml:"allow_unsafe"`
+	RequireUnsafeComments   bool `yaml:"require_unsafe_comments"`
+	DetectTransmuteUsage    bool `yaml:"detect_transmute_usage"`
+	
+	// Performance analysis
+	DetectIneffcientString  bool `yaml:"detect_inefficient_string"`
+	DetectBoxedPrimitives   bool `yaml:"detect_boxed_primitives"`
+	DetectBlockingInAsync   bool `yaml:"detect_blocking_in_async"`
+	
+	// Macro analysis
+	MaxMacroComplexity      int  `yaml:"max_macro_complexity"`
+	AllowRecursiveMacros    bool `yaml:"allow_recursive_macros"`
+	
+	// Module structure
+	MaxModuleDepth          int  `yaml:"max_module_depth"`
+	MaxFileLines            int  `yaml:"max_file_lines"`
+	
+	// Naming conventions (Rust-specific)
+	EnforceSnakeCase        bool `yaml:"enforce_snake_case"`
+	EnforcePascalCase       bool `yaml:"enforce_pascal_case"`
+	EnforceScreamingSnake   bool `yaml:"enforce_screaming_snake"`
 }
 
 // Load loads configuration from a file
@@ -162,6 +210,7 @@ func GetDefaultConfig() *Config {
 				".c",
 				".h",
 				".hpp",
+				".rs",
 			},
 			SkipTestFiles:  boolPtr(true),  // Skip test files by default
 			AggressiveMode: boolPtr(false), // Normal mode by default
@@ -191,6 +240,56 @@ func GetDefaultConfig() *Config {
 			Level:  "info",
 			Format: "structured",
 		},
+		Rust: GetDefaultRustConfig(),
+	}
+}
+
+// GetDefaultRustConfig returns the default Rust configuration
+func GetDefaultRustConfig() RustConfig {
+	return RustConfig{
+		// Ownership and borrowing
+		EnableOwnershipAnalysis: true,
+		MaxLifetimeParams:       3,
+		DetectUnnecessaryClones: true,
+		
+		// Error handling
+		EnableErrorHandlingCheck: true,
+		AllowUnwrap:             false,
+		AllowExpect:             false,
+		EnforceResultPropagation: true,
+		
+		// Pattern matching
+		EnablePatternMatchCheck:  true,
+		RequireExhaustiveMatch:   true,
+		MaxNestedMatchDepth:      3,
+		
+		// Trait and impl
+		MaxTraitBounds:          5,
+		MaxImplMethods:          20,
+		DetectOrphanInstances:   true,
+		
+		// Unsafe code
+		AllowUnsafe:             true,  // Allow but track
+		RequireUnsafeComments:   true,
+		DetectTransmuteUsage:    true,
+		
+		// Performance
+		DetectIneffcientString:  true,
+		DetectBoxedPrimitives:   true,
+		DetectBlockingInAsync:   true,
+		
+		// Macro analysis
+		MaxMacroComplexity:      10,
+		AllowRecursiveMacros:    false,
+		
+		// Module structure
+		MaxModuleDepth:          5,
+		MaxFileLines:            500,
+		
+		// Naming conventions
+		EnforceSnakeCase:        true,
+		EnforcePascalCase:       true,
+		EnforceScreamingSnake:   true,
 	}
 }
 
@@ -281,6 +380,45 @@ func mergeWithDefaults(config *Config) {
 	}
 	if config.Logging.Format == "" {
 		config.Logging.Format = defaults.Logging.Format
+	}
+	
+	// Merge Rust config - use defaults if not explicitly set
+	mergeRustConfig(&config.Rust, &defaults.Rust)
+}
+
+// mergeRustConfig merges Rust configuration with defaults
+func mergeRustConfig(config *RustConfig, defaults *RustConfig) {
+	// Since booleans default to false, we need a different approach
+	// We'll only merge if the entire Rust config section appears to be unset
+	
+	// Check if config is completely empty (all defaults)
+	emptyConfig := RustConfig{}
+	if *config == emptyConfig {
+		*config = *defaults
+		return
+	}
+	
+	// For integer fields, use defaults if zero
+	if config.MaxLifetimeParams == 0 {
+		config.MaxLifetimeParams = defaults.MaxLifetimeParams
+	}
+	if config.MaxNestedMatchDepth == 0 {
+		config.MaxNestedMatchDepth = defaults.MaxNestedMatchDepth
+	}
+	if config.MaxTraitBounds == 0 {
+		config.MaxTraitBounds = defaults.MaxTraitBounds
+	}
+	if config.MaxImplMethods == 0 {
+		config.MaxImplMethods = defaults.MaxImplMethods
+	}
+	if config.MaxMacroComplexity == 0 {
+		config.MaxMacroComplexity = defaults.MaxMacroComplexity
+	}
+	if config.MaxModuleDepth == 0 {
+		config.MaxModuleDepth = defaults.MaxModuleDepth
+	}
+	if config.MaxFileLines == 0 {
+		config.MaxFileLines = defaults.MaxFileLines
 	}
 }
 

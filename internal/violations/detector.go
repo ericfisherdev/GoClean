@@ -75,6 +75,56 @@ type DetectorConfig struct {
 	
 	// Severity classification config
 	SeverityConfig *SeverityConfig
+	
+	// Rust-specific configuration
+	RustConfig *RustDetectorConfig
+}
+
+// RustDetectorConfig provides Rust-specific detector configuration
+type RustDetectorConfig struct {
+	// Ownership and borrowing
+	EnableOwnershipAnalysis bool
+	MaxLifetimeParams       int
+	DetectUnnecessaryClones bool
+	
+	// Error handling
+	EnableErrorHandlingCheck bool
+	AllowUnwrap             bool
+	AllowExpect             bool
+	EnforceResultPropagation bool
+	
+	// Pattern matching
+	EnablePatternMatchCheck  bool
+	RequireExhaustiveMatch   bool
+	MaxNestedMatchDepth      int
+	
+	// Trait and impl
+	MaxTraitBounds          int
+	MaxImplMethods          int
+	DetectOrphanInstances   bool
+	
+	// Unsafe code
+	AllowUnsafe             bool
+	RequireUnsafeComments   bool
+	DetectTransmuteUsage    bool
+	
+	// Performance
+	DetectIneffcientString  bool
+	DetectBoxedPrimitives   bool
+	DetectBlockingInAsync   bool
+	
+	// Macro analysis
+	MaxMacroComplexity      int
+	AllowRecursiveMacros    bool
+	
+	// Module structure
+	MaxModuleDepth          int
+	MaxFileLines            int
+	
+	// Naming conventions
+	EnforceSnakeCase        bool
+	EnforcePascalCase       bool
+	EnforceScreamingSnake   bool
 }
 
 // DefaultDetectorConfig returns the default configuration
@@ -93,6 +143,56 @@ func DefaultDetectorConfig() *DetectorConfig {
 		SkipTestFiles:        true,
 		Verbose:              false,
 		SeverityConfig:       DefaultSeverityConfig(),
+		RustConfig:           DefaultRustDetectorConfig(),
+	}
+}
+
+// DefaultRustDetectorConfig returns the default Rust detector configuration
+func DefaultRustDetectorConfig() *RustDetectorConfig {
+	return &RustDetectorConfig{
+		// Ownership and borrowing
+		EnableOwnershipAnalysis: true,
+		MaxLifetimeParams:       3,
+		DetectUnnecessaryClones: true,
+		
+		// Error handling
+		EnableErrorHandlingCheck: true,
+		AllowUnwrap:             false,
+		AllowExpect:             false,
+		EnforceResultPropagation: true,
+		
+		// Pattern matching
+		EnablePatternMatchCheck:  true,
+		RequireExhaustiveMatch:   true,
+		MaxNestedMatchDepth:      3,
+		
+		// Trait and impl
+		MaxTraitBounds:          5,
+		MaxImplMethods:          20,
+		DetectOrphanInstances:   true,
+		
+		// Unsafe code
+		AllowUnsafe:             true,  // Allow but track
+		RequireUnsafeComments:   true,
+		DetectTransmuteUsage:    true,
+		
+		// Performance
+		DetectIneffcientString:  true,
+		DetectBoxedPrimitives:   true,
+		DetectBlockingInAsync:   true,
+		
+		// Macro analysis
+		MaxMacroComplexity:      10,
+		AllowRecursiveMacros:    false,
+		
+		// Module structure
+		MaxModuleDepth:          5,
+		MaxFileLines:            500,
+		
+		// Naming conventions
+		EnforceSnakeCase:        true,
+		EnforcePascalCase:       true,
+		EnforceScreamingSnake:   true,
 	}
 }
 
