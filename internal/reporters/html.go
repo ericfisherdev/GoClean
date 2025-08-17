@@ -185,6 +185,52 @@ func getTemplateFunctions() template.FuncMap {
 			
 			return template.HTML(strings.TrimSuffix(result.String(), "\n"))
 		},
+		"detectLanguage": func(filePath string) string {
+			// Detect programming language from file extension for syntax highlighting
+			ext := strings.ToLower(filepath.Ext(filePath))
+			switch ext {
+			case ".rs":
+				return "rust"
+			case ".go":
+				return "go"
+			case ".js", ".jsx":
+				return "javascript"
+			case ".ts", ".tsx":
+				return "typescript"
+			case ".py":
+				return "python"
+			case ".java":
+				return "java"
+			case ".cs":
+				return "csharp"
+			case ".c", ".h":
+				return "c"
+			case ".cpp", ".cc", ".cxx", ".hpp":
+				return "cpp"
+			case ".php":
+				return "php"
+			case ".rb":
+				return "ruby"
+			case ".swift":
+				return "swift"
+			case ".kt", ".kts":
+				return "kotlin"
+			case ".scala":
+				return "scala"
+			default:
+				return "plaintext"
+			}
+		},
+		"rustViolationCategory": func(violationType models.ViolationType) string {
+			category := models.GetRustViolationCategory(violationType)
+			if category == "" {
+				return "general"
+			}
+			return string(category)
+		},
+		"isRustViolation": func(violationType models.ViolationType) bool {
+			return models.IsRustSpecificViolation(violationType)
+		},
 		"themeClass": func(theme string) string {
 			switch theme {
 			case "dark":

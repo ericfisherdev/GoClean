@@ -29,6 +29,12 @@ const (
 	LowViolationThreshold = 5
 )
 
+// typeCount represents a violation type with its count
+type typeCount struct {
+	Type  models.ViolationType
+	Count int
+}
+
 // ConsoleReporter outputs reports to the console
 type ConsoleReporter struct {
 	verbose bool
@@ -92,28 +98,49 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 	fmt.Println(strings.Repeat("-", SeparatorLength))
 	
 	// Sort violation types by count (descending)
-	type typeCount struct {
-		Type  models.ViolationType
-		Count int
-	}
 	
 	var sortedTypes []typeCount
+	var rustViolations []typeCount
 	for vtype, count := range stats.ViolationsByType {
-		sortedTypes = append(sortedTypes, typeCount{Type: vtype, Count: count})
+		if models.IsRustSpecificViolation(vtype) {
+			rustViolations = append(rustViolations, typeCount{Type: vtype, Count: count})
+		} else {
+			sortedTypes = append(sortedTypes, typeCount{Type: vtype, Count: count})
+		}
 	}
 	
 	sort.Slice(sortedTypes, func(i, j int) bool {
 		return sortedTypes[i].Count > sortedTypes[j].Count
 	})
+	sort.Slice(rustViolations, func(i, j int) bool {
+		return rustViolations[i].Count > rustViolations[j].Count
+	})
 	
 	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
+	
+	// Print general violations
 	for _, tc := range sortedTypes {
 		fmt.Fprintf(w, "%s:\t%s\n", 
 			tc.Type.GetDisplayName(), 
 			c.colorizeViolationCount(tc.Count))
 	}
+	
+	// Print Rust-specific violations with category indicators
+	for _, tc := range rustViolations {
+		category := models.GetRustViolationCategory(tc.Type)
+		fmt.Fprintf(w, "%s 🦀 [%s]:\t%s\n", 
+			tc.Type.GetDisplayName(),
+			strings.Title(string(category)),
+			c.colorizeViolationCount(tc.Count))
+	}
+	
 	w.Flush()
 	fmt.Println()
+	
+	// Print Rust violation categories summary if there are Rust violations
+	if len(rustViolations) > 0 {
+		c.printRustCategorySummary(rustViolations)
+	}
 
 	fmt.Println(c.colorize("🚨 VIOLATIONS BY SEVERITY", "section"))
 	fmt.Println(strings.Repeat("-", SeparatorLength))
@@ -227,11 +254,19 @@ func (c *ConsoleReporter) printViolation(v *models.Violation) {
 	severityIcon := c.getSeverityIcon(v.Severity)
 	severityColor := c.getSeverityColor(v.Severity)
 	
-	fmt.Printf("  %s %s [Line %d] %s\n",
+	// Add Rust category indicator if it's a Rust-specific violation
+	categoryInfo := ""
+	if models.IsRustSpecificViolation(v.Type) {
+		category := models.GetRustViolationCategory(v.Type)
+		categoryInfo = fmt.Sprintf(" [🦀 %s]", strings.Title(string(category)))
+	}
+	
+	fmt.Printf("  %s %s [Line %d] %s%s\n",
 		severityIcon,
 		c.colorize(v.Severity.String(), severityColor),
 		v.Line,
-		v.Type.GetDisplayName())
+		v.Type.GetDisplayName(),
+		c.colorize(categoryInfo, "rust-category"))
 	
 	fmt.Printf("    %s\n", v.Message)
 	
@@ -277,16 +312,17 @@ func (c *ConsoleReporter) colorize(text, colorType string) string {
 	}
 	
 	colors := map[string]string{
-		"header":      "\033[1;36m",  // Cyan bold
-		"section":     "\033[1;34m",  // Blue bold
-		"success":     "\033[1;32m",  // Green bold
-		"warning":     "\033[1;33m",  // Yellow bold
-		"error":       "\033[1;31m",  // Red bold
-		"filename":    "\033[1;37m",  // White bold
-		"description": "\033[0;90m",  // Dark gray
-		"suggestion":  "\033[0;36m",  // Cyan
-		"file":        "\033[0;35m",  // Magenta
-		"reset":       "\033[0m",     // Reset
+		"header":       "\033[1;36m",  // Cyan bold
+		"section":      "\033[1;34m",  // Blue bold
+		"success":      "\033[1;32m",  // Green bold
+		"warning":      "\033[1;33m",  // Yellow bold
+		"error":        "\033[1;31m",  // Red bold
+		"filename":     "\033[1;37m",  // White bold
+		"description":  "\033[0;90m",  // Dark gray
+		"suggestion":   "\033[0;36m",  // Cyan
+		"file":         "\033[0;35m",  // Magenta
+		"rust-category": "\033[0;33m",  // Yellow for Rust categories
+		"reset":        "\033[0m",     // Reset
 	}
 	
 	if color, exists := colors[colorType]; exists {
@@ -294,6 +330,43 @@ func (c *ConsoleReporter) colorize(text, colorType string) string {
 	}
 	
 	return text
+}
+
+// printRustCategorySummary prints a summary of Rust violations by category
+func (c *ConsoleReporter) printRustCategorySummary(rustViolations []typeCount) {
+	fmt.Println(c.colorize("🦀 RUST VIOLATIONS BY CATEGORY", "section"))
+	fmt.Println(strings.Repeat("-", SeparatorLength))
+	
+	// Group by category
+	categoryCount := make(map[models.RustViolationCategory]int)
+	for _, tv := range rustViolations {
+		category := models.GetRustViolationCategory(tv.Type)
+		categoryCount[category] += tv.Count
+	}
+	
+	// Sort categories by count
+	type categoryInfo struct {
+		Category models.RustViolationCategory
+		Count    int
+	}
+	
+	var categories []categoryInfo
+	for cat, count := range categoryCount {
+		categories = append(categories, categoryInfo{Category: cat, Count: count})
+	}
+	
+	sort.Slice(categories, func(i, j int) bool {
+		return categories[i].Count > categories[j].Count
+	})
+	
+	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
+	for _, cat := range categories {
+		fmt.Fprintf(w, "%s:\t%s\n", 
+			strings.Title(string(cat.Category)), 
+			c.colorizeViolationCount(cat.Count))
+	}
+	w.Flush()
+	fmt.Println()
 }
 
 // colorizeBySeverity applies color based on severity level
