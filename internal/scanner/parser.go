@@ -13,15 +13,17 @@ import (
 
 // Parser handles file parsing and basic analysis
 type Parser struct {
-	verbose     bool
-	astAnalyzer *ASTAnalyzer
+	verbose         bool
+	astAnalyzer     *ASTAnalyzer
+	rustASTAnalyzer *RustASTAnalyzer
 }
 
 // NewParser creates a new Parser instance
 func NewParser(verbose bool) *Parser {
 	return &Parser{
-		verbose:     verbose,
-		astAnalyzer: NewASTAnalyzer(verbose),
+		verbose:         verbose,
+		astAnalyzer:     NewASTAnalyzer(verbose),
+		rustASTAnalyzer: NewRustASTAnalyzer(verbose),
 	}
 }
 
@@ -34,6 +36,11 @@ func (p *Parser) ParseFile(fileInfo *models.FileInfo) (*models.ScanResult, error
 	// Use AST parsing for Go files
 	if fileInfo.Language == "Go" {
 		return p.parseGoFileWithAST(fileInfo)
+	}
+	
+	// Use AST parsing for Rust files
+	if fileInfo.Language == "Rust" {
+		return p.parseRustFileWithAST(fileInfo)
 	}
 	
 	// Fall back to line-by-line parsing for other languages
@@ -77,6 +84,48 @@ func (p *Parser) parseGoFileWithAST(fileInfo *models.FileInfo) (*models.ScanResu
 	if p.verbose && os.Getenv("GOCLEAN_TEST_MODE") == "" {
 		fmt.Fprintf(os.Stderr, "AST parsed %s: %d lines, %d functions, %d types\n",
 			fileInfo.Path, metrics.TotalLines, len(astInfo.Functions), len(astInfo.Types))
+	}
+
+	return result, nil
+}
+
+// parseRustFileWithAST performs AST-based parsing for Rust files
+func (p *Parser) parseRustFileWithAST(fileInfo *models.FileInfo) (*models.ScanResult, error) {
+	content, err := p.readFileOptimized(fileInfo.Path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read file %s: %w", fileInfo.Path, err)
+	}
+
+	// Perform Rust AST analysis
+	rustASTInfo, err := p.rustASTAnalyzer.AnalyzeRustFile(fileInfo.Path, content)
+	if err != nil {
+		// Fall back to line-by-line parsing if AST fails
+		if p.verbose {
+			fmt.Printf("Rust AST parsing failed for %s, falling back to line parsing: %v\n", fileInfo.Path, err)
+		}
+		return p.parseFileLineByLine(fileInfo, content)
+	}
+
+	// Extract metrics from content
+	metrics := p.extractMetricsFromContent(content, fileInfo.Language)
+	metrics.FunctionCount = len(rustASTInfo.Functions)
+	metrics.ClassCount = len(rustASTInfo.Structs) + len(rustASTInfo.Enums) + len(rustASTInfo.Traits)
+
+	// Update file info with AST data
+	fileInfo.Lines = metrics.TotalLines
+	fileInfo.Scanned = true
+
+	// Create scan result with Rust AST information
+	result := &models.ScanResult{
+		File:        fileInfo,
+		Violations:  []*models.Violation{}, // Will be populated by violation detectors
+		Metrics:     metrics,
+		RustASTInfo: rustASTInfo, // Store Rust AST info for violation detection
+	}
+
+	if p.verbose && os.Getenv("GOCLEAN_TEST_MODE") == "" {
+		fmt.Fprintf(os.Stderr, "Rust AST parsed %s: %d lines, %d functions, %d structs, %d enums\n",
+			fileInfo.Path, metrics.TotalLines, len(rustASTInfo.Functions), len(rustASTInfo.Structs), len(rustASTInfo.Enums))
 	}
 
 	return result, nil
