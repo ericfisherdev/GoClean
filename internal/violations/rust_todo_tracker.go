@@ -171,10 +171,10 @@ func (d *RustTodoTrackerDetector) checkForMarkers(text string, lineNum int, file
 func (d *RustTodoTrackerDetector) checkForRustSpecificMarkers(line string, lineNum int, filePath string) *models.Violation {
 	// Check for Rust-specific panic/error macros that often indicate incomplete code
 	patterns := map[string]string{
-		`panic!\s*\(\s*"([^"]*)"`: "PANIC",
-		`unimplemented!\s*\(\s*(?:"([^"]*)")?`: "UNIMPLEMENTED",
-		`unreachable!\s*\(\s*(?:"([^"]*)")?`: "UNREACHABLE",
-		`todo!\s*\(\s*(?:"([^"]*)")?`: "TODO",
+		`panic!\s*\(\s*(?:"([^"]*)")?\s*\)`: "PANIC",
+		`unimplemented!\s*\(\s*(?:"([^"]*)")?\s*\)`: "UNIMPLEMENTED",
+		`unreachable!\s*\(\s*(?:"([^"]*)")?\s*\)`: "UNREACHABLE",
+		`todo!\s*\(\s*(?:"([^"]*)")?\s*\)`: "TODO",
 	}
 	
 	for pattern, marker := range patterns {
