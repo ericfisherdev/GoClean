@@ -142,3 +142,29 @@ func getCurrentMemoryUsage() uint64 {
 	runtime.ReadMemStats(&m)
 	return m.Alloc
 }
+
+// CreateRustBenchmarkFiles creates multiple Rust test files for benchmarking
+func (h *BenchmarkHelper) CreateRustBenchmarkFiles(b *testing.B, count int, content string) []*models.FileInfo {
+	b.Helper()
+	var files []*models.FileInfo
+	
+	for i := 0; i < count; i++ {
+		fileName := fmt.Sprintf("bench_file_%d.rs", i)
+		filePath := filepath.Join(h.TempDir, fileName)
+		
+		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			b.Fatalf("Failed to create Rust benchmark file: %v", err)
+		}
+		
+		fileInfo := &models.FileInfo{
+			Path:     filePath,
+			Name:     fileName,
+			Language: "Rust",
+			Size:     int64(len(content)),
+		}
+		
+		files = append(files, fileInfo)
+	}
+	
+	return files
+}

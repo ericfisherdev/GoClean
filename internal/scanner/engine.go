@@ -21,26 +21,32 @@ const (
 
 // Engine is the main scanning orchestrator
 type Engine struct {
-	fileWalker         *FileWalker
-	parser             *Parser
-	violationDetector  *ViolationDetector
-	verbose            bool
-	maxWorkers         int
-	progressFn         func(string)
-	realTimeMode       bool
-	workerBufferSize   int
+	fileWalker           *FileWalker
+	parser               *Parser
+	violationDetector    *ViolationDetector
+	verbose              bool
+	maxWorkers           int
+	progressFn           func(string)
+	realTimeMode         bool
+	workerBufferSize     int
+	rustOptimizer        *RustPerformanceOptimizer
+	enableRustOptimization bool
 }
 
 // NewEngine creates a new scanning engine
 func NewEngine(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool) *Engine {
 	numCPU := runtime.NumCPU()
+	rustOptimizer := NewRustPerformanceOptimizer(verbose)
+	
 	return &Engine{
-		fileWalker:        NewFileWalker(includePaths, excludePatterns, fileTypes, verbose),
-		parser:            NewParser(verbose),
-		violationDetector: NewViolationDetector(violations.DefaultDetectorConfig()),
-		verbose:           verbose,
-		maxWorkers:        numCPU, // Default to number of CPU cores
-		workerBufferSize:  numCPU * 2, // Buffer size for better throughput
+		fileWalker:             NewFileWalker(includePaths, excludePatterns, fileTypes, verbose),
+		parser:                 NewParserWithOptimizer(verbose, rustOptimizer),
+		violationDetector:      NewViolationDetector(violations.DefaultDetectorConfig()),
+		verbose:                verbose,
+		maxWorkers:             numCPU, // Default to number of CPU cores
+		workerBufferSize:       numCPU * 2, // Buffer size for better throughput
+		rustOptimizer:          rustOptimizer,
+		enableRustOptimization: true,
 	}
 }
 
@@ -48,18 +54,21 @@ func NewEngine(includePaths []string, excludePatterns []string, fileTypes []stri
 func NewEngineWithConfig(includePaths []string, excludePatterns []string, fileTypes []string, verbose bool,
 	skipTestFiles bool, aggressiveMode bool, customTestPatterns []string) *Engine {
 	numCPU := runtime.NumCPU()
+	rustOptimizer := NewRustPerformanceOptimizer(verbose)
 	
 	// Create detector config with test file awareness
 	detectorConfig := violations.DefaultDetectorConfig()
 	detectorConfig.AggressiveMode = aggressiveMode
 	
 	return &Engine{
-		fileWalker:        NewFileWalkerWithConfig(includePaths, excludePatterns, fileTypes, verbose, skipTestFiles, aggressiveMode, customTestPatterns),
-		parser:            NewParser(verbose),
-		violationDetector: NewViolationDetector(detectorConfig),
-		verbose:           verbose,
-		maxWorkers:        numCPU,
-		workerBufferSize:  numCPU * 2,
+		fileWalker:             NewFileWalkerWithConfig(includePaths, excludePatterns, fileTypes, verbose, skipTestFiles, aggressiveMode, customTestPatterns),
+		parser:                 NewParserWithOptimizer(verbose, rustOptimizer),
+		violationDetector:      NewViolationDetector(detectorConfig),
+		verbose:                verbose,
+		maxWorkers:             numCPU,
+		workerBufferSize:       numCPU * 2,
+		rustOptimizer:          rustOptimizer,
+		enableRustOptimization: true,
 	}
 }
 
@@ -67,6 +76,44 @@ func NewEngineWithConfig(includePaths []string, excludePatterns []string, fileTy
 func (e *Engine) SetMaxWorkers(workers int) {
 	if workers > 0 {
 		e.maxWorkers = workers
+		// Update Rust optimizer configuration if available
+		if e.rustOptimizer != nil {
+			e.rustOptimizer.SetWorkerConfiguration(workers, workers*2)
+		}
+	}
+}
+
+// EnableRustOptimization enables or disables Rust-specific performance optimizations
+func (e *Engine) EnableRustOptimization(enabled bool) {
+	e.enableRustOptimization = enabled
+}
+
+// SetRustCacheConfig configures the Rust AST cache
+func (e *Engine) SetRustCacheConfig(maxSize int, ttl time.Duration) {
+	if e.rustOptimizer != nil {
+		e.rustOptimizer.SetCacheConfiguration(maxSize, ttl)
+	}
+}
+
+// GetRustPerformanceMetrics returns performance metrics for Rust parsing
+func (e *Engine) GetRustPerformanceMetrics() map[string]interface{} {
+	if e.rustOptimizer != nil {
+		return e.rustOptimizer.GetPerformanceMetrics()
+	}
+	return nil
+}
+
+// ClearRustCache clears the Rust AST cache
+func (e *Engine) ClearRustCache() {
+	if e.rustOptimizer != nil {
+		e.rustOptimizer.ClearCache()
+	}
+}
+
+// CleanupRustCache removes expired entries from the Rust cache
+func (e *Engine) CleanupRustCache() {
+	if e.rustOptimizer != nil {
+		e.rustOptimizer.CleanupCache()
 	}
 }
 
@@ -76,6 +123,11 @@ func (e *Engine) Scan() (*models.ScanSummary, []*models.ScanResult, error) {
 
 	// Reset violation detector caches for new scan
 	e.violationDetector.ResetDuplicationCache()
+	
+	// Cleanup expired Rust cache entries if optimization is enabled
+	if e.enableRustOptimization && e.rustOptimizer != nil {
+		e.rustOptimizer.CleanupCache()
+	}
 
 	if e.progressFn != nil {
 		e.progressFn("Starting file discovery...")

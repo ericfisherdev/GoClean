@@ -11,17 +11,27 @@ import (
 // RustASTAnalyzer handles Rust AST parsing and analysis
 // Note: This is a simplified implementation that will be enhanced with syn crate integration
 type RustASTAnalyzer struct {
-	verbose bool
+	verbose   bool
+	optimizer *RustPerformanceOptimizer
 }
 
 // NewRustASTAnalyzer creates a new Rust AST analyzer instance
 func NewRustASTAnalyzer(verbose bool) *RustASTAnalyzer {
 	return &RustASTAnalyzer{
-		verbose: verbose,
+		verbose:   verbose,
+		optimizer: NewRustPerformanceOptimizer(verbose),
 	}
 }
 
-// AnalyzeRustFile performs AST-based analysis of a Rust source file
+// NewRustASTAnalyzerWithOptimizer creates a new analyzer with a shared optimizer
+func NewRustASTAnalyzerWithOptimizer(verbose bool, optimizer *RustPerformanceOptimizer) *RustASTAnalyzer {
+	return &RustASTAnalyzer{
+		verbose:   verbose,
+		optimizer: optimizer,
+	}
+}
+
+// AnalyzeRustFile performs AST-based analysis of a Rust source file with caching
 // TODO: This is a temporary implementation using regex parsing
 // Will be replaced with proper syn crate integration via CGO
 func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*types.RustASTInfo, error) {
@@ -29,27 +39,51 @@ func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*typ
 		fmt.Printf("Analyzing Rust file with AST: %s\n", filePath)
 	}
 
+	// Try to get from cache first if optimizer is available
+	if a.optimizer != nil {
+		contentHash := a.optimizer.CalculateContentHash(content)
+		if cachedAST := a.optimizer.GetCachedAST(filePath, contentHash); cachedAST != nil {
+			if a.verbose {
+				fmt.Printf("Using cached AST for %s\n", filePath)
+			}
+			return cachedAST, nil
+		}
+	}
+
 	source := string(content)
 	lines := strings.Split(source, "\n")
 
-	// Create AST info
-	astInfo := &types.RustASTInfo{
-		FilePath:  filePath,
-		CrateName: a.extractCrateName(source),
-		Functions: make([]*types.RustFunctionInfo, 0),
-		Structs:   make([]*types.RustStructInfo, 0),
-		Enums:     make([]*types.RustEnumInfo, 0),
-		Traits:    make([]*types.RustTraitInfo, 0),
-		Impls:     make([]*types.RustImplInfo, 0),
-		Modules:   make([]*types.RustModuleInfo, 0),
-		Constants: make([]*types.RustConstantInfo, 0),
-		Uses:      make([]*types.RustUseInfo, 0),
-		Macros:    make([]*types.RustMacroInfo, 0),
+	// Get AST info from pool if optimizer is available
+	var astInfo *types.RustASTInfo
+	if a.optimizer != nil {
+		astInfo = a.optimizer.GetASTInfo()
+	} else {
+		astInfo = &types.RustASTInfo{
+			Functions: make([]*types.RustFunctionInfo, 0),
+			Structs:   make([]*types.RustStructInfo, 0),
+			Enums:     make([]*types.RustEnumInfo, 0),
+			Traits:    make([]*types.RustTraitInfo, 0),
+			Impls:     make([]*types.RustImplInfo, 0),
+			Modules:   make([]*types.RustModuleInfo, 0),
+			Constants: make([]*types.RustConstantInfo, 0),
+			Uses:      make([]*types.RustUseInfo, 0),
+			Macros:    make([]*types.RustMacroInfo, 0),
+		}
 	}
+
+	// Set basic info
+	astInfo.FilePath = filePath
+	astInfo.CrateName = a.extractCrateName(source)
 
 	// Parse file line by line for basic information
 	// TODO: Replace with proper syn crate parsing
 	a.parseRustContent(lines, astInfo)
+
+	// Cache the result if optimizer is available
+	if a.optimizer != nil {
+		contentHash := a.optimizer.CalculateContentHash(content)
+		a.optimizer.CacheAST(filePath, astInfo, contentHash)
+	}
 
 	if a.verbose {
 		fmt.Printf("Rust AST analysis complete for %s: %d functions, %d structs, %d enums\n",
@@ -379,4 +413,44 @@ func (a *RustASTAnalyzer) calculateCyclomaticComplexity(content string) int {
 	}
 
 	return complexity
+}
+
+// GetOptimizer returns the performance optimizer instance
+func (a *RustASTAnalyzer) GetOptimizer() *RustPerformanceOptimizer {
+	return a.optimizer
+}
+
+// SetOptimizer sets a new performance optimizer instance
+func (a *RustASTAnalyzer) SetOptimizer(optimizer *RustPerformanceOptimizer) {
+	a.optimizer = optimizer
+}
+
+// ClearCache clears the AST cache
+func (a *RustASTAnalyzer) ClearCache() {
+	if a.optimizer != nil {
+		a.optimizer.ClearCache()
+	}
+}
+
+// GetPerformanceMetrics returns performance metrics from the optimizer
+func (a *RustASTAnalyzer) GetPerformanceMetrics() map[string]interface{} {
+	if a.optimizer != nil {
+		return a.optimizer.GetPerformanceMetrics()
+	}
+	return nil
+}
+
+// EstimateMemoryUsage returns memory usage estimates
+func (a *RustASTAnalyzer) EstimateMemoryUsage() map[string]interface{} {
+	if a.optimizer != nil {
+		return a.optimizer.EstimateMemoryUsage()
+	}
+	return nil
+}
+
+// CleanupCache removes expired entries from cache
+func (a *RustASTAnalyzer) CleanupCache() {
+	if a.optimizer != nil {
+		a.optimizer.CleanupCache()
+	}
 }

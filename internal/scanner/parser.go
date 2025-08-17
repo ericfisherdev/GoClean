@@ -27,6 +27,15 @@ func NewParser(verbose bool) *Parser {
 	}
 }
 
+// NewParserWithOptimizer creates a new Parser instance with a shared Rust optimizer
+func NewParserWithOptimizer(verbose bool, rustOptimizer *RustPerformanceOptimizer) *Parser {
+	return &Parser{
+		verbose:         verbose,
+		astAnalyzer:     NewASTAnalyzer(verbose),
+		rustASTAnalyzer: NewRustASTAnalyzerWithOptimizer(verbose, rustOptimizer),
+	}
+}
+
 // ParseFile reads and analyzes a single file
 func (p *Parser) ParseFile(fileInfo *models.FileInfo) (*models.ScanResult, error) {
 	if p.verbose {

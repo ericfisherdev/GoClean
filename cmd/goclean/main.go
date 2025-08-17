@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/ericfisherdev/goclean/internal/config"
@@ -31,6 +32,7 @@ var (
 	paths       []string
 	exclude     []string
 	fileTypes   []string
+	languages   []string
 	thresholds  map[string]int
 	
 	// Test file handling flags
@@ -40,6 +42,11 @@ var (
 	
 	// Console output flags
 	consoleViolations bool
+	
+	// Rust-specific flags
+	rustOptimizations bool
+	rustCacheSize     int
+	rustCacheTTL      int // in minutes
 
 )
 
@@ -51,7 +58,7 @@ var rootCmd = &cobra.Command{
 It provides real-time HTML reporting and optional markdown output for AI analysis.
 
 Features:
-- Multi-language support (Go, JavaScript, TypeScript, Python, Java, C#)
+- Multi-language support (Go, Rust, JavaScript, TypeScript, Python, Java, C#)
 - Real-time HTML dashboard with auto-refresh
 - Configurable violation thresholds
 - Markdown output for AI analysis
@@ -70,7 +77,8 @@ Examples:
   goclean scan ./src
   goclean scan ./src ./internal --exclude vendor/,node_modules/
   goclean scan . --format html --output ./reports/report.html
-  goclean scan . --verbose --config ./custom-config.yaml
+  goclean scan . --languages go,rust --verbose
+  goclean scan . --languages rust --config ./rust-config.yaml
   goclean scan . --console-violations  # AI-friendly output`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -123,11 +131,22 @@ Examples:
 			fileTypesList = cfg.Scan.FileTypes
 		}
 		
+		// Handle language filtering - map languages to file extensions
+		if len(languages) > 0 {
+			languageExtensions := getLanguageExtensions(languages)
+			if len(languageExtensions) > 0 {
+				fileTypesList = languageExtensions
+			}
+		}
+		
 		// Display configuration
 		if verbose && !consoleViolations {
 			fmt.Printf("Scan paths: %v\n", scanPaths)
 			if len(excludePatterns) > 0 {
 				fmt.Printf("Exclude patterns: %v\n", excludePatterns)
+			}
+			if len(languages) > 0 {
+				fmt.Printf("Languages: %v\n", languages)
 			}
 			if len(fileTypesList) > 0 {
 				fmt.Printf("File types: %v\n", fileTypesList)
@@ -153,6 +172,28 @@ Examples:
 		// Create and configure scanner engine with test file configuration
 		engine := scanner.NewEngineWithConfig(scanPaths, excludePatterns, fileTypesList, verbose,
 			cfg.Scan.GetSkipTestFiles(), cfg.Scan.GetAggressiveMode(), cfg.Scan.CustomTestPatterns)
+		
+		// Configure Rust optimizations if Rust language is being scanned
+		if containsRust(languages, fileTypesList) || rustOptimizations {
+			engine.EnableRustOptimization(rustOptimizations || containsRust(languages, fileTypesList))
+			
+			// Configure cache based on flags or auto-estimation
+			cacheSize := rustCacheSize
+			if cacheSize == 0 {
+				cacheSize = estimateCacheSize(scanPaths)
+			}
+			
+			cacheTTL := time.Duration(rustCacheTTL) * time.Minute
+			if rustCacheTTL == 0 {
+				cacheTTL = 30 * time.Minute
+			}
+			
+			engine.SetRustCacheConfig(cacheSize, cacheTTL)
+			
+			if verbose && !consoleViolations {
+				fmt.Printf("Rust optimizations enabled: cache size=%d, TTL=%v\n", cacheSize, cacheTTL)
+			}
+		}
 		
 		// Set progress callback for real-time updates
 		progressCallback := func(message string) {
@@ -207,6 +248,16 @@ Examples:
 			
 			if markdownPath := reporterManager.GetMarkdownOutputPath(); markdownPath != "" {
 				fmt.Printf("📝 Markdown report generated: %s\n", markdownPath)
+			}
+		}
+		
+		// Display Rust performance metrics if verbose and optimizations were enabled
+		if verbose && !consoleViolations && (containsRust(languages, fileTypesList) || rustOptimizations) {
+			if metrics := engine.GetRustPerformanceMetrics(); metrics != nil {
+				fmt.Printf("\n🦀 Rust Performance Metrics:\n")
+				fmt.Printf("   Cache hits: %d, misses: %d (%.1f%% hit rate)\n", 
+					metrics["cache_hits"], metrics["cache_misses"], metrics["cache_hit_rate"])
+				fmt.Printf("   Cache size: %d entries\n", metrics["cache_size"])
 			}
 		}
 		
@@ -419,6 +470,81 @@ func generateConsoleViolationsOutput(summary *models.ScanSummary, results []*mod
 	fmt.Printf("\n⚠️  Total: %d violations found\n", summary.TotalViolations)
 }
 
+// getLanguageExtensions maps language names to their file extensions
+func getLanguageExtensions(languages []string) []string {
+	languageMap := map[string][]string{
+		"go":         {".go"},
+		"rust":       {".rs"},
+		"javascript": {".js", ".jsx"},
+		"typescript": {".ts", ".tsx"},
+		"python":     {".py"},
+		"java":       {".java"},
+		"c#":         {".cs"},
+		"csharp":     {".cs"},
+		"c":          {".c", ".h"},
+		"cpp":        {".cpp", ".cc", ".cxx", ".hpp"},
+		"c++":        {".cpp", ".cc", ".cxx", ".hpp"},
+		"php":        {".php"},
+		"ruby":       {".rb"},
+		"swift":      {".swift"},
+		"kotlin":     {".kt", ".kts"},
+		"scala":      {".scala"},
+	}
+	
+	var extensions []string
+	for _, lang := range languages {
+		if exts, exists := languageMap[strings.ToLower(lang)]; exists {
+			extensions = append(extensions, exts...)
+		}
+	}
+	
+	return extensions
+}
+
+// containsRust checks if Rust is being scanned based on languages or file types
+func containsRust(languages, fileTypes []string) bool {
+	// Check explicit language specification
+	for _, lang := range languages {
+		if strings.ToLower(lang) == "rust" {
+			return true
+		}
+	}
+	
+	// Check file types for Rust extensions
+	for _, fileType := range fileTypes {
+		if fileType == ".rs" {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// estimateCacheSize estimates appropriate cache size based on project scope
+func estimateCacheSize(scanPaths []string) int {
+	// Start with a base cache size
+	baseSize := 500
+	
+	// Estimate based on number of scan paths
+	pathMultiplier := len(scanPaths)
+	if pathMultiplier == 0 {
+		pathMultiplier = 1
+	}
+	
+	// Simple heuristic: more paths likely means larger project
+	estimatedSize := baseSize * pathMultiplier
+	
+	// Cap the cache size to reasonable limits
+	if estimatedSize > 2000 {
+		return 2000
+	}
+	if estimatedSize < 100 {
+		return 100
+	}
+	
+	return estimatedSize
+}
+
 func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is goclean.yaml)")
@@ -427,6 +553,7 @@ func init() {
 	// Scan command flags
 	scanCmd.Flags().StringSliceVarP(&exclude, "exclude", "e", []string{}, "exclude patterns (comma-separated)")
 	scanCmd.Flags().StringSliceVarP(&fileTypes, "types", "t", []string{}, "file types to scan (comma-separated, e.g., .go,.js,.py)")
+	scanCmd.Flags().StringSliceVarP(&languages, "languages", "l", []string{}, "languages to scan (comma-separated, e.g., go,rust,javascript)")
 	scanCmd.Flags().StringVarP(&format, "format", "f", "html", "output format (html, markdown, json)")
 	scanCmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file path")
 	
@@ -437,6 +564,11 @@ func init() {
 	
 	// Console output flags
 	scanCmd.Flags().BoolVar(&consoleViolations, "console-violations", false, "Output violations directly to console in structured format for AI agents")
+	
+	// Rust-specific flags
+	scanCmd.Flags().BoolVar(&rustOptimizations, "rust-opt", false, "Enable Rust performance optimizations (auto-enabled when scanning Rust)")
+	scanCmd.Flags().IntVar(&rustCacheSize, "rust-cache-size", 0, "Rust AST cache size (0 = auto-estimate)")
+	scanCmd.Flags().IntVar(&rustCacheTTL, "rust-cache-ttl", 0, "Rust cache TTL in minutes (0 = 30 minutes)")
 
 	// Config subcommands
 	configCmd.AddCommand(configInitCmd)
