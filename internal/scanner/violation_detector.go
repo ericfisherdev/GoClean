@@ -36,6 +36,8 @@ func NewViolationDetector(config *violations.DetectorConfig) *ViolationDetector 
 	registry.RegisterDetector(violations.NewRustDocumentationDetector(config))
 	registry.RegisterDetector(violations.NewRustMagicNumberDetector(config))
 	registry.RegisterDetector(violations.NewRustStructureDetector(config))
+	registry.RegisterDetector(violations.NewRustOwnershipDetector(config))
+	registry.RegisterDetector(violations.NewRustErrorHandlingDetector(config))
 	
 	// Register advanced detectors
 	registry.RegisterDetector(violations.NewMagicNumberDetector(config))
