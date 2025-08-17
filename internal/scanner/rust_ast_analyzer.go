@@ -31,12 +31,10 @@ func NewRustASTAnalyzerWithOptimizer(verbose bool, optimizer *RustPerformanceOpt
 	}
 }
 
-// AnalyzeRustFile performs AST-based analysis of a Rust source file with caching
-// TODO: This is a temporary implementation using regex parsing
-// Will be replaced with proper syn crate integration via CGO
+// AnalyzeRustFile performs AST-based analysis of a Rust source file using syn crate via CGO
 func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*types.RustASTInfo, error) {
 	if a.verbose {
-		fmt.Printf("Analyzing Rust file with AST: %s\n", filePath)
+		fmt.Printf("Analyzing Rust file with syn crate: %s\n", filePath)
 	}
 
 	// Try to get from cache first if optimizer is available
@@ -50,6 +48,49 @@ func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*typ
 		}
 	}
 
+	// Use syn crate via CGO for parsing
+	astInfo, err := a.parseWithSynCrate(filePath, content)
+	if err != nil {
+		// Fallback to regex-based parsing if syn crate fails
+		if a.verbose {
+			fmt.Printf("Syn crate parsing failed for %s, falling back to regex: %v\n", filePath, err)
+		}
+		return a.parseWithRegexFallback(filePath, content)
+	}
+
+	// Cache the result if optimizer is available
+	if a.optimizer != nil {
+		contentHash := a.optimizer.CalculateContentHash(content)
+		a.optimizer.CacheAST(filePath, astInfo, contentHash)
+	}
+
+	if a.verbose {
+		fmt.Printf("Syn crate analysis complete for %s: %d functions, %d structs, %d enums\n",
+			filePath, len(astInfo.Functions), len(astInfo.Structs), len(astInfo.Enums))
+	}
+
+	return astInfo, nil
+}
+
+// parseWithSynCrate uses the syn crate via CGO to parse Rust code
+func (a *RustASTAnalyzer) parseWithSynCrate(filePath string, content []byte) (*types.RustASTInfo, error) {
+	// Get the global syn parser instance
+	parser, err := GetGlobalSynParser()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get syn parser: %w", err)
+	}
+
+	// Parse the Rust file using syn crate
+	astInfo, err := parser.ParseRustFile(content, filePath)
+	if err != nil {
+		return nil, fmt.Errorf("syn crate parsing failed: %w", err)
+	}
+
+	return astInfo, nil
+}
+
+// parseWithRegexFallback uses regex-based parsing as a fallback when syn crate fails
+func (a *RustASTAnalyzer) parseWithRegexFallback(filePath string, content []byte) (*types.RustASTInfo, error) {
 	source := string(content)
 	lines := strings.Split(source, "\n")
 
@@ -75,26 +116,14 @@ func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*typ
 	astInfo.FilePath = filePath
 	astInfo.CrateName = a.extractCrateName(source)
 
-	// Parse file line by line for basic information
-	// TODO: Replace with proper syn crate parsing
+	// Parse file line by line using regex patterns
 	a.parseRustContent(lines, astInfo)
-
-	// Cache the result if optimizer is available
-	if a.optimizer != nil {
-		contentHash := a.optimizer.CalculateContentHash(content)
-		a.optimizer.CacheAST(filePath, astInfo, contentHash)
-	}
-
-	if a.verbose {
-		fmt.Printf("Rust AST analysis complete for %s: %d functions, %d structs, %d enums\n",
-			filePath, len(astInfo.Functions), len(astInfo.Structs), len(astInfo.Enums))
-	}
 
 	return astInfo, nil
 }
 
 // parseRustContent parses Rust content using regex patterns
-// This is a temporary implementation that will be replaced with syn crate integration
+// This serves as a fallback when syn crate parsing fails
 func (a *RustASTAnalyzer) parseRustContent(lines []string, astInfo *types.RustASTInfo) {
 	for i, line := range lines {
 		lineNum := i + 1
