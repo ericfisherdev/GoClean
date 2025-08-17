@@ -44,11 +44,4 @@ echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
 # Update VERSION file
 echo "$NEW_VERSION" > VERSION
 
-# Update main.go
-sed -i "s/Version: \".*\"/Version: \"$NEW_VERSION\"/" cmd/goclean/main.go
-
-# Update main_test.go
-sed -i "s/rootCmd.Version != \".*\"/rootCmd.Version != \"$NEW_VERSION\"/" cmd/goclean/main_test.go
-sed -i "s/Expected version '.*'/Expected version '$NEW_VERSION'/" cmd/goclean/main_test.go
-
 echo "Version bumped to $NEW_VERSION"

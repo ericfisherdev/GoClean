@@ -22,8 +22,8 @@ The version is automatically bumped on every commit through a git pre-commit hoo
 1. When you make a commit, the pre-commit hook runs `scripts/bump-version.sh`
 2. If it's the first commit of the day, the patch resets to 0
 3. If it's a subsequent commit on the same day, the patch increments
-4. The VERSION file and source files are automatically updated
-5. These changes are staged and included in your commit
+4. The VERSION file is automatically updated
+5. The updated VERSION file is staged and included in your commit
 
 ### Manual Version Bump
 If needed, you can manually bump the version:
@@ -46,8 +46,8 @@ Or check the application:
 
 When the version is bumped, the following files are updated:
 - `VERSION` - The source of truth for the current version
-- `cmd/goclean/main.go` - The Version field in rootCmd
-- `cmd/goclean/main_test.go` - Version assertions in tests
+
+The application automatically reads the version from the VERSION file at runtime, eliminating the need to update source code files.
 
 ## Benefits of CalVer
 

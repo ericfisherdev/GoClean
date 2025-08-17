@@ -3,7 +3,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -16,7 +18,7 @@ import (
 
 var (
 	// Version can be overridden at build time with -ldflags "-X main.Version=x.y.z"
-	Version = "2025.08.16.20"
+	Version = getVersionFromFile()
 	
 	// Global flags
 	cfgFile     string
@@ -71,8 +73,10 @@ Examples:
   goclean scan . --console-violations  # AI-friendly output`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("GoClean v%s - Clean Code Analysis Tool\n", rootCmd.Version)
-		fmt.Println("Starting code analysis...")
+		if !consoleViolations {
+			fmt.Printf("GoClean v%s - Clean Code Analysis Tool\n", rootCmd.Version)
+			fmt.Println("Starting code analysis...")
+		}
 		
 		// Load configuration
 		cfg, err := config.Load(cfgFile)
@@ -119,7 +123,7 @@ Examples:
 		}
 		
 		// Display configuration
-		if verbose {
+		if verbose && !consoleViolations {
 			fmt.Printf("Scan paths: %v\n", scanPaths)
 			if len(excludePatterns) > 0 {
 				fmt.Printf("Exclude patterns: %v\n", excludePatterns)
@@ -151,7 +155,7 @@ Examples:
 		
 		// Set progress callback for real-time updates
 		progressCallback := func(message string) {
-			if verbose {
+			if verbose && !consoleViolations {
 				fmt.Printf("Progress: %s\n", message)
 			}
 		}
@@ -168,6 +172,11 @@ Examples:
 		if consoleViolations {
 			// Generate structured violations output for AI agents
 			generateConsoleViolationsOutput(summary, results)
+			// Exit immediately with appropriate code for console violations mode
+			if summary.TotalViolations > 0 {
+				os.Exit(1)
+			}
+			return
 		} else {
 			fmt.Println()
 			err = reporterManager.GenerateConsoleReport(summary, results, verbose, true)
@@ -265,6 +274,51 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("GoClean v%s\n", rootCmd.Version)
 		fmt.Println("A clean code analysis tool for modern development teams")
 	},
+}
+
+// getVersionFromFile reads the version from the VERSION file, falling back to a default if not found
+func getVersionFromFile() string {
+	const defaultVersion = "dev"
+	
+	// Try to find VERSION file in the current directory or parent directories
+	versionPaths := []string{
+		"VERSION",
+		"../VERSION",
+		"../../VERSION",
+	}
+	
+	for _, versionPath := range versionPaths {
+		if file, err := os.Open(versionPath); err == nil {
+			defer file.Close()
+			
+			content, err := io.ReadAll(file)
+			if err == nil {
+				version := strings.TrimSpace(string(content))
+				if version != "" {
+					return version
+				}
+			}
+		}
+	}
+	
+	// If VERSION file not found, try to find it relative to the executable
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		versionFile := filepath.Join(execDir, "VERSION")
+		if file, err := os.Open(versionFile); err == nil {
+			defer file.Close()
+			
+			content, err := io.ReadAll(file)
+			if err == nil {
+				version := strings.TrimSpace(string(content))
+				if version != "" {
+					return version
+				}
+			}
+		}
+	}
+	
+	return defaultVersion
 }
 
 // generateConsoleViolationsOutput outputs violations in a structured format for AI agents
