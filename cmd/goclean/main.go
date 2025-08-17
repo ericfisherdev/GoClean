@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/ericfisherdev/goclean/internal/config"
@@ -323,8 +324,6 @@ func getVersionFromFile() string {
 
 // generateConsoleViolationsOutput outputs violations in a structured format for AI agents
 func generateConsoleViolationsOutput(summary *models.ScanSummary, results []*models.ScanResult) {
-	const maxDescriptionLength = 100
-	
 	// Print basic scan summary first
 	fmt.Printf("=== GoClean Scan Results ===\n")
 	fmt.Printf("Total Files: %d\n", summary.TotalFiles)
@@ -338,8 +337,12 @@ func generateConsoleViolationsOutput(summary *models.ScanSummary, results []*mod
 	}
 	
 	fmt.Println("=== Violations (Structured Format) ===")
-	fmt.Printf("%-60s %-8s %-15s %-6s %s\n", "FILE", "LINE", "TYPE", "LEVEL", "MESSAGE")
-	fmt.Println(strings.Repeat("-", 140))
+	
+	// Create tab writer for structured output
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', 0)
+	
+	// Write header
+	fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", "FILE", "LINE", "TYPE", "LEVEL", "MESSAGE")
 	
 	// Collect all violations from all files
 	var allViolations []*models.Violation
@@ -357,32 +360,22 @@ func generateConsoleViolationsOutput(summary *models.ScanSummary, results []*mod
 		return allViolations[i].Line < allViolations[j].Line
 	})
 	
-	// Output each violation in a structured format
+	// Output each violation in tab-delimited format
 	for _, violation := range allViolations {
-		// Truncate file path to make it more readable
-		displayFile := violation.File
-		const maxFilePathLength = 55
-		if len(displayFile) > maxFilePathLength {
-			displayFile = "..." + displayFile[len(displayFile)-(maxFilePathLength-3):]
-		}
-		
-		// Truncate message if too long
-		message := violation.Message
-		if len(message) > maxDescriptionLength {
-			message = message[:maxDescriptionLength-3] + "..."
-		}
-		
-		// Clean up message (remove newlines)
-		message = strings.ReplaceAll(message, "\n", " ")
+		// Clean up message (remove newlines and tabs but preserve content)
+		message := strings.ReplaceAll(violation.Message, "\n", " ")
 		message = strings.ReplaceAll(message, "\t", " ")
 		
-		fmt.Printf("%-60s %-8d %-15s %-6s %s\n",
-			displayFile,
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n",
+			violation.File,
 			violation.Line,
 			string(violation.Type),
 			violation.Severity.String(),
 			message)
 	}
+	
+	// Flush the tabwriter
+	w.Flush()
 	
 	fmt.Printf("\n=== Summary by Type ===\n")
 	// Count violations by type
