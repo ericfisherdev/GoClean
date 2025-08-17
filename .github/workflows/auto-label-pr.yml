@@ -62,5 +62,16 @@ jobs:
               }
             } catch (error) {
               console.error('Error managing label:', error);
-              core.setFailed(`Failed to add label: ${error.message}`);
+
+              // Check for permission errors (forked PRs)
+              const isPermissionError = error.status === 403 ||
+                error.message.includes("Resource not accessible") ||
+                error.message.includes("Requires write access");
+
+              if (isPermissionError) {
+                core.warning(`Permission denied - expected for forked PRs`);
+                console.warn('Skipping label due to insufficient permissions');
+              } else {
+                core.setFailed(`Failed to add label: ${error.message}`);
+              }
             }

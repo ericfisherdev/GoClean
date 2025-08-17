@@ -12,15 +12,6 @@ type ProgrammingTermAnalyzer struct {
 	morphEngine *MorphologyEngine
 	acronyms    map[string]string
 	commonTerms map[string]bool
-	patterns    map[string]PatternInfo
-}
-
-// PatternInfo contains information about programming naming patterns
-type PatternInfo struct {
-	Pattern     string   `json:"pattern"`
-	Description string   `json:"description"`
-	Examples    []string `json:"examples"`
-	IsValid     bool     `json:"is_valid"`
 }
 
 // NewProgrammingTermAnalyzer creates a new programming term analyzer
@@ -29,7 +20,6 @@ func NewProgrammingTermAnalyzer(morphEngine *MorphologyEngine) *ProgrammingTermA
 		morphEngine: morphEngine,
 		acronyms:    make(map[string]string),
 		commonTerms: make(map[string]bool),
-		patterns:    make(map[string]PatternInfo),
 	}
 
 	analyzer.initializeTermDatabases()
@@ -97,7 +87,6 @@ type ProgrammingTermResult struct {
 func (p *ProgrammingTermAnalyzer) initializeTermDatabases() {
 	p.loadAcronymDatabase()
 	p.loadCommonTermsDatabase()
-	p.loadPatternDatabase()
 }
 
 // loadAcronymDatabase initializes known programming acronyms
@@ -275,44 +264,6 @@ func (p *ProgrammingTermAnalyzer) loadCommonTermsDatabase() {
 	p.commonTerms = commonTerms
 }
 
-// loadPatternDatabase initializes naming pattern information
-func (p *ProgrammingTermAnalyzer) loadPatternDatabase() {
-	patterns := map[string]PatternInfo{
-		"camelCase": {
-			Pattern:     "camelCase",
-			Description: "First word lowercase, subsequent words capitalized",
-			Examples:    []string{"getUserById", "isValidEmail", "calculateTotalAmount"},
-			IsValid:     true,
-		},
-		"PascalCase": {
-			Pattern:     "PascalCase",
-			Description: "All words capitalized",
-			Examples:    []string{"UserManager", "DatabaseConnection", "EmailValidator"},
-			IsValid:     true,
-		},
-		"snake_case": {
-			Pattern:     "snake_case",
-			Description: "All lowercase with underscores",
-			Examples:    []string{"user_id", "max_retry_count", "is_valid"},
-			IsValid:     true,
-		},
-		"SCREAMING_SNAKE_CASE": {
-			Pattern:     "SCREAMING_SNAKE_CASE",
-			Description: "All uppercase with underscores",
-			Examples:    []string{"MAX_RETRIES", "DEFAULT_TIMEOUT", "API_VERSION"},
-			IsValid:     true,
-		},
-		"kebab-case": {
-			Pattern:     "kebab-case",
-			Description: "All lowercase with hyphens",
-			Examples:    []string{"user-profile", "email-validator", "retry-count"},
-			IsValid:     false, // Generally not used in Go
-		},
-	}
-
-	p.patterns = patterns
-}
-
 // isKnownAcronym checks if a term is a known programming acronym
 func (p *ProgrammingTermAnalyzer) isKnownAcronym(term string) bool {
 	upperTerm := strings.ToUpper(term)
@@ -342,7 +293,17 @@ func (p *ProgrammingTermAnalyzer) isCamelCase(term string) bool {
 		return false
 	}
 
-	// Should contain at least one uppercase letter (if more than one word)
+	// Return false if the term contains separator characters
+	if strings.ContainsAny(term, "_-") {
+		return false
+	}
+
+	// Single lowercase rune is valid camelCase
+	if len(runes) == 1 {
+		return true
+	}
+
+	// Scan for uppercase letters
 	hasUpper := false
 	for i := 1; i < len(runes); i++ {
 		if unicode.IsUpper(runes[i]) {
@@ -351,11 +312,8 @@ func (p *ProgrammingTermAnalyzer) isCamelCase(term string) bool {
 		}
 	}
 
-	// Single word is valid camelCase
-	if !hasUpper && len(runes) > 1 {
-		return true
-	}
-
+	// For multi-rune terms, only return true if uppercase was found
+	// (multi-rune with no uppercase but no separators should return false)
 	return hasUpper
 }
 
@@ -450,38 +408,38 @@ func (p *ProgrammingTermAnalyzer) extractWordComponents(term string) []string {
 		var currentWord strings.Builder
 		for i := 0; i < len(runes); i++ {
 			char := runes[i]
-			
+
 			// Check for word boundaries
 			shouldSplit := false
 			if i > 0 {
 				prevChar := runes[i-1]
-				
+
 				// Lower to upper transition (camelCase boundary)
 				if unicode.IsLower(prevChar) && unicode.IsUpper(char) {
 					shouldSplit = true
 				}
-				
+
 				// Acronym handling: Upper to upper followed by lower (HTTPServer -> HTTP Server)
 				if i < len(runes)-1 && unicode.IsUpper(prevChar) && unicode.IsUpper(char) && unicode.IsLower(runes[i+1]) {
 					shouldSplit = true
 				}
-				
+
 				// Letter to digit transition (userID123 -> user ID 123)
 				if unicode.IsLetter(prevChar) && unicode.IsDigit(char) {
 					shouldSplit = true
 				}
-				
+
 				// Digit to letter transition (SHA256Sum -> SHA 256 Sum)
 				if unicode.IsDigit(prevChar) && unicode.IsLetter(char) {
 					shouldSplit = true
 				}
 			}
-			
+
 			if shouldSplit && currentWord.Len() > 0 {
 				components = append(components, strings.ToLower(currentWord.String()))
 				currentWord.Reset()
 			}
-			
+
 			currentWord.WriteRune(unicode.ToLower(char))
 		}
 

@@ -512,6 +512,55 @@ func TestProgrammingTermAnalyzer_CamelCaseUnicode(t *testing.T) {
 	}
 }
 
+// TestProgrammingTermAnalyzer_CamelCaseFixedLogic tests the fixed camelCase logic for separators and single characters
+func TestProgrammingTermAnalyzer_CamelCaseFixedLogic(t *testing.T) {
+	engine := NewMorphologyEngine()
+	analyzer := NewProgrammingTermAnalyzer(engine)
+	
+	testCases := []struct {
+		term           string
+		expectedCamel  bool
+		description    string
+	}{
+		// Single character cases
+		{"a", true, "Single lowercase letter should be camelCase"},
+		{"x", true, "Single lowercase letter should be camelCase"},
+		{"A", false, "Single uppercase letter should not be camelCase"},
+		
+		// Separator cases (should be false)
+		{"foo_bar", false, "Terms with underscores should not be camelCase"},
+		{"foo-bar", false, "Terms with hyphens should not be camelCase"},
+		{"user_id", false, "snake_case should not be camelCase"},
+		{"get-user", false, "kebab-case should not be camelCase"},
+		
+		// Multi-character without uppercase (should be false)
+		{"foobar", false, "Multi-character lowercase without uppercase should not be camelCase"},
+		{"hello", false, "Multi-character lowercase without uppercase should not be camelCase"},
+		{"test", false, "Multi-character lowercase without uppercase should not be camelCase"},
+		
+		// Valid camelCase (should be true)
+		{"getUserId", true, "Proper camelCase should be detected"},
+		{"camelCase", true, "Proper camelCase should be detected"},
+		{"myVariable", true, "Proper camelCase should be detected"},
+		{"a1", false, "Single letter followed by digit should not be camelCase without uppercase"},
+		
+		// Invalid camelCase (should be false)  
+		{"GetUserId", false, "PascalCase should not be camelCase"},
+		{"CONSTANT", false, "All uppercase should not be camelCase"},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.term, func(t *testing.T) {
+			result := analyzer.AnalyzeProgrammingTerm(tc.term)
+			
+			if result.IsCamelCase != tc.expectedCamel {
+				t.Errorf("For term '%s': expected IsCamelCase=%v, got %v", 
+					tc.term, tc.expectedCamel, result.IsCamelCase)
+			}
+		})
+	}
+}
+
 // TestProgrammingTermAnalyzer_NilMorphEngineHandling tests that nil morphEngine is handled gracefully
 func TestProgrammingTermAnalyzer_NilMorphEngineHandling(t *testing.T) {
 	// Create analyzer with nil morphEngine
