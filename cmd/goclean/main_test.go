@@ -14,8 +14,8 @@ func TestRootCommand(t *testing.T) {
 		t.Errorf("Expected root command use 'goclean', got %q", rootCmd.Use)
 	}
 
-	if rootCmd.Version != "2025.08.16.13" {
-		t.Errorf("Expected version '2025.08.16.13', got %q", rootCmd.Version)
+	if rootCmd.Version != Version {
+		t.Errorf("Expected version %q, got %q", Version, rootCmd.Version)
 	}
 }
 

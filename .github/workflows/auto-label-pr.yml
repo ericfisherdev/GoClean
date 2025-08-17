@@ -1,0 +1,77 @@
+---
+name: Auto Label PR
+
+"on":
+  pull_request:
+    types: [opened]
+    branches:
+      - develop
+
+jobs:
+  add-wip-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Add Work in Progress Label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            try {
+              // First check if the label exists in the repository
+              const labelName = 'Work in Progress';
+              let labelExists = false;
+
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelName
+                });
+                labelExists = true;
+              } catch (error) {
+                if (error.status === 404) {
+                  // Label doesn't exist, create it
+                  console.log(`Creating label: ${labelName}`);
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: labelName,
+                    color: '4e1076',
+                    description: 'This PR is a work in progress'
+                  });
+                  labelExists = true;
+                } else {
+                  throw error;
+                }
+              }
+
+              // Now add the label to the PR
+              if (labelExists) {
+                console.log(`Adding label to PR #${context.issue.number}`);
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: [labelName]
+                });
+                console.log('Label added successfully');
+              }
+            } catch (error) {
+              console.error('Error managing label:', error);
+
+              // Check for permission errors (forked PRs)
+              const isPermissionError = error.status === 403 ||
+                error.message.includes("Resource not accessible") ||
+                error.message.includes("Requires write access");
+
+              if (isPermissionError) {
+                core.warning(`Permission denied - expected for forked PRs`);
+                console.warn('Skipping label due to insufficient permissions');
+              } else {
+                core.setFailed(`Failed to add label: ${error.message}`);
+              }
+            }

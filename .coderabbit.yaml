@@ -1,10 +1,10 @@
+---
 # CodeRabbit Configuration for GoClean
 # Documentation: https://docs.coderabbit.ai/reference/yaml-template
 
 reviews:
   # Review profile - can be "chill", "assertive", or "active"
   profile: "chill"
-  
   # Enable automatic reviews on all pull requests
   auto_review:
     enabled: true
@@ -12,15 +12,28 @@ reviews:
     drafts: false
     # Empty base_branches array means review ALL PRs regardless of target branch
     base_branches: [develop, release]
-    labels: []
+    # Only review PRs with the "Needs Review" label
+    labels: ["Needs Review"]
     ignore_title_keywords: []
 
   # Generate high-level summaries for pull requests
   high_level_summary: true
-  
+  # Enable label suggestions and auto-apply
+  suggested_labels: true
+  auto_apply_labels: true
+  # Custom labeling instructions
+  labeling_instructions:
+    - label: "Review Approved"
+      instructions: "Apply when the PR has no more suggested
+        coderabbit changes and all reviews pass"
+    - label: "CR Review Pending"
+      instructions: "Apply when a review was submitted to
+        coderabbit but hasn't been completed yet"
+    - label: "CR Review Failed"
+      instructions: "Apply when changes are requested by coderabbit"
+
   # Request changes workflow - auto-approve after comments are resolved
   request_changes_workflow: true
-  
   # Set commit status during review process
   commit_status: true
 

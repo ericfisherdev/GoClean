@@ -12,6 +12,9 @@ import (
 )
 
 var (
+	// Version can be overridden at build time with -ldflags "-X main.Version=x.y.z"
+	Version = "2025.08.16.20"
+	
 	// Global flags
 	cfgFile     string
 	verbose     bool
@@ -44,7 +47,7 @@ Features:
 - Configurable violation thresholds
 - Markdown output for AI analysis
 - Comprehensive clean code violation detection`,
-	Version: "2025.08.16.13",
+	Version: Version,
 }
 
 // scanCmd represents the scan command

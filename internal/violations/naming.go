@@ -9,11 +9,14 @@ import (
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/types"
+	"github.com/ericfisherdev/goclean/internal/violations/morphology"
 )
 
 // NamingDetector detects naming convention violations
 type NamingDetector struct {
-	config *DetectorConfig
+	config           *DetectorConfig
+	morphEngine      *morphology.MorphologyEngine
+	programmingTerms *morphology.ProgrammingTermAnalyzer
 }
 
 // NewNamingDetector creates a new naming convention detector
@@ -21,8 +24,15 @@ func NewNamingDetector(config *DetectorConfig) *NamingDetector {
 	if config == nil {
 		config = DefaultDetectorConfig()
 	}
+	
+	// Initialize morphology engine
+	morphEngine := morphology.NewMorphologyEngine()
+	programmingTerms := morphology.NewProgrammingTermAnalyzer(morphEngine)
+	
 	return &NamingDetector{
-		config: config,
+		config:           config,
+		morphEngine:      morphEngine,
+		programmingTerms: programmingTerms,
 	}
 }
 
@@ -133,6 +143,7 @@ func (d *NamingDetector) checkFunctionNaming(fn *types.FunctionInfo, filePath st
 
 	// Check for inappropriate abbreviations
 	if d.hasInappropriateAbbreviation(fn.Name) {
+		suggestion := d.generateAbbreviationSuggestion(fn.Name)
 		violations = append(violations, &models.Violation{
 			Type:        models.ViolationTypeNaming,
 			Severity:    models.SeverityLow,
@@ -141,7 +152,7 @@ func (d *NamingDetector) checkFunctionNaming(fn *types.FunctionInfo, filePath st
 			Line:        fn.StartLine,
 			Column:      fn.StartColumn,
 			Rule:        "unclear-abbreviation",
-			Suggestion:  "Consider spelling out abbreviations for better readability",
+			Suggestion:  suggestion,
 			CodeSnippet: d.generateFunctionNameSnippet(fn),
 		})
 	}
@@ -580,6 +591,18 @@ func (d *NamingDetector) isLikelyCompleteWord(word string) bool {
 		return false
 	}
 	
+	// NEW: Use morphology engine for intelligent analysis
+	if d.morphEngine != nil {
+		if d.morphEngine.IsCompleteWord(word) {
+			return true
+		}
+		
+		// If morphology engine thinks it's probably an abbreviation, respect that
+		if d.morphEngine.IsProbableAbbreviation(word) {
+			return false
+		}
+	}
+	
 	// Check if it's a recognized complete word first (this is the primary check)
 	if d.isRecognizedCompleteWord(word) {
 		return true
@@ -1006,6 +1029,38 @@ func (d *NamingDetector) getGoCasingSuggestion(name string, isExported bool, ite
 	} else {
 		return fmt.Sprintf("Unexported %s names should start with lowercase and use camelCase (e.g., myFunction)", itemType)
 	}
+}
+
+// generateAbbreviationSuggestion generates intelligent suggestions for abbreviated names using morphology
+func (d *NamingDetector) generateAbbreviationSuggestion(name string) string {
+	if d.programmingTerms != nil {
+		// Analyze the programming term
+		analysis := d.programmingTerms.AnalyzeProgrammingTerm(name)
+		
+		// If we have specific suggestions from morphological analysis, use them
+		if len(analysis.SuggestedFixes) > 0 {
+			return fmt.Sprintf("Consider these improvements: %s", strings.Join(analysis.SuggestedFixes, "; "))
+		}
+	}
+	
+	// Extract word components and suggest expansions
+	words := d.extractWordsFromName(name)
+	var suggestions []string
+	
+	for _, word := range words {
+		if d.morphEngine != nil {
+			expansions := d.morphEngine.GetSuggestedExpansions(word)
+			if len(expansions) > 0 {
+				suggestions = append(suggestions, fmt.Sprintf("'%s' could be '%s'", word, strings.Join(expansions, "' or '")))
+			}
+		}
+	}
+	
+	if len(suggestions) > 0 {
+		return fmt.Sprintf("Consider spelling out abbreviations: %s", strings.Join(suggestions, "; "))
+	}
+	
+	return "Consider spelling out abbreviations for better readability"
 }
 
 // Code snippet generation helpers
