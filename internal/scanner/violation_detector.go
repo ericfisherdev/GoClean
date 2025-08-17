@@ -8,9 +8,10 @@ import (
 
 // ViolationDetector manages violation detection during scanning
 type ViolationDetector struct {
-	registry            *violations.DetectorRegistry
-	duplicationDetector *violations.DuplicationDetector
-	config              *violations.DetectorConfig
+	registry                 *violations.DetectorRegistry
+	duplicationDetector      *violations.DuplicationDetector
+	rustDuplicationDetector  *violations.RustDuplicationDetector
+	config                   *violations.DetectorConfig
 }
 
 // NewViolationDetector creates a new violation detector
@@ -29,19 +30,28 @@ func NewViolationDetector(config *violations.DetectorConfig) *ViolationDetector 
 	// Register Go-specific detectors
 	registry.RegisterDetector(violations.NewGoStandardNamingDetector(config))
 	
+	// Register Rust-specific detectors
+	registry.RegisterDetector(violations.NewRustFunctionDetector(config))
+	registry.RegisterDetector(violations.NewRustNamingDetector(config))
+	registry.RegisterDetector(violations.NewRustDocumentationDetector(config))
+	registry.RegisterDetector(violations.NewRustMagicNumberDetector(config))
+	registry.RegisterDetector(violations.NewRustStructureDetector(config))
+	
 	// Register advanced detectors
 	registry.RegisterDetector(violations.NewMagicNumberDetector(config))
 	registry.RegisterDetector(violations.NewCommentedCodeDetector(config))
 	registry.RegisterDetector(violations.NewTodoTrackerDetector(config))
 	registry.RegisterDetector(violations.NewDocumentationDetector(config))
 	
-	// Create duplication detector separately (needs special handling)
+	// Create duplication detectors separately (needs special handling)
 	duplicationDetector := violations.NewDuplicationDetector(config)
+	rustDuplicationDetector := violations.NewRustDuplicationDetector(config)
 	
 	return &ViolationDetector{
-		registry:            registry,
-		duplicationDetector: duplicationDetector,
-		config:              config,
+		registry:                registry,
+		duplicationDetector:     duplicationDetector,
+		rustDuplicationDetector: rustDuplicationDetector,
+		config:                  config,
 	}
 }
 
@@ -51,31 +61,29 @@ func (vd *ViolationDetector) DetectViolations(result *models.ScanResult) {
 		return
 	}
 	
-	// Get AST info from the scan result
-	var astInfo *types.GoASTInfo
+	// Run standard detectors on the AST info (Go or Rust)
+	violations := vd.registry.DetectAll(result.File, result.ASTInfo)
+	
+	// Run duplication detectors (needs special handling as they compare across files)
 	if result.ASTInfo != nil {
 		if goAstInfo, ok := result.ASTInfo.(*types.GoASTInfo); ok {
-			astInfo = goAstInfo
+			dupViolations := vd.duplicationDetector.Detect(result.File, goAstInfo)
+			violations = append(violations, dupViolations...)
+		} else if rustAstInfo, ok := result.ASTInfo.(*types.RustASTInfo); ok {
+			rustDupViolations := vd.rustDuplicationDetector.Detect(result.File, rustAstInfo)
+			violations = append(violations, rustDupViolations...)
 		}
-	}
-	
-	// Run standard detectors
-	violations := vd.registry.DetectAll(result.File, astInfo)
-	
-	// Run duplication detector (needs special handling as it compares across files)
-	if astInfo != nil {
-		dupViolations := vd.duplicationDetector.Detect(result.File, astInfo)
-		violations = append(violations, dupViolations...)
 	}
 	
 	// Add violations to the result
 	result.Violations = violations
 }
 
-// ResetDuplicationCache resets the duplication detector's cache
+// ResetDuplicationCache resets the duplication detectors' caches
 // This should be called at the start of each new scan
 func (vd *ViolationDetector) ResetDuplicationCache() {
 	vd.duplicationDetector.Reset()
+	vd.rustDuplicationDetector.Reset()
 }
 
 // GetConfig returns the detector configuration

@@ -46,6 +46,7 @@ const (
 	ViolationTypeCommentedCode        ViolationType = "commented_code"
 	ViolationTypeTodo                 ViolationType = "todo_marker"
 	ViolationTypeDocumentation        ViolationType = "documentation_quality"
+	ViolationTypeStructure            ViolationType = "code_structure"
 )
 
 // Violation represents a clean code violation found during scanning
