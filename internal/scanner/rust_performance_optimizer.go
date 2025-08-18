@@ -477,3 +477,228 @@ func (opt *RustPerformanceOptimizer) EstimateMemoryUsage() map[string]interface{
 		}(),
 	}
 }
+
+// MemoryPool provides enhanced memory pooling for CGO operations
+type MemoryPool struct {
+	stringPool    sync.Pool
+	bufferPool    sync.Pool
+	maxBufferSize int
+}
+
+// NewMemoryPool creates a new memory pool for efficient memory management
+func NewMemoryPool() *MemoryPool {
+	return &MemoryPool{
+		maxBufferSize: 1024 * 1024, // 1MB max buffer size
+		stringPool: sync.Pool{
+			New: func() interface{} {
+				// Pre-allocate small strings to reduce allocations
+				return make([]string, 0, 10)
+			},
+		},
+		bufferPool: sync.Pool{
+			New: func() interface{} {
+				// Pre-allocate 64KB buffers
+				return make([]byte, 0, 64*1024)
+			},
+		},
+	}
+}
+
+// GetStringSlice gets a reusable string slice from the pool
+func (mp *MemoryPool) GetStringSlice() []string {
+	slice := mp.stringPool.Get().([]string)
+	return slice[:0] // Reset length but keep capacity
+}
+
+// PutStringSlice returns a string slice to the pool
+func (mp *MemoryPool) PutStringSlice(slice []string) {
+	if cap(slice) > 100 { // Don't pool excessively large slices
+		return
+	}
+	mp.stringPool.Put(slice)
+}
+
+// GetBuffer gets a reusable byte buffer from the pool
+func (mp *MemoryPool) GetBuffer() []byte {
+	buffer := mp.bufferPool.Get().([]byte)
+	return buffer[:0] // Reset length but keep capacity
+}
+
+// PutBuffer returns a byte buffer to the pool
+func (mp *MemoryPool) PutBuffer(buffer []byte) {
+	if cap(buffer) > mp.maxBufferSize {
+		return // Don't pool excessively large buffers
+	}
+	mp.bufferPool.Put(buffer)
+}
+
+// BenchmarkResult represents the result of a performance benchmark
+type BenchmarkResult struct {
+	Operation      string        `json:"operation"`
+	FileSize       int64         `json:"file_size_bytes"`
+	Duration       time.Duration `json:"duration"`
+	ThroughputMBps float64       `json:"throughput_mbps"`
+	MemoryUsed     int64         `json:"memory_used_bytes"`
+	Success        bool          `json:"success"`
+	Error          string        `json:"error,omitempty"`
+	Timestamp      time.Time     `json:"timestamp"`
+}
+
+// PerformanceProfiler provides detailed performance profiling for Rust parsing
+type PerformanceProfiler struct {
+	benchmarks []BenchmarkResult
+	mutex      sync.RWMutex
+	memPool    *MemoryPool
+}
+
+// NewPerformanceProfiler creates a new performance profiler
+func NewPerformanceProfiler() *PerformanceProfiler {
+	return &PerformanceProfiler{
+		benchmarks: make([]BenchmarkResult, 0, 100),
+		memPool:    NewMemoryPool(),
+	}
+}
+
+// BenchmarkParsingOperation benchmarks a single parsing operation
+func (pp *PerformanceProfiler) BenchmarkParsingOperation(
+	operation string,
+	content []byte,
+	parseFunc func([]byte) error,
+) BenchmarkResult {
+	
+	var memStats runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&memStats)
+	startMem := memStats.Alloc
+	
+	start := time.Now()
+	err := parseFunc(content)
+	duration := time.Since(start)
+	
+	runtime.ReadMemStats(&memStats)
+	endMem := memStats.Alloc
+	
+	var memUsed int64
+	if endMem > startMem {
+		memUsed = int64(endMem - startMem)
+	}
+	
+	fileSize := int64(len(content))
+	throughput := float64(0)
+	if duration.Nanoseconds() > 0 {
+		throughput = float64(fileSize) / duration.Seconds() / (1024 * 1024) // MB/s
+	}
+	
+	result := BenchmarkResult{
+		Operation:      operation,
+		FileSize:       fileSize,
+		Duration:       duration,
+		ThroughputMBps: throughput,
+		MemoryUsed:     memUsed,
+		Success:        err == nil,
+		Timestamp:      time.Now(),
+	}
+	
+	if err != nil {
+		result.Error = err.Error()
+	}
+	
+	pp.mutex.Lock()
+	pp.benchmarks = append(pp.benchmarks, result)
+	// Keep only last 100 benchmarks to prevent unbounded growth
+	if len(pp.benchmarks) > 100 {
+		pp.benchmarks = pp.benchmarks[len(pp.benchmarks)-100:]
+	}
+	pp.mutex.Unlock()
+	
+	return result
+}
+
+// GetBenchmarkSummary returns a summary of recent benchmark results
+func (pp *PerformanceProfiler) GetBenchmarkSummary() map[string]interface{} {
+	pp.mutex.RLock()
+	defer pp.mutex.RUnlock()
+	
+	if len(pp.benchmarks) == 0 {
+		return map[string]interface{}{
+			"benchmark_count": 0,
+		}
+	}
+	
+	var (
+		totalDuration     time.Duration
+		totalThroughput   float64
+		totalMemory       int64
+		successCount      int
+		avgFileSize       int64
+		maxThroughput     float64
+		minThroughput     float64 = float64(^uint64(0) >> 1) // Max float64
+	)
+	
+	for _, bench := range pp.benchmarks {
+		totalDuration += bench.Duration
+		totalThroughput += bench.ThroughputMBps
+		totalMemory += bench.MemoryUsed
+		avgFileSize += bench.FileSize
+		
+		if bench.Success {
+			successCount++
+		}
+		
+		if bench.ThroughputMBps > maxThroughput {
+			maxThroughput = bench.ThroughputMBps
+		}
+		
+		if bench.ThroughputMBps < minThroughput && bench.ThroughputMBps > 0 {
+			minThroughput = bench.ThroughputMBps
+		}
+	}
+	
+	benchmarkCount := len(pp.benchmarks)
+	successRate := float64(successCount) / float64(benchmarkCount) * 100
+	
+	return map[string]interface{}{
+		"benchmark_count":       benchmarkCount,
+		"success_rate_percent":  successRate,
+		"avg_duration_ms":       float64(totalDuration.Nanoseconds()) / float64(benchmarkCount) / 1e6,
+		"avg_throughput_mbps":   totalThroughput / float64(benchmarkCount),
+		"max_throughput_mbps":   maxThroughput,
+		"min_throughput_mbps":   func() float64 {
+			if minThroughput == float64(^uint64(0)>>1) {
+				return 0
+			}
+			return minThroughput
+		}(),
+		"avg_memory_kb":         float64(totalMemory) / float64(benchmarkCount) / 1024,
+		"avg_file_size_kb":      float64(avgFileSize) / float64(benchmarkCount) / 1024,
+		"total_duration_ms":     float64(totalDuration.Nanoseconds()) / 1e6,
+	}
+}
+
+// GetRecentBenchmarks returns the most recent benchmark results
+func (pp *PerformanceProfiler) GetRecentBenchmarks(count int) []BenchmarkResult {
+	pp.mutex.RLock()
+	defer pp.mutex.RUnlock()
+	
+	if count <= 0 || len(pp.benchmarks) == 0 {
+		return nil
+	}
+	
+	if count > len(pp.benchmarks) {
+		count = len(pp.benchmarks)
+	}
+	
+	start := len(pp.benchmarks) - count
+	result := make([]BenchmarkResult, count)
+	copy(result, pp.benchmarks[start:])
+	
+	return result
+}
+
+// ClearBenchmarks clears all stored benchmark results
+func (pp *PerformanceProfiler) ClearBenchmarks() {
+	pp.mutex.Lock()
+	defer pp.mutex.Unlock()
+	
+	pp.benchmarks = pp.benchmarks[:0]
+}

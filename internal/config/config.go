@@ -123,6 +123,13 @@ type RustConfig struct {
 	EnforceSnakeCase        bool `yaml:"enforce_snake_case"`
 	EnforcePascalCase       bool `yaml:"enforce_pascal_case"`
 	EnforceScreamingSnake   bool `yaml:"enforce_screaming_snake"`
+	
+	// Trait analysis (additional configuration)
+	MaxTraitComplexity      int  `yaml:"max_trait_complexity"`
+	MaxTraitLines           int  `yaml:"max_trait_lines"`
+	MaxTraitMethods         int  `yaml:"max_trait_methods"`
+	MaxAssociatedTypes      int  `yaml:"max_associated_types"`
+	MaxComplexTraitParams   int  `yaml:"max_complex_trait_params"`
 }
 
 // Load loads configuration from a file
@@ -290,6 +297,13 @@ func GetDefaultRustConfig() RustConfig {
 		EnforceSnakeCase:        true,
 		EnforcePascalCase:       true,
 		EnforceScreamingSnake:   true,
+		
+		// Trait analysis defaults
+		MaxTraitComplexity:      15,
+		MaxTraitLines:           50,
+		MaxTraitMethods:         8,
+		MaxAssociatedTypes:      4,
+		MaxComplexTraitParams:   2,
 	}
 }
 

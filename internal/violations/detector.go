@@ -125,6 +125,13 @@ type RustDetectorConfig struct {
 	EnforceSnakeCase        bool
 	EnforcePascalCase       bool
 	EnforceScreamingSnake   bool
+	
+	// Trait analysis
+	MaxTraitComplexity      int
+	MaxTraitLines           int
+	MaxTraitMethods         int
+	MaxAssociatedTypes      int
+	MaxComplexTraitParams   int
 }
 
 // DefaultDetectorConfig returns the default configuration
@@ -193,6 +200,13 @@ func DefaultRustDetectorConfig() *RustDetectorConfig {
 		EnforceSnakeCase:        true,
 		EnforcePascalCase:       true,
 		EnforceScreamingSnake:   true,
+		
+		// Trait analysis defaults
+		MaxTraitComplexity:      15,
+		MaxTraitLines:           50,
+		MaxTraitMethods:         8,
+		MaxAssociatedTypes:      4,
+		MaxComplexTraitParams:   2,
 	}
 }
 

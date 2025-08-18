@@ -52,7 +52,10 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"sync"
+	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/ericfisherdev/goclean/internal/types"
@@ -60,78 +63,27 @@ import (
 
 // RustSynParser provides CGO-based Rust parsing using the syn crate
 type RustSynParser struct {
-	initialized bool
-	mutex       sync.RWMutex
-	verbose     bool
+	initialized      bool
+	mutex           sync.RWMutex
+	verbose         bool
+	
+	// Memory safety tracking
+	allocatedCStrings int64  // Track allocated C strings
+	activeParseCalls  int64  // Track active parsing operations
+	totalParseCalls   int64  // Total parsing operations
+	lastCleanup       time.Time
+	
+	// Error tracking and recovery
+	consecutiveErrors int64
+	lastError         error
+	errorMutex        sync.RWMutex
+	
+	// Performance monitoring
+	totalParseTime    time.Duration
+	avgParseTime      time.Duration
+	perfMutex         sync.RWMutex
 }
 
-// RustSynConfig represents configuration options for the Rust parser
-type RustSynConfig struct {
-	IncludeDocs       bool
-	IncludePositions  bool
-	ParseMacros       bool
-	IncludePrivate    bool
-	MaxComplexityCalc uint32
-	IncludeGenerics   bool
-}
-
-// DefaultRustSynConfig returns a default configuration for Rust parsing
-func DefaultRustSynConfig() *RustSynConfig {
-	return &RustSynConfig{
-		IncludeDocs:       true,
-		IncludePositions:  true,
-		ParseMacros:       true,
-		IncludePrivate:    true,
-		MaxComplexityCalc: 100,
-		IncludeGenerics:   true,
-	}
-}
-
-// ParseResult represents the result of a parsing operation
-type ParseResult struct {
-	Success   bool   `json:"success"`
-	AST       *types.RustASTInfo `json:"ast_info,omitempty"`
-	Error     string `json:"error,omitempty"`
-	ErrorCode int    `json:"error_code,omitempty"`
-}
-
-// BatchParseResult represents the result of batch parsing multiple files
-type BatchParseResult struct {
-	TotalFiles       int                   `json:"total_files"`
-	SuccessfulParses int                   `json:"successful_parses"`
-	Results          []SingleParseResult   `json:"results"`
-}
-
-// SingleParseResult represents a single file parsing result in batch operation
-type SingleParseResult struct {
-	FilePath string             `json:"file_path"`
-	Success  bool               `json:"success"`
-	AST      *types.RustASTInfo `json:"ast_info,omitempty"`
-	Error    string             `json:"error,omitempty"`
-}
-
-// ParsingStats represents statistics about parsing performance
-type ParsingStats struct {
-	LineCount             int    `json:"line_count"`
-	CharCount             int    `json:"char_count"`
-	ByteCount             int    `json:"byte_count"`
-	EstimatedFunctions    int    `json:"estimated_functions"`
-	EstimatedStructs      int    `json:"estimated_structs"`
-	EstimatedEnums        int    `json:"estimated_enums"`
-	EstimatedTraits       int    `json:"estimated_traits"`
-	EstimatedImpls        int    `json:"estimated_impls"`
-	ParseComplexity       string `json:"parse_complexity"`
-}
-
-// LibraryCapabilities represents the capabilities of the Rust parsing library
-type LibraryCapabilities struct {
-	Version              string                 `json:"version"`
-	SynVersion           string                 `json:"syn_version"`
-	Features             map[string]bool        `json:"features"`
-	SupportedConstructs  []string               `json:"supported_constructs"`
-	ParsingCapabilities  map[string]bool        `json:"parsing_capabilities"`
-	Performance          map[string]bool        `json:"performance"`
-}
 
 // NewRustSynParser creates a new Rust parser using the syn crate via CGO
 func NewRustSynParser(verbose bool) (*RustSynParser, error) {
@@ -155,15 +107,26 @@ func (p *RustSynParser) Initialize() error {
 		return nil
 	}
 
+	// Reset safety counters
+	atomic.StoreInt64(&p.allocatedCStrings, 0)
+	atomic.StoreInt64(&p.activeParseCalls, 0)
+	atomic.StoreInt64(&p.totalParseCalls, 0)
+	atomic.StoreInt64(&p.consecutiveErrors, 0)
+	p.lastCleanup = time.Now()
+
 	result := C.goclean_rust_init()
 	if result != 0 {
-		return fmt.Errorf("failed to initialize Rust library, error code: %d", result)
+		p.recordError(fmt.Errorf("failed to initialize Rust library, error code: %d", result))
+		return p.lastError
 	}
 
 	p.initialized = true
 	if p.verbose {
 		fmt.Println("Rust syn parser initialized successfully")
 	}
+
+	// Set up automatic cleanup routine
+	go p.memoryCleanupRoutine()
 
 	return nil
 }
@@ -196,6 +159,18 @@ func (p *RustSynParser) ParseRustFile(content []byte, filePath string) (*types.R
 
 // ParseRustFileWithConfig parses a Rust source file with custom configuration
 func (p *RustSynParser) ParseRustFileWithConfig(content []byte, filePath string, config *RustSynConfig) (*types.RustASTInfo, error) {
+	startTime := time.Now()
+	
+	// Track active parsing operation
+	atomic.AddInt64(&p.activeParseCalls, 1)
+	atomic.AddInt64(&p.totalParseCalls, 1)
+	defer atomic.AddInt64(&p.activeParseCalls, -1)
+	
+	// Check for too many consecutive errors
+	if atomic.LoadInt64(&p.consecutiveErrors) > 10 {
+		return nil, fmt.Errorf("too many consecutive errors, parser may be unstable")
+	}
+
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -207,12 +182,18 @@ func (p *RustSynParser) ParseRustFileWithConfig(content []byte, filePath string,
 		fmt.Printf("Parsing Rust file with syn crate: %s (%d bytes)\n", filePath, len(content))
 	}
 
-	// Convert Go strings to C strings
-	sourceC := C.CString(string(content))
-	defer C.free(unsafe.Pointer(sourceC))
+	// Validate input size to prevent memory issues
+	const maxFileSize = 50 * 1024 * 1024 // 50MB limit
+	if len(content) > maxFileSize {
+		return nil, fmt.Errorf("file too large: %d bytes (max %d bytes)", len(content), maxFileSize)
+	}
 
-	filePathC := C.CString(filePath)
-	defer C.free(unsafe.Pointer(filePathC))
+	// Convert Go strings to C strings with tracking
+	sourceC := p.allocateCString(string(content))
+	defer p.freeCString(sourceC)
+
+	filePathC := p.allocateCString(filePath)
+	defer p.freeCString(filePathC)
 
 	// Prepare config
 	configC := C.struct_FFIParseConfig{
@@ -236,24 +217,38 @@ func (p *RustSynParser) ParseRustFileWithConfig(content []byte, filePath string,
 		&resultC,
 	)
 
-	// Handle result
+	// Handle result with better error tracking
 	if result != 0 {
-		return nil, fmt.Errorf("parsing failed with error code: %d", result)
+		err := fmt.Errorf("parsing failed with error code: %d", result)
+		p.recordError(err)
+		return nil, err
 	}
 
-	defer C.goclean_rust_free_result(&resultC)
+	defer func() {
+		// Ensure cleanup happens even if panic occurs
+		if r := recover(); r != nil {
+			C.goclean_rust_free_result(&resultC)
+			panic(r)
+		} else {
+			C.goclean_rust_free_result(&resultC)
+		}
+	}()
 
 	if resultC.success == 0 {
 		errorMsg := "unknown error"
 		if resultC.error_message != nil {
 			errorMsg = C.GoString(resultC.error_message)
 		}
-		return nil, fmt.Errorf("parsing failed: %s (error code: %d)", errorMsg, resultC.error_code)
+		err := fmt.Errorf("parsing failed: %s (error code: %d)", errorMsg, resultC.error_code)
+		p.recordError(err)
+		return nil, err
 	}
 
 	// Convert JSON result to Go struct
 	if resultC.data == nil {
-		return nil, fmt.Errorf("no data returned from parser")
+		err := fmt.Errorf("no data returned from parser")
+		p.recordError(err)
+		return nil, err
 	}
 
 	jsonData := C.GoStringN(resultC.data, C.int(resultC.data_len))
@@ -261,11 +256,16 @@ func (p *RustSynParser) ParseRustFileWithConfig(content []byte, filePath string,
 	// Parse the JSON into our Rust AST structure
 	var rustAST RustASTFromJSON
 	if err := json.Unmarshal([]byte(jsonData), &rustAST); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON result: %w", err)
+		parseErr := fmt.Errorf("failed to parse JSON result: %w", err)
+		p.recordError(parseErr)
+		return nil, parseErr
 	}
 
 	// Convert to types.RustASTInfo
 	astInfo := convertFromJSONAST(&rustAST)
+
+	// Record successful parse
+	p.recordSuccessfulParse(time.Since(startTime))
 
 	if p.verbose {
 		fmt.Printf("Successfully parsed %s: %d functions, %d structs, %d enums\n",
@@ -284,8 +284,8 @@ func (p *RustSynParser) ValidateSyntax(content []byte) (bool, error) {
 		return false, fmt.Errorf("Rust parser not initialized")
 	}
 
-	sourceC := C.CString(string(content))
-	defer C.free(unsafe.Pointer(sourceC))
+	sourceC := p.allocateCString(string(content))
+	defer p.freeCString(sourceC)
 
 	result := C.goclean_rust_validate_syntax(sourceC, C.size_t(len(content)))
 	
@@ -295,7 +295,9 @@ func (p *RustSynParser) ValidateSyntax(content []byte) (bool, error) {
 	case 0:
 		return false, nil
 	default:
-		return false, fmt.Errorf("validation failed with error code: %d", result)
+		err := fmt.Errorf("validation failed with error code: %d", result)
+		p.recordError(err)
+		return false, err
 	}
 }
 
@@ -308,8 +310,8 @@ func (p *RustSynParser) ParseExpression(expression string) (map[string]interface
 		return nil, fmt.Errorf("Rust parser not initialized")
 	}
 
-	exprC := C.CString(expression)
-	defer C.free(unsafe.Pointer(exprC))
+	exprC := p.allocateCString(expression)
+	defer p.freeCString(exprC)
 
 	var outputPtr *C.char
 	var outputLen C.size_t
@@ -322,7 +324,9 @@ func (p *RustSynParser) ParseExpression(expression string) (map[string]interface
 	)
 
 	if result != 0 {
-		return nil, fmt.Errorf("expression parsing failed with error code: %d", result)
+		err := fmt.Errorf("expression parsing failed with error code: %d", result)
+		p.recordError(err)
+		return nil, err
 	}
 
 	defer C.goclean_rust_free_string(outputPtr)
@@ -331,7 +335,9 @@ func (p *RustSynParser) ParseExpression(expression string) (map[string]interface
 
 	var result_map map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonData), &result_map); err != nil {
-		return nil, fmt.Errorf("failed to parse expression result: %w", err)
+		parseErr := fmt.Errorf("failed to parse expression result: %w", err)
+		p.recordError(parseErr)
+		return nil, parseErr
 	}
 
 	return result_map, nil
@@ -876,4 +882,140 @@ func convertMacroFromJSON(m *RustMacroFromJSON) *types.RustMacroInfo {
 		MacroType:      "macro_rules!", // Default type, could be enhanced
 		HasDocComments: m.HasDocComments,
 	}
+}
+
+// Memory safety helper methods
+
+// allocateCString allocates a C string and tracks it for safety
+func (p *RustSynParser) allocateCString(s string) *C.char {
+	atomic.AddInt64(&p.allocatedCStrings, 1)
+	return C.CString(s)
+}
+
+// freeCString frees a C string and updates tracking
+func (p *RustSynParser) freeCString(cstr *C.char) {
+	if cstr != nil {
+		C.free(unsafe.Pointer(cstr))
+		atomic.AddInt64(&p.allocatedCStrings, -1)
+	}
+}
+
+// recordError records a parsing error for tracking
+func (p *RustSynParser) recordError(err error) {
+	p.errorMutex.Lock()
+	defer p.errorMutex.Unlock()
+	
+	p.lastError = err
+	atomic.AddInt64(&p.consecutiveErrors, 1)
+}
+
+// recordSuccessfulParse records a successful parsing operation
+func (p *RustSynParser) recordSuccessfulParse(duration time.Duration) {
+	// Reset consecutive errors on success
+	atomic.StoreInt64(&p.consecutiveErrors, 0)
+	
+	// Update performance metrics
+	p.perfMutex.Lock()
+	defer p.perfMutex.Unlock()
+	
+	p.totalParseTime += duration
+	totalCalls := atomic.LoadInt64(&p.totalParseCalls)
+	if totalCalls > 0 {
+		p.avgParseTime = p.totalParseTime / time.Duration(totalCalls)
+	}
+}
+
+// memoryCleanupRoutine performs periodic memory safety checks
+func (p *RustSynParser) memoryCleanupRoutine() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	
+	for range ticker.C {
+		p.mutex.RLock()
+		initialized := p.initialized
+		p.mutex.RUnlock()
+		
+		if !initialized {
+			return
+		}
+		
+		// Check for memory leaks
+		allocatedStrings := atomic.LoadInt64(&p.allocatedCStrings)
+		activeCalls := atomic.LoadInt64(&p.activeParseCalls)
+		
+		if p.verbose && (allocatedStrings > 0 || activeCalls > 0) {
+			fmt.Printf("Memory safety check: %d allocated C strings, %d active parse calls\n", 
+				allocatedStrings, activeCalls)
+		}
+		
+		// Force garbage collection if memory usage seems high
+		if allocatedStrings > 100 {
+			runtime.GC()
+		}
+		
+		p.lastCleanup = time.Now()
+	}
+}
+
+// GetMemorySafetyMetrics returns current memory safety metrics
+func (p *RustSynParser) GetMemorySafetyMetrics() map[string]interface{} {
+	p.perfMutex.RLock()
+	defer p.perfMutex.RUnlock()
+	
+	p.errorMutex.RLock()
+	defer p.errorMutex.RUnlock()
+	
+	var lastErrorMsg string
+	if p.lastError != nil {
+		lastErrorMsg = p.lastError.Error()
+	}
+	
+	return map[string]interface{}{
+		"allocated_c_strings":    atomic.LoadInt64(&p.allocatedCStrings),
+		"active_parse_calls":     atomic.LoadInt64(&p.activeParseCalls),
+		"total_parse_calls":      atomic.LoadInt64(&p.totalParseCalls),
+		"consecutive_errors":     atomic.LoadInt64(&p.consecutiveErrors),
+		"last_error":             lastErrorMsg,
+		"avg_parse_time_ms":      p.avgParseTime.Milliseconds(),
+		"total_parse_time_ms":    p.totalParseTime.Milliseconds(),
+		"last_cleanup":           p.lastCleanup.Format(time.RFC3339),
+		"initialized":            p.initialized,
+	}
+}
+
+// ForceCleanup forces immediate cleanup of resources
+func (p *RustSynParser) ForceCleanup() {
+	runtime.GC()
+	p.lastCleanup = time.Now()
+	
+	if p.verbose {
+		metrics := p.GetMemorySafetyMetrics()
+		fmt.Printf("Forced cleanup completed. Metrics: %+v\n", metrics)
+	}
+}
+
+// ValidateMemoryState checks for potential memory issues
+func (p *RustSynParser) ValidateMemoryState() error {
+	allocatedStrings := atomic.LoadInt64(&p.allocatedCStrings)
+	activeCalls := atomic.LoadInt64(&p.activeParseCalls)
+	consecutiveErrors := atomic.LoadInt64(&p.consecutiveErrors)
+	
+	// Check for obvious memory leaks
+	if allocatedStrings > activeCalls*2 {
+		return fmt.Errorf("potential memory leak: %d allocated C strings with only %d active calls",
+			allocatedStrings, activeCalls)
+	}
+	
+	// Check for excessive errors
+	if consecutiveErrors > 20 {
+		return fmt.Errorf("too many consecutive errors (%d), parser may be unstable",
+			consecutiveErrors)
+	}
+	
+	// Check for extremely long-running operations
+	if activeCalls > 0 && time.Since(p.lastCleanup) > 30*time.Minute {
+		return fmt.Errorf("parsing operations running for over 30 minutes, possible deadlock")
+	}
+	
+	return nil
 }
