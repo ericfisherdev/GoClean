@@ -277,11 +277,23 @@ func (e *Engine) worker(wg *sync.WaitGroup, filesChan <-chan *models.FileInfo, r
 				Violations: []*models.Violation{},
 				Metrics:    &models.FileMetrics{},
 			}
-			errorsChan <- fmt.Errorf("failed to parse %s: %w", file.Path, err)
 		} else {
 			e.violationDetector.DetectViolations(result)
 		}
+		
+		// Always send result first to avoid blocking on the errors channel
 		resultsChan <- result
+		
+		// Send error non-blocking (best-effort error reporting)
+		if err != nil {
+			select {
+			case errorsChan <- fmt.Errorf("failed to parse %s: %w", file.Path, err):
+				// Error successfully sent to error channel
+			default:
+				// Error channel is full, but error is already recorded in result.File.Error
+				// so we can safely drop this duplicate error report
+			}
+		}
 	}
 }
 

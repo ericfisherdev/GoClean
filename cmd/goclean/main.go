@@ -95,7 +95,16 @@ Examples:
 		}
 		
 		// Override configuration with command-line flags if provided
-		if outputPath != "" {
+		if format == "json" {
+			// Enable JSON export when format is explicitly set to json
+			cfg.Export.JSON.Enabled = true
+			if outputPath != "" {
+				cfg.Export.JSON.Path = outputPath
+			} else if cfg.Export.JSON.Path == "" {
+				// Use default path if not configured
+				cfg.Export.JSON.Path = "./reports/violations.json"
+			}
+		} else if outputPath != "" {
 			if format == "html" || format == "" {
 				cfg.Output.HTML.Path = outputPath
 			} else if format == "markdown" {

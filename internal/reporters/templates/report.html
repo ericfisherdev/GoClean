@@ -906,7 +906,7 @@
                                                 {{ if .CodeSnippet }}
                                                 <div class="mt-3">
                                                     <h6>Code:</h6>
-                                                    <pre class="code-snippet border rounded p-2"><code class="language-{{ detectLanguage $.File }}">{{ formatCode .CodeSnippet }}</code></pre>
+                                                    <pre class="code-snippet border rounded p-2"><code class="language-{{ detectLanguage .File }}">{{ formatCode .CodeSnippet }}</code></pre>
                                                 </div>
                                                 {{ end }}
                                                 
