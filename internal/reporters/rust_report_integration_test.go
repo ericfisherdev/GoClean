@@ -136,8 +136,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "rust-violations.md")
 		
-		mdReporter := NewMarkdownReporter(&MarkdownConfig{
-			OutputPath: outputPath,
+		mdReporter := NewMarkdownReporter(&config.MarkdownConfig{
+			Path: outputPath,
 		})
 
 		rpt := &models.Report{Violations: violations, Stats: stats}
@@ -224,8 +224,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "rust-violations.json")
 		
-		jsonReporter := NewJSONReporter(&JSONConfig{
-			OutputPath: outputPath,
+		jsonReporter := NewJSONReporter(&config.JSONConfig{
+			Path: outputPath,
 		})
 
 		rpt := &models.Report{Violations: violations, Stats: stats}
@@ -251,11 +251,11 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 		expectedJSON := []string{
 			`"rule":"RUST_INVALID_FUNCTION_NAMING"`,
 			`"rule":"RUST_OVERUSE_UNWRAP"`,
-			`"filePath":"src/lib.rs"`,
-			`"filePath":"src/main.rs"`,
-			`"filePath":"src/utils.rs"`,
+			`"file":"src/lib.rs"`,
+			`"file":"src/main.rs"`,
+			`"file":"src/utils.rs"`,
 			`"message":"Function 'getUserData' should use snake_case naming"`,
-			`"codeSnippet":"fn getUserData() -> String {"`,
+			`"code_snippet":"fn getUserData() -> String {"`,
 		}
 
 		for _, expected := range expectedJSON {
@@ -335,10 +335,12 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "mixed-report.html")
 		
-		htmlReporter := NewHTMLReporter(&HTMLConfig{
-			OutputPath: outputPath,
-			Title:      "Mixed Go/Rust Analysis Report",
+		htmlReporter, err := NewHTMLReporter(&config.HTMLConfig{
+			Path: outputPath,
 		})
+		if err != nil {
+			t.Fatalf("Failed to create HTML reporter: %v", err)
+		}
 
 		rpt := &models.Report{Violations: violations, Stats: stats}
 		err := htmlReporter.Generate(rpt)
@@ -393,8 +395,8 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "mixed-violations.md")
 		
-		mdReporter := NewMarkdownReporter(&MarkdownConfig{
-			OutputPath: outputPath,
+		mdReporter := NewMarkdownReporter(&config.MarkdownConfig{
+			Path: outputPath,
 		})
 
 		rpt := &models.Report{Violations: violations, Stats: stats}

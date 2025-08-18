@@ -125,9 +125,12 @@ func (m *RustParserManager) tryInitializeRegexParser() bool {
 		return false
 	}
 
+	// Acquire write lock to prevent races with state mutations
+	m.mutex.Lock()
 	m.regexAnalyzer = regexAnalyzer
 	m.currentParserType = ParserTypeRegex
 	m.fallbackReason = "Syn crate unavailable, using regex parsing"
+	m.mutex.Unlock()
 
 	if m.verbose {
 		fmt.Println("⚠️  Rust parsing: Using regex fallback (limited accuracy)")
@@ -141,10 +144,15 @@ func (m *RustParserManager) tryInitializeRegexParser() bool {
 
 // initializeFallbackMode sets up no-op fallback when no parsing is available
 func (m *RustParserManager) initializeFallbackMode(reason string) {
+	// Acquire write lock to prevent races with state mutations
+	m.mutex.Lock()
 	m.currentParserType = ParserTypeFallback
 	m.fallbackReason = reason
+	verbose := m.verbose // Read verbose value while locked
+	m.mutex.Unlock()
 
-	if m.verbose {
+	// Perform I/O operations after releasing the lock
+	if verbose {
 		fmt.Printf("❌ Rust parsing: No parser available (%s)\n", reason)
 	}
 
