@@ -231,8 +231,7 @@ if [ ! -f ./bin/goclean ]; then
 fi
 
 # Test GoClean's Rust parsing
-./bin/goclean scan testdata/rust-samples/sample-project --console --format table
-
+ ./bin/goclean scan testdata/rust-samples/sample-project --console-violations
 # Generate JSON output for analysis
 ./bin/goclean scan testdata/rust-samples/sample-project --format json > rust-scan-results.json
 
