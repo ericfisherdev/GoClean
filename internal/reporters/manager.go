@@ -54,6 +54,12 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		manager.reporters = append(manager.reporters, markdownReporter)
 	}
 
+	// Initialize JSON reporter if configured
+	if cfg.Export.JSON.Enabled && cfg.Export.JSON.Path != "" {
+		jsonReporter := NewJSONReporter(&cfg.Export.JSON)
+		manager.reporters = append(manager.reporters, jsonReporter)
+	}
+
 	return manager, nil
 }
 
@@ -182,6 +188,9 @@ func (m *Manager) GetConfiguredReporters() []string {
 	if m.config.Output.Markdown.Enabled && m.config.Output.Markdown.Path != "" {
 		types = append(types, "Markdown")
 	}
+	if m.config.Export.JSON.Enabled && m.config.Export.JSON.Path != "" {
+		types = append(types, "JSON")
+	}
 
 	return types
 }
@@ -195,6 +204,14 @@ func (m *Manager) GetHTMLOutputPath() string {
 func (m *Manager) GetMarkdownOutputPath() string {
 	if m.config.Output.Markdown.Enabled {
 		return m.config.Output.Markdown.Path
+	}
+	return ""
+}
+
+// GetJSONOutputPath returns the configured JSON output path
+func (m *Manager) GetJSONOutputPath() string {
+	if m.config.Export.JSON.Enabled {
+		return m.config.Export.JSON.Path
 	}
 	return ""
 }

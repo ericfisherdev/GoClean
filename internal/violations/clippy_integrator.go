@@ -111,6 +111,11 @@ func (c *ClippyIntegrator) Detect(fileInfo *models.FileInfo, astInfo interface{}
 		return []*models.Violation{}
 	}
 
+	// Check if clippy integration is enabled
+	if c.config.ClippyConfig == nil || !c.config.ClippyConfig.Enabled {
+		return []*models.Violation{}
+	}
+
 	// Find the project root (directory containing Cargo.toml)
 	projectRoot := c.findCargoProjectRoot(fileInfo.Path)
 	if projectRoot == "" {

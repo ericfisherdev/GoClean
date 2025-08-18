@@ -26,8 +26,10 @@ type Config struct {
 	Scan        ScanConfig    `yaml:"scan"`
 	Thresholds  Thresholds    `yaml:"thresholds"`
 	Output      OutputConfig  `yaml:"output"`
+	Export      ExportConfig  `yaml:"export"`
 	Logging     LoggingConfig `yaml:"logging"`
 	Rust        RustConfig    `yaml:"rust"`
+	Clippy      ClippyConfig  `yaml:"clippy"`
 }
 
 // ScanConfig contains scanning-related settings
@@ -40,6 +42,10 @@ type ScanConfig struct {
 	SkipTestFiles    *bool    `yaml:"skip_test_files"`    // Default: true
 	AggressiveMode   *bool    `yaml:"aggressive_mode"`    // Default: false
 	CustomTestPatterns []string `yaml:"custom_test_patterns"`
+	
+	// Performance optimization settings
+	ConcurrentFiles  int    `yaml:"concurrent_files"`   // Maximum concurrent file processing
+	MaxFileSize      string `yaml:"max_file_size"`      // Maximum file size to process (e.g., "1MB", "500KB")
 }
 
 // Thresholds contains clean code thresholds
@@ -76,6 +82,34 @@ type MarkdownConfig struct {
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
+}
+
+// ExportConfig contains export-related settings
+type ExportConfig struct {
+	JSON JSONConfig `yaml:"json"`
+	CSV  CSVConfig  `yaml:"csv"`
+}
+
+// JSONConfig contains JSON export settings
+type JSONConfig struct {
+	Enabled     bool   `yaml:"enabled"`
+	Path        string `yaml:"path"`
+	PrettyPrint bool   `yaml:"pretty_print"`
+}
+
+// CSVConfig contains CSV export settings
+type CSVConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Path    string `yaml:"path"`
+}
+
+// ClippyConfig contains rust-clippy integration settings
+type ClippyConfig struct {
+	Enabled           bool                       `yaml:"enabled"`
+	Categories        []string                   `yaml:"categories"`
+	SeverityMapping   map[string]string          `yaml:"severity_mapping"`
+	AdditionalLints   []string                   `yaml:"additional_lints"`
+	FailOnClippyErrors bool                      `yaml:"fail_on_clippy_errors"`
 }
 
 // RustConfig contains Rust-specific analysis settings
@@ -222,6 +256,8 @@ func GetDefaultConfig() *Config {
 			SkipTestFiles:  boolPtr(true),  // Skip test files by default
 			AggressiveMode: boolPtr(false), // Normal mode by default
 			CustomTestPatterns: []string{},
+			ConcurrentFiles: 0, // Use default (number of CPU cores)
+			MaxFileSize:     "", // No limit by default
 		},
 		Thresholds: Thresholds{
 			FunctionLines:        DefaultFunctionLines,
@@ -243,11 +279,23 @@ func GetDefaultConfig() *Config {
 				IncludeExamples: true,
 			},
 		},
+		Export: ExportConfig{
+			JSON: JSONConfig{
+				Enabled:     false,
+				Path:        "./reports/violations.json",
+				PrettyPrint: true,
+			},
+			CSV: CSVConfig{
+				Enabled: false,
+				Path:    "./reports/violations.csv",
+			},
+		},
 		Logging: LoggingConfig{
 			Level:  "info",
 			Format: "structured",
 		},
 		Rust: GetDefaultRustConfig(),
+		Clippy: GetDefaultClippyConfig(),
 	}
 }
 
@@ -304,6 +352,28 @@ func GetDefaultRustConfig() RustConfig {
 		MaxTraitMethods:         8,
 		MaxAssociatedTypes:      4,
 		MaxComplexTraitParams:   2,
+	}
+}
+
+// GetDefaultClippyConfig returns the default Clippy configuration
+func GetDefaultClippyConfig() ClippyConfig {
+	return ClippyConfig{
+		Enabled: false, // Disabled by default since it requires cargo
+		Categories: []string{
+			"correctness",
+			"suspicious",
+			"style",
+			"complexity",
+			"perf",
+		},
+		SeverityMapping: map[string]string{
+			"error": "critical",
+			"warn":  "high",
+			"info":  "medium",
+			"note":  "low",
+		},
+		AdditionalLints:   []string{},
+		FailOnClippyErrors: false,
 	}
 }
 
@@ -388,6 +458,25 @@ func mergeWithDefaults(config *Config) {
 		config.Output.Markdown.Path = defaults.Output.Markdown.Path
 	}
 
+	// Merge scan config additional fields
+	if config.Scan.ConcurrentFiles == 0 {
+		config.Scan.ConcurrentFiles = defaults.Scan.ConcurrentFiles
+	}
+	if config.Scan.MaxFileSize == "" {
+		config.Scan.MaxFileSize = defaults.Scan.MaxFileSize
+	}
+
+	// Merge export config
+	if config.Export.JSON.Path == "" {
+		config.Export.JSON.Path = defaults.Export.JSON.Path
+	}
+	if config.Export.CSV.Path == "" {
+		config.Export.CSV.Path = defaults.Export.CSV.Path
+	}
+
+	// Merge clippy config
+	mergeClippyConfig(&config.Clippy, &defaults.Clippy)
+
 	// Merge logging config
 	if config.Logging.Level == "" {
 		config.Logging.Level = defaults.Logging.Level
@@ -434,6 +523,29 @@ func mergeRustConfig(config *RustConfig, defaults *RustConfig) {
 	if config.MaxFileLines == 0 {
 		config.MaxFileLines = defaults.MaxFileLines
 	}
+}
+
+// mergeClippyConfig merges Clippy configuration with defaults
+func mergeClippyConfig(config *ClippyConfig, defaults *ClippyConfig) {
+	// Check if config is completely empty (all defaults)
+	if !config.Enabled && len(config.Categories) == 0 && len(config.SeverityMapping) == 0 && 
+	   len(config.AdditionalLints) == 0 && !config.FailOnClippyErrors {
+		*config = *defaults
+		return
+	}
+	
+	// Merge categories if empty
+	if len(config.Categories) == 0 {
+		config.Categories = defaults.Categories
+	}
+	
+	// Merge severity mapping if empty
+	if len(config.SeverityMapping) == 0 {
+		config.SeverityMapping = defaults.SeverityMapping
+	}
+	
+	// Additional lints is an additive list, so we don't replace if empty
+	// This allows users to explicitly set an empty list if desired
 }
 
 // Validate checks if the configuration is valid

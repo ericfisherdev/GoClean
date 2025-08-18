@@ -78,6 +78,9 @@ type DetectorConfig struct {
 	
 	// Rust-specific configuration
 	RustConfig *RustDetectorConfig
+	
+	// Clippy configuration
+	ClippyConfig *ClippyDetectorConfig
 }
 
 // RustDetectorConfig provides Rust-specific detector configuration
@@ -134,6 +137,15 @@ type RustDetectorConfig struct {
 	MaxComplexTraitParams   int
 }
 
+// ClippyDetectorConfig provides clippy-specific detector configuration
+type ClippyDetectorConfig struct {
+	Enabled           bool
+	Categories        []string
+	SeverityMapping   map[string]string
+	AdditionalLints   []string
+	FailOnClippyErrors bool
+}
+
 // DefaultDetectorConfig returns the default configuration
 func DefaultDetectorConfig() *DetectorConfig {
 	return &DetectorConfig{
@@ -151,6 +163,7 @@ func DefaultDetectorConfig() *DetectorConfig {
 		Verbose:              false,
 		SeverityConfig:       DefaultSeverityConfig(),
 		RustConfig:           DefaultRustDetectorConfig(),
+		ClippyConfig:         DefaultClippyDetectorConfig(),
 	}
 }
 
@@ -207,6 +220,28 @@ func DefaultRustDetectorConfig() *RustDetectorConfig {
 		MaxTraitMethods:         8,
 		MaxAssociatedTypes:      4,
 		MaxComplexTraitParams:   2,
+	}
+}
+
+// DefaultClippyDetectorConfig returns the default Clippy detector configuration
+func DefaultClippyDetectorConfig() *ClippyDetectorConfig {
+	return &ClippyDetectorConfig{
+		Enabled: false, // Disabled by default since it requires cargo
+		Categories: []string{
+			"correctness",
+			"suspicious", 
+			"style",
+			"complexity",
+			"perf",
+		},
+		SeverityMapping: map[string]string{
+			"error": "critical",
+			"warn":  "high",
+			"info":  "medium",
+			"note":  "low",
+		},
+		AdditionalLints:   []string{},
+		FailOnClippyErrors: false,
 	}
 }
 

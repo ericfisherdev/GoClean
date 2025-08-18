@@ -173,6 +173,25 @@ Examples:
 		engine := scanner.NewEngineWithConfig(scanPaths, excludePatterns, fileTypesList, verbose,
 			cfg.Scan.GetSkipTestFiles(), cfg.Scan.GetAggressiveMode(), cfg.Scan.CustomTestPatterns)
 		
+		// Configure concurrent file processing if specified
+		if cfg.Scan.ConcurrentFiles > 0 {
+			engine.SetMaxWorkers(cfg.Scan.ConcurrentFiles)
+			if verbose && !consoleViolations {
+				fmt.Printf("Concurrent file processing set to: %d workers\n", cfg.Scan.ConcurrentFiles)
+			}
+		}
+		
+		// Configure max file size if specified
+		if cfg.Scan.MaxFileSize != "" {
+			if err := engine.SetMaxFileSize(cfg.Scan.MaxFileSize); err != nil {
+				fmt.Fprintf(os.Stderr, "Invalid max file size configuration: %v\n", err)
+				os.Exit(1)
+			}
+			if verbose && !consoleViolations {
+				fmt.Printf("Max file size limit set to: %s\n", cfg.Scan.MaxFileSize)
+			}
+		}
+		
 		// Configure Rust optimizations if Rust language is being scanned
 		if containsRust(languages, fileTypesList) || rustOptimizations {
 			engine.EnableRustOptimization(rustOptimizations || containsRust(languages, fileTypesList))
@@ -248,6 +267,10 @@ Examples:
 			
 			if markdownPath := reporterManager.GetMarkdownOutputPath(); markdownPath != "" {
 				fmt.Printf("📝 Markdown report generated: %s\n", markdownPath)
+			}
+			
+			if jsonPath := reporterManager.GetJSONOutputPath(); jsonPath != "" {
+				fmt.Printf("📄 JSON report generated: %s\n", jsonPath)
 			}
 		}
 		

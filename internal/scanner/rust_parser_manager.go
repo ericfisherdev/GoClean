@@ -420,12 +420,7 @@ func isCGOEnabled() bool {
 	return CGOEnabled
 }
 
-// Build-time flags (set by build tags)
-//go:build cgo
-var CGOEnabled = true
-
-//go:build !cgo
-// var CGOEnabled = false
+// Build-time flags are defined in cgo_enabled.go and cgo_disabled.go
 
 // Global parser manager instance
 var (
