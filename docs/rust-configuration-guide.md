@@ -32,23 +32,23 @@ goclean scan
 
 ```bash
 # Generate a basic configuration file
-goclean config init --rust
+goclean config init goclean-rust.yaml
 
-# Generate with specific template
-goclean config init --template rust-strict --output strict-rust.yaml
+# Generate in different location  
+goclean config init configs/rust-config.yaml
 ```
 
 ### 3. Quick Scan Commands
 
 ```bash
 # Basic Rust project scan
-goclean scan --path ./src --format table
+goclean scan ./src --format json
 
 # Include Rust files specifically
-goclean scan --file-types .rs --console
+goclean scan --types .rs --console-violations
 
 # Mixed project with both Go and Rust
-goclean scan --file-types .go,.rs --html --markdown
+goclean scan --types .go,.rs --format html
 ```
 
 ## Configuration Examples
@@ -284,32 +284,38 @@ clippy:
 
 ```bash
 # Scan current directory for Rust files
-goclean scan --file-types .rs
+goclean scan --types .rs
 
-# Use specific configuration
-goclean scan --config configs/rust-strict.yaml
+# Use specific configuration with Rust file types
+goclean scan --config configs/rust-strict.yaml --types .rs
 
-# Scan specific paths
-goclean scan --path ./src --path ./benches --file-types .rs
+# Scan specific directories (positional arguments followed by flags)
+goclean scan ./src ./benches --types .rs
 
-# Generate specific output formats
-goclean scan --html --markdown --format json
+# Generate HTML report
+goclean scan --format html --output reports/rust-report.html
+
+# Generate Markdown report
+goclean scan --format markdown --output reports/violations.md
+
+# Generate JSON report
+goclean scan --format json --output data/violations.json
 ```
 
 ### Advanced Commands
 
 ```bash
 # Mixed language scanning
-goclean scan --file-types .go,.rs --config configs/rust-mixed-project.yaml
+goclean scan --types .go,.rs --config configs/rust-mixed-project.yaml
 
-# Performance-focused scan
-goclean scan --config configs/rust-performance-focused.yaml --concurrent 30
+# Performance-focused scan with aggressive mode
+goclean scan --config configs/rust-performance-focused.yaml --aggressive --types .rs
 
-# Strict analysis with all outputs
-goclean scan --config configs/rust-strict.yaml --html --markdown --console --format table
+# Strict analysis with JSON output
+goclean scan --config configs/rust-strict.yaml --format json --output results.json
 
-# CI/CD friendly output
-goclean scan --config configs/rust-minimal.yaml --format json --no-color --quiet > results.json
+# CI/CD friendly console output
+goclean scan --config configs/rust-minimal.yaml --console-violations --types .rs
 ```
 
 ### Filtering and Exclusions
@@ -318,24 +324,24 @@ goclean scan --config configs/rust-minimal.yaml --format json --no-color --quiet
 # Exclude test files and benchmarks
 goclean scan --exclude "tests/" --exclude "benches/" --exclude "target/"
 
-# Include only specific severity levels
-goclean scan --severity high --severity critical
+# Use aggressive scanning for stricter analysis
+goclean scan --aggressive --types .rs
 
-# Exclude specific violation types
-goclean scan --exclude-violations "RUST_TODO_COMMENT,RUST_COMMENTED_CODE"
+# Use minimal configuration for faster scanning
+goclean scan --config configs/rust-minimal.yaml
 ```
 
 ### Report Generation
 
 ```bash
-# Generate comprehensive HTML report
-goclean scan --html --theme dark --auto-refresh --snippet-lines 10
+# Console output for AI analysis
+goclean scan --console-violations --types .rs
 
-# AI-friendly markdown for code review
-goclean scan --markdown --ai-friendly --include-examples
+# Export data for analysis using JSON format
+goclean scan --format json --output data.json
 
-# Export data for analysis
-goclean scan --export-json --export-csv --pretty-print
+# Enable aggressive scanning mode with Rust files
+goclean scan --aggressive --types .rs
 ```
 
 ## Mixed Projects (Go + Rust)
@@ -531,8 +537,8 @@ cargo clippy --version
 # Use performance-focused configuration
 goclean scan --config configs/rust-performance-focused.yaml
 
-# Reduce concurrent files if running out of memory
-goclean scan --concurrent 5
+# Use minimal configuration if running out of memory
+goclean scan --config configs/rust-minimal.yaml
 ```
 
 #### 3. Too Many Violations
@@ -541,8 +547,8 @@ goclean scan --concurrent 5
 # Start with lenient thresholds
 goclean scan --config configs/rust-minimal.yaml
 
-# Filter by severity
-goclean scan --severity critical --severity high
+# Use strict configuration for critical violations
+goclean scan --config configs/rust-strict.yaml
 ```
 
 #### 4. Configuration Validation
@@ -552,23 +558,23 @@ goclean scan --severity critical --severity high
 goclean config validate
 
 # Check configuration with verbose output
-goclean scan --config goclean.yaml --verbose --dry-run
+goclean scan --config goclean.yaml --verbose
 ```
 
 ### Debug Commands
 
 ```bash
-# Debug Rust parsing
-goclean scan --verbose --debug-rust
+# Debug Rust parsing with verbose output
+goclean scan --verbose --rust-opt
 
-# Check file discovery
-goclean scan --dry-run --verbose
+# Check file discovery with verbose output
+goclean scan --verbose
 
-# Analyze performance
-goclean scan --profile --output profile.json
+# Analyze with verbose output
+goclean scan --verbose --format json --output analysis.json
 
 # Test specific files
-goclean scan --path ./src/main.rs --verbose
+goclean scan ./src/main.rs --verbose
 ```
 
 ### Environment Variables
