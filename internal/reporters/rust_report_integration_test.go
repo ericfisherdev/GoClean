@@ -140,7 +140,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			OutputPath: outputPath,
 		})
 
-		err := mdReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err := mdReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate Markdown report: %v", err)
 		}
@@ -192,7 +193,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			Output:  &buf,
 		})
 
-		err := consoleReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err := consoleReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate console report: %v", err)
 		}
@@ -226,7 +228,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			OutputPath: outputPath,
 		})
 
-		err := jsonReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err := jsonReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate JSON report: %v", err)
 		}
@@ -337,7 +340,8 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 			Title:      "Mixed Go/Rust Analysis Report",
 		})
 
-		err := htmlReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err := htmlReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate mixed HTML report: %v", err)
 		}

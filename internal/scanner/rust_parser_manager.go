@@ -216,6 +216,9 @@ func (m *RustParserManager) ParseRustFile(content []byte, filePath string) (*typ
 
 // parseWithSyn uses the syn crate parser
 func (m *RustParserManager) parseWithSyn(content []byte, filePath string) (*types.RustASTInfo, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	
 	if m.synParser == nil {
 		return nil, fmt.Errorf("syn parser not initialized")
 	}
@@ -225,6 +228,9 @@ func (m *RustParserManager) parseWithSyn(content []byte, filePath string) (*type
 
 // parseWithRegexFallback uses the regex-based parser
 func (m *RustParserManager) parseWithRegexFallback(content []byte, filePath string) (*types.RustASTInfo, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	
 	if m.regexAnalyzer == nil {
 		return nil, fmt.Errorf("regex analyzer not initialized")
 	}
@@ -235,8 +241,9 @@ func (m *RustParserManager) parseWithRegexFallback(content []byte, filePath stri
 // ValidateSyntax validates Rust syntax using the best available method
 func (m *RustParserManager) ValidateSyntax(content []byte) (bool, error) {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	
 	parserType := m.currentParserType
-	m.mutex.RUnlock()
 
 	switch parserType {
 	case ParserTypeSyn:

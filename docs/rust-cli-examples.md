@@ -316,8 +316,11 @@ goclean scan --config configs/rust-minimal.yaml --console-violations
 ### Release Preparation
 
 ```bash
-# Comprehensive pre-release scan
-goclean scan --config configs/rust-strict.yaml --format html --format json
+# Comprehensive pre-release scan - HTML report
+goclean scan --config configs/rust-strict.yaml --format html
+
+# Comprehensive pre-release scan - JSON report  
+goclean scan --config configs/rust-strict.yaml --format json
 
 # Quality metrics export
 goclean scan --config configs/rust-minimal.yaml --format json --output "releases/quality-report.json"

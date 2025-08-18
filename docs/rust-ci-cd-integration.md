@@ -47,72 +47,92 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
           cache-dependency-path: go.sum
           
       - name: Set up Rust toolchain
-        if: matrix.test-suite == 'rust-tests'
-        uses: actions-rs/toolchain@v1
+        if: matrix.test-suite == 'rust-tests' || matrix.test-suite == 'integration-tests'
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
+          
+      - name: Cache Cargo dependencies
+        if: matrix.test-suite == 'rust-tests' || matrix.test-suite == 'integration-tests'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            
+      - name: Build GoClean binary
+        run: |
+          mkdir -p ./bin
+          go build -o ./bin/goclean ./cmd/goclean
+          
+      - name: Run Go tests
+        if: matrix.test-suite == 'go-tests'
+        run: |
+          go test -v -coverprofile=coverage-go.out ./internal/scanner -run="Test.*Go"
+          go test -v ./internal/violations -run="Test.*Go"
+          go test -v ./internal/reporters ./internal/config ./internal/models
+          go test -v ./cmd/goclean
+          
+      - name: Run Rust tests
+        if: matrix.test-suite == 'rust-tests'
+        run: |
+          go test -v -coverprofile=coverage-rust.out ./internal/scanner -run="Test.*Rust"
+          go test -v ./internal/violations -run="Test.*Rust"
+          
+      - name: Run integration tests
+        if: matrix.test-suite == 'integration-tests'
+        run: |
+          go test -v ./internal/scanner -run="TestIntegration"
+          go test -v ./internal/violations -run="TestIntegration"
+          
+      - name: Install benchstat
+        if: matrix.test-suite == 'benchmark-tests'
+        run: |
+          GO111MODULE=on go install golang.org/x/perf/cmd/benchstat@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          
+      - name: Run benchmark tests
+        if: matrix.test-suite == 'benchmark-tests'
+        run: |
+          go test -bench=BenchmarkRustVsGoParsingPerformance/Small -benchmem -timeout=5m ./internal/scanner
+          go test -bench=BenchmarkParsingMemoryComparison -benchmem -timeout=3m ./internal/scanner
 ```
 
 ### 2. Test Suite Components
 
-#### Go Tests
-```yaml
-- name: Build GoClean binary
-  run: |
-    mkdir -p ./bin
-    go build -o ./bin/goclean ./cmd/goclean
-    
-- name: Run Go tests
-  if: matrix.test-suite == 'go-tests'
-  run: |
-    go test -v -coverprofile=coverage-go.out ./internal/scanner -run="Test.*Go"
-    go test -v ./internal/violations -run="Test.*Go"
-    go test -v ./internal/reporters ./internal/config ./internal/models
-    go test -v ./cmd/goclean
-```
+The above workflow includes four test suites executed through the matrix strategy:
 
-#### Rust Tests
-```yaml
-- name: Run Rust tests
-  if: matrix.test-suite == 'rust-tests'
-  run: |
-    go test -v -coverprofile=coverage-rust.out ./internal/scanner -run="Test.*Rust"
-    go test -v ./internal/violations -run="Test.*Rust"
-```
+#### Go Tests (`go-tests`)
+- Builds GoClean binary 
+- Runs Go-specific unit tests with coverage
+- Tests reporters, config, models, and CLI modules
 
-#### Integration Tests
-```yaml
-- name: Run integration tests
-  if: matrix.test-suite == 'integration-tests'
-  run: |
-    go test -v ./internal/scanner -run="TestIntegration"
-    go test -v ./internal/violations -run="TestIntegration"
-```
+#### Rust Tests (`rust-tests`)  
+- Sets up Rust toolchain with clippy and rustfmt
+- Runs Rust-specific unit tests with coverage
+- Tests Rust parser and violation detection
 
-#### Benchmark Tests
-```yaml
-- name: Install benchstat
-  if: matrix.test-suite == 'benchmark-tests'
-  run: |
-    GO111MODULE=on go install golang.org/x/perf/cmd/benchstat@latest
-    echo "$GOPATH/bin" >> $GITHUB_PATH
+#### Integration Tests (`integration-tests`)
+- Includes both Go and Rust toolchain setup
+- Runs cross-language integration tests
+- Validates Go-Rust parser integration
 
-- name: Run benchmark tests
-  if: matrix.test-suite == 'benchmark-tests'
-  run: |
-    go test -bench=BenchmarkRustVsGoParsingPerformance/Small -benchmem -timeout=5m ./internal/scanner
-    go test -bench=BenchmarkParsingMemoryComparison -benchmem -timeout=3m ./internal/scanner
-```
+#### Benchmark Tests (`benchmark-tests`)
+- Installs benchstat for performance analysis
+- Runs performance comparison benchmarks
+- Measures parsing speed and memory usage
 
 ## 3. Rust Sample Project Creation
 
