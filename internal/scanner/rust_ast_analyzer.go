@@ -31,10 +31,10 @@ func NewRustASTAnalyzerWithOptimizer(verbose bool, optimizer *RustPerformanceOpt
 	}
 }
 
-// AnalyzeRustFile performs AST-based analysis of a Rust source file using syn crate via CGO
+// AnalyzeRustFile performs AST-based analysis of a Rust source file with automatic fallback
 func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*types.RustASTInfo, error) {
 	if a.verbose {
-		fmt.Printf("Analyzing Rust file with syn crate: %s\n", filePath)
+		fmt.Printf("Analyzing Rust file with automatic parser selection: %s\n", filePath)
 	}
 
 	// Try to get from cache first if optimizer is available
@@ -48,14 +48,11 @@ func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*typ
 		}
 	}
 
-	// Use syn crate via CGO for parsing
-	astInfo, err := a.parseWithSynCrate(filePath, content)
+	// Use the parser manager for automatic fallback handling
+	parserManager := GetGlobalParserManager(a.verbose)
+	astInfo, err := parserManager.ParseRustFile(content, filePath)
 	if err != nil {
-		// Fallback to regex-based parsing if syn crate fails
-		if a.verbose {
-			fmt.Printf("Syn crate parsing failed for %s, falling back to regex: %v\n", filePath, err)
-		}
-		return a.parseWithRegexFallback(filePath, content)
+		return nil, fmt.Errorf("Rust parsing failed: %w", err)
 	}
 
 	// Cache the result if optimizer is available
@@ -65,8 +62,9 @@ func (a *RustASTAnalyzer) AnalyzeRustFile(filePath string, content []byte) (*typ
 	}
 
 	if a.verbose {
-		fmt.Printf("Syn crate analysis complete for %s: %d functions, %d structs, %d enums\n",
-			filePath, len(astInfo.Functions), len(astInfo.Structs), len(astInfo.Enums))
+		capabilities := parserManager.GetCapabilities()
+		fmt.Printf("Rust analysis complete for %s using %s: %d functions, %d structs, %d enums\n",
+			filePath, capabilities.ParserType, len(astInfo.Functions), len(astInfo.Structs), len(astInfo.Enums))
 	}
 
 	return astInfo, nil
