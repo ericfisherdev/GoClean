@@ -1,3 +1,6 @@
+//go:build cgo && !no_rust
+// +build cgo,!no_rust
+
 // Package scanner provides CGO bindings for the Rust syn crate parsing library.
 // This file implements the C/Go interface for the goclean-rust-parser library.
 package scanner
