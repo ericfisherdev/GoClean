@@ -64,9 +64,6 @@ func NewRustParserManager(verbose bool) *RustParserManager {
 
 // initializeBestParser attempts to initialize parsers in order of preference
 func (m *RustParserManager) initializeBestParser() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	// Try syn crate first (best accuracy and performance)
 	if m.tryInitializeSynParser() {
 		return
@@ -102,9 +99,11 @@ func (m *RustParserManager) tryInitializeSynParser() bool {
 		return false
 	}
 
+	m.mutex.Lock()
 	m.synParser = synParser
 	m.currentParserType = ParserTypeSyn
 	m.fallbackReason = ""
+	m.mutex.Unlock()
 
 	if m.verbose {
 		fmt.Println("✅ Rust parsing: Using syn crate (optimal performance and accuracy)")

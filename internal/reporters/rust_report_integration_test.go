@@ -94,7 +94,8 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			t.Fatalf("Failed to create HTML reporter: %v", err)
 		}
 
-		err = htmlReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err = htmlReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate HTML report: %v", err)
 		}

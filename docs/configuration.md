@@ -266,7 +266,9 @@ naming:
 
 GoClean provides comprehensive support for Rust projects with specialized analysis capabilities.
 
-### Basic Rust Configuration
+### Basic Rust Configuration (Preview)
+
+> **Preview Feature**: Rust-specific analyses are experimental and may produce false positives/negatives. Ownership, borrowing, error-handling, and pattern-match checks require semantic parsing beyond regex/AST and may not cover all cases.
 
 ```yaml
 rust:
