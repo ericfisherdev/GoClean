@@ -410,8 +410,8 @@ func (p *RustSynParser) GetParseStats(content []byte) (*ParsingStats, error) {
 		return nil, fmt.Errorf("Rust parser not initialized")
 	}
 
-	sourceC := C.CString(string(content))
-	defer C.free(unsafe.Pointer(sourceC))
+        sourceC := p.allocateCString(string(content))
+        defer p.freeCString(sourceC)
 
 	var statsPtr *C.char
 	var statsLen C.size_t
