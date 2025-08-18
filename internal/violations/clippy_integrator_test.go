@@ -117,8 +117,8 @@ func TestClippyIntegrator_ParseClippyOutput(t *testing.T) {
 		t.Errorf("Expected message to contain 'Detected by rust-clippy', got '%s'", violation.Message)
 	}
 	
-	if violation.Rule != "clippy::clippy::too_many_arguments" {
-		t.Errorf("Expected rule 'clippy::clippy::too_many_arguments', got '%s'", violation.Rule)
+	if violation.Rule != "clippy::too_many_arguments" {
+		t.Errorf("Expected rule 'clippy::too_many_arguments', got '%s'", violation.Rule)
 	}
 	
 	if !strings.Contains(violation.Description, "rust-clippy") {
@@ -314,7 +314,7 @@ func TestClippyIntegrator_ConvertDiagnosticToViolation(t *testing.T) {
 	diagnostic := ClippyDiagnostic{
 		Message: "this function has too many arguments (5/4)",
 		Code: &ClippyCode{
-			Code: "too_many_arguments",
+			Code: "clippy::too_many_arguments",
 		},
 		Level: "warning",
 		Spans: []ClippySpan{
@@ -439,16 +439,8 @@ func TestClippyIntegrator_ConvertDiagnosticToViolationNilCode(t *testing.T) {
 	
 	violation := integrator.convertDiagnosticToViolation(diagnostic, "src/main.rs")
 	
-	if violation == nil {
-		t.Fatal("Expected violation to be created even with nil Code")
-	}
-	
-	if !strings.Contains(violation.Rule, "clippy::unknown") {
-		t.Errorf("Expected rule to contain 'clippy::unknown', got '%s'", violation.Rule)
-	}
-	
-	if !strings.Contains(violation.Message, "Detected by rust-clippy") {
-		t.Errorf("Expected message to contain 'Detected by rust-clippy', got '%s'", violation.Message)
+	if violation != nil {
+		t.Fatal("Expected no violation to be created for nil Code")
 	}
 }
 

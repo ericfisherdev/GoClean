@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ericfisherdev/goclean/internal/config"
 	"github.com/ericfisherdev/goclean/internal/models"
 )
 

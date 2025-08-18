@@ -271,6 +271,11 @@ func (c *ClippyIntegrator) convertDiagnosticToViolation(diagnostic ClippyDiagnos
 		return nil
 	}
 	
+	// Only create violations for diagnostics with clippy:: prefix
+	if diagnostic.Code == nil || !strings.HasPrefix(diagnostic.Code.Code, "clippy::") {
+		return nil
+	}
+	
 	// Handle potential nil diagnostic.Code safely
 	var codeStr string
 	if diagnostic.Code != nil {
@@ -294,7 +299,7 @@ func (c *ClippyIntegrator) convertDiagnosticToViolation(diagnostic ClippyDiagnos
 		Column:      primarySpan.ColumnStart,
 		Message:     fmt.Sprintf("Detected by rust-clippy: %s", diagnostic.Message),
 		Description: "Violation detected by rust-clippy static analysis tool",
-		Rule:        fmt.Sprintf("clippy::%s", codeStr),
+		Rule:        codeStr,
 		Suggestion:  c.generateClippySuggestion(diagnostic),
 		CodeSnippet: c.extractCodeSnippet(primarySpan),
 	}

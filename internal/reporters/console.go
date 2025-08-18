@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 	"time"
+	"unicode"
 
 	"github.com/ericfisherdev/goclean/internal/config"
 	"github.com/ericfisherdev/goclean/internal/models"
@@ -29,6 +30,26 @@ const (
 	FileNameTruncateChars = 27
 	LowViolationThreshold = 5
 )
+
+// titleCase converts a string to title case, replacing the deprecated strings.Title
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	
+	words := strings.Fields(s)
+	for i, word := range words {
+		if len(word) > 0 {
+			runes := []rune(word)
+			runes[0] = unicode.ToUpper(runes[0])
+			for j := 1; j < len(runes); j++ {
+				runes[j] = unicode.ToLower(runes[j])
+			}
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
+}
 
 // typeCount represents a violation type with its count
 type typeCount struct {
@@ -278,37 +299,37 @@ func (c *ConsoleReporter) printViolation(v *models.Violation) {
 	categoryInfo := ""
 	if models.IsRustSpecificViolation(v.Type) {
 		category := models.GetRustViolationCategory(v.Type)
-		categoryInfo = fmt.Sprintf(" [🦀 %s]", strings.Title(string(category)))
+		categoryInfo = fmt.Sprintf(" [🦀 %s]", titleCase(string(category)))
 	}
 	
-	fmt.Printf("  %s %s [Line %d] %s%s\n",
+	fmt.Fprintf(c.output, "  %s %s [Line %d] %s%s\n",
 		severityIcon,
 		c.colorize(v.Severity.String(), severityColor),
 		v.Line,
 		v.Type.GetDisplayName(),
 		c.colorize(categoryInfo, "rust-category"))
 	
-	fmt.Printf("    %s\n", v.Message)
+	fmt.Fprintf(c.output, "    %s\n", v.Message)
 	
 	if v.Description != "" {
-		fmt.Printf("    %s\n", c.colorize(v.Description, "description"))
+		fmt.Fprintf(c.output, "    %s\n", c.colorize(v.Description, "description"))
 	}
 	
 	if v.Suggestion != "" {
-		fmt.Printf("    💡 %s\n", c.colorize(v.Suggestion, "suggestion"))
+		fmt.Fprintf(c.output, "    💡 %s\n", c.colorize(v.Suggestion, "suggestion"))
 	}
 	
 	if c.verbose && v.CodeSnippet != "" {
-		fmt.Printf("    Code:\n")
+		fmt.Fprintf(c.output, "    Code:\n")
 		lines := strings.Split(v.CodeSnippet, "\n")
 		for i, line := range lines {
 			if strings.TrimSpace(line) != "" {
-				fmt.Printf("      %d: %s\n", v.Line+i, line)
+				fmt.Fprintf(c.output, "      %d: %s\n", v.Line+i, line)
 			}
 		}
 	}
 	
-	fmt.Println()
+	fmt.Fprintln(c.output)
 }
 
 // printFooter prints the report footer
@@ -354,8 +375,8 @@ func (c *ConsoleReporter) colorize(text, colorType string) string {
 
 // printRustCategorySummary prints a summary of Rust violations by category
 func (c *ConsoleReporter) printRustCategorySummary(rustViolations []typeCount) {
-	fmt.Println(c.colorize("🦀 RUST VIOLATIONS BY CATEGORY", "section"))
-	fmt.Println(strings.Repeat("-", SeparatorLength))
+	fmt.Fprintln(c.output, c.colorize("🦀 RUST VIOLATIONS BY CATEGORY", "section"))
+	fmt.Fprintln(c.output, strings.Repeat("-", SeparatorLength))
 	
 	// Group by category
 	categoryCount := make(map[models.RustViolationCategory]int)
@@ -379,14 +400,14 @@ func (c *ConsoleReporter) printRustCategorySummary(rustViolations []typeCount) {
 		return categories[i].Count > categories[j].Count
 	})
 	
-	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
+	w := tabwriter.NewWriter(c.output, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
 	for _, cat := range categories {
 		fmt.Fprintf(w, "%s:\t%s\n", 
-			strings.Title(string(cat.Category)), 
+			titleCase(string(cat.Category)), 
 			c.colorizeViolationCount(cat.Count))
 	}
 	w.Flush()
-	fmt.Println()
+	fmt.Fprintln(c.output)
 }
 
 // colorizeBySeverity applies color based on severity level
