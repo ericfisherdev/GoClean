@@ -393,7 +393,8 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 			OutputPath: outputPath,
 		})
 
-		err := mdReporter.Generate(violations, stats)
+		rpt := &models.Report{Violations: violations, Stats: stats}
+		err := mdReporter.Generate(rpt)
 		if err != nil {
 			t.Fatalf("Failed to generate mixed Markdown report: %v", err)
 		}

@@ -68,9 +68,9 @@ func (p *FallbackSynParser) ParseRustFile(content []byte, filePath string) (*typ
 	return nil, fmt.Errorf("Rust support is not available in this build (CGO disabled or Rust library not found)")
 }
 
-// ValidateSyntax returns an error indicating Rust support is not available
-func (p *FallbackSynParser) ValidateSyntax(content string) error {
-	return fmt.Errorf("Rust syntax validation is not available in this build (CGO disabled or Rust library not found)")
+// ValidateSyntax returns false and error indicating Rust support is not available
+func (p *FallbackSynParser) ValidateSyntax(content []byte) (bool, error) {
+	return false, fmt.Errorf("Rust syntax validation is not available in this build (CGO disabled or Rust library not found)")
 }
 
 // ParseExpression returns an error indicating Rust support is not available
@@ -79,21 +79,21 @@ func (p *FallbackSynParser) ParseExpression(expression string) (map[string]inter
 }
 
 // GetCapabilities returns empty capabilities for fallback mode
-func (p *FallbackSynParser) GetCapabilities() (*SynParserCapabilities, error) {
-	return &SynParserCapabilities{
-		Version:              "fallback-1.0.0",
-		SupportedFeatures:    []string{},
-		MaxFileSize:          0,
-		ThreadSafe:           true,
-		BatchProcessing:      false,
-		SyntaxValidation:     false,
-		ExpressionParsing:    false,
-		ErrorRecovery:        false,
-		IncrementalParsing:   false,
-		PositionTracking:     false,
-		CommentPreservation:  false,
-		TokenStreaming:       false,
-		CustomConfiguration:  false,
+func (p *FallbackSynParser) GetCapabilities() (*LibraryCapabilities, error) {
+	return &LibraryCapabilities{
+		Version:             "fallback-1.0.0",
+		SynVersion:          "fallback-1.0.0",
+		Features:            make(map[string]bool),
+		SupportedConstructs: []string{},
+		ParsingCapabilities: map[string]bool{
+			"syntax_validation": false,
+			"expression_parsing": false,
+			"batch_processing": false,
+		},
+		Performance: map[string]bool{
+			"thread_safe": true,
+			"optimized": false,
+		},
 	}, nil
 }
 
@@ -135,14 +135,27 @@ var _ interface {
 	Cleanup() error
 	IsInitialized() bool
 	ParseFile(string, string) (*types.RustASTInfo, error)
-	ValidateSyntax(string) error
+	ParseRustFile([]byte, string) (*types.RustASTInfo, error)
+	ValidateSyntax([]byte) (bool, error)
 	ParseExpression(string) (map[string]interface{}, error)
-	GetCapabilities() (*SynParserCapabilities, error)
+	GetCapabilities() (*LibraryCapabilities, error)
 	GetVersion() (string, error)
 	CanParse(string) bool
 	BatchParse([]ParseRequest) ([]ParseResult, error)
 	GetParseStats(string) (*ParseStats, error)
 } = (*FallbackSynParser)(nil)
+
+// Type alias for compatibility with rust_parser_manager.go
+type RustSynParser = FallbackSynParser
+
+// NewRustSynParser creates a new fallback parser compatible with CGO interface
+func NewRustSynParser(verbose bool) (*RustSynParser, error) {
+	parser, err := GetGlobalSynParser()
+	if err != nil {
+		return nil, err
+	}
+	return parser, parser.Initialize()
+}
 
 // Helper functions for graceful degradation
 

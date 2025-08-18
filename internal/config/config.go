@@ -122,48 +122,48 @@ type ClippyConfig struct {
 // RustConfig contains Rust-specific analysis settings
 type RustConfig struct {
 	// Ownership and borrowing analysis
-	EnableOwnershipAnalysis bool `yaml:"enable_ownership_analysis"`
-	MaxLifetimeParams       int  `yaml:"max_lifetime_params"`
-	DetectUnnecessaryClones bool `yaml:"detect_unnecessary_clones"`
+	EnableOwnershipAnalysis *bool `yaml:"enable_ownership_analysis"`
+	MaxLifetimeParams       int   `yaml:"max_lifetime_params"`
+	DetectUnnecessaryClones *bool `yaml:"detect_unnecessary_clones"`
 	
 	// Error handling analysis
-	EnableErrorHandlingCheck bool `yaml:"enable_error_handling_check"`
-	AllowUnwrap             bool `yaml:"allow_unwrap"`
-	AllowExpect             bool `yaml:"allow_expect"`
-	EnforceResultPropagation bool `yaml:"enforce_result_propagation"`
+	EnableErrorHandlingCheck *bool `yaml:"enable_error_handling_check"`
+	AllowUnwrap             *bool `yaml:"allow_unwrap"`
+	AllowExpect             *bool `yaml:"allow_expect"`
+	EnforceResultPropagation *bool `yaml:"enforce_result_propagation"`
 	
 	// Pattern matching analysis
-	EnablePatternMatchCheck  bool `yaml:"enable_pattern_match_check"`
-	RequireExhaustiveMatch   bool `yaml:"require_exhaustive_match"`
-	MaxNestedMatchDepth      int  `yaml:"max_nested_match_depth"`
+	EnablePatternMatchCheck  *bool `yaml:"enable_pattern_match_check"`
+	RequireExhaustiveMatch   *bool `yaml:"require_exhaustive_match"`
+	MaxNestedMatchDepth      int   `yaml:"max_nested_match_depth"`
 	
 	// Trait and impl analysis
-	MaxTraitBounds          int  `yaml:"max_trait_bounds"`
-	MaxImplMethods          int  `yaml:"max_impl_methods"`
-	DetectOrphanInstances   bool `yaml:"detect_orphan_instances"`
+	MaxTraitBounds          int   `yaml:"max_trait_bounds"`
+	MaxImplMethods          int   `yaml:"max_impl_methods"`
+	DetectOrphanInstances   *bool `yaml:"detect_orphan_instances"`
 	
 	// Unsafe code analysis
-	AllowUnsafe             bool `yaml:"allow_unsafe"`
-	RequireUnsafeComments   bool `yaml:"require_unsafe_comments"`
-	DetectTransmuteUsage    bool `yaml:"detect_transmute_usage"`
+	AllowUnsafe             *bool `yaml:"allow_unsafe"`
+	RequireUnsafeComments   *bool `yaml:"require_unsafe_comments"`
+	DetectTransmuteUsage    *bool `yaml:"detect_transmute_usage"`
 	
 	// Performance analysis
-	DetectInefficientString bool `yaml:"detect_inefficient_string"`
-	DetectBoxedPrimitives   bool `yaml:"detect_boxed_primitives"`
-	DetectBlockingInAsync   bool `yaml:"detect_blocking_in_async"`
+	DetectInefficientString *bool `yaml:"detect_inefficient_string"`
+	DetectBoxedPrimitives   *bool `yaml:"detect_boxed_primitives"`
+	DetectBlockingInAsync   *bool `yaml:"detect_blocking_in_async"`
 	
 	// Macro analysis
-	MaxMacroComplexity      int  `yaml:"max_macro_complexity"`
-	AllowRecursiveMacros    bool `yaml:"allow_recursive_macros"`
+	MaxMacroComplexity      int   `yaml:"max_macro_complexity"`
+	AllowRecursiveMacros    *bool `yaml:"allow_recursive_macros"`
 	
 	// Module structure
 	MaxModuleDepth          int  `yaml:"max_module_depth"`
 	MaxFileLines            int  `yaml:"max_file_lines"`
 	
 	// Naming conventions (Rust-specific)
-	EnforceSnakeCase        bool `yaml:"enforce_snake_case"`
-	EnforcePascalCase       bool `yaml:"enforce_pascal_case"`
-	EnforceScreamingSnake   bool `yaml:"enforce_screaming_snake"`
+	EnforceSnakeCase        *bool `yaml:"enforce_snake_case"`
+	EnforcePascalCase       *bool `yaml:"enforce_pascal_case"`
+	EnforceScreamingSnake   *bool `yaml:"enforce_screaming_snake"`
 	
 	// Trait analysis (additional configuration)
 	MaxTraitComplexity      int  `yaml:"max_trait_complexity"`
@@ -171,6 +171,91 @@ type RustConfig struct {
 	MaxTraitMethods         int  `yaml:"max_trait_methods"`
 	MaxAssociatedTypes      int  `yaml:"max_associated_types"`
 	MaxComplexTraitParams   int  `yaml:"max_complex_trait_params"`
+}
+
+// getBoolDefault returns the value pointed to by p, or d if p is nil
+func getBoolDefault(p *bool, d bool) bool {
+	if p != nil {
+		return *p
+	}
+	return d
+}
+
+// Getter methods for RustConfig bool fields with defaults
+func (r *RustConfig) GetEnableOwnershipAnalysis() bool {
+	return getBoolDefault(r.EnableOwnershipAnalysis, true)
+}
+
+func (r *RustConfig) GetDetectUnnecessaryClones() bool {
+	return getBoolDefault(r.DetectUnnecessaryClones, true)
+}
+
+func (r *RustConfig) GetEnableErrorHandlingCheck() bool {
+	return getBoolDefault(r.EnableErrorHandlingCheck, true)
+}
+
+func (r *RustConfig) GetAllowUnwrap() bool {
+	return getBoolDefault(r.AllowUnwrap, false)
+}
+
+func (r *RustConfig) GetAllowExpect() bool {
+	return getBoolDefault(r.AllowExpect, false)
+}
+
+func (r *RustConfig) GetEnforceResultPropagation() bool {
+	return getBoolDefault(r.EnforceResultPropagation, true)
+}
+
+func (r *RustConfig) GetEnablePatternMatchCheck() bool {
+	return getBoolDefault(r.EnablePatternMatchCheck, true)
+}
+
+func (r *RustConfig) GetRequireExhaustiveMatch() bool {
+	return getBoolDefault(r.RequireExhaustiveMatch, true)
+}
+
+func (r *RustConfig) GetDetectOrphanInstances() bool {
+	return getBoolDefault(r.DetectOrphanInstances, true)
+}
+
+func (r *RustConfig) GetAllowUnsafe() bool {
+	return getBoolDefault(r.AllowUnsafe, false)
+}
+
+func (r *RustConfig) GetRequireUnsafeComments() bool {
+	return getBoolDefault(r.RequireUnsafeComments, true)
+}
+
+func (r *RustConfig) GetDetectTransmuteUsage() bool {
+	return getBoolDefault(r.DetectTransmuteUsage, true)
+}
+
+func (r *RustConfig) GetDetectInefficientString() bool {
+	return getBoolDefault(r.DetectInefficientString, true)
+}
+
+func (r *RustConfig) GetDetectBoxedPrimitives() bool {
+	return getBoolDefault(r.DetectBoxedPrimitives, true)
+}
+
+func (r *RustConfig) GetDetectBlockingInAsync() bool {
+	return getBoolDefault(r.DetectBlockingInAsync, true)
+}
+
+func (r *RustConfig) GetAllowRecursiveMacros() bool {
+	return getBoolDefault(r.AllowRecursiveMacros, false)
+}
+
+func (r *RustConfig) GetEnforceSnakeCase() bool {
+	return getBoolDefault(r.EnforceSnakeCase, true)
+}
+
+func (r *RustConfig) GetEnforcePascalCase() bool {
+	return getBoolDefault(r.EnforcePascalCase, true)
+}
+
+func (r *RustConfig) GetEnforceScreamingSnake() bool {
+	return getBoolDefault(r.EnforceScreamingSnake, true)
 }
 
 // Load loads configuration from a file
@@ -310,48 +395,48 @@ func GetDefaultConfig() *Config {
 func GetDefaultRustConfig() RustConfig {
 	return RustConfig{
 		// Ownership and borrowing
-		EnableOwnershipAnalysis: true,
+		EnableOwnershipAnalysis: boolPtr(true),
 		MaxLifetimeParams:       3,
-		DetectUnnecessaryClones: true,
+		DetectUnnecessaryClones: boolPtr(true),
 		
 		// Error handling
-		EnableErrorHandlingCheck: true,
-		AllowUnwrap:             false,
-		AllowExpect:             false,
-		EnforceResultPropagation: true,
+		EnableErrorHandlingCheck: boolPtr(true),
+		AllowUnwrap:             boolPtr(false),
+		AllowExpect:             boolPtr(false),
+		EnforceResultPropagation: boolPtr(true),
 		
 		// Pattern matching
-		EnablePatternMatchCheck:  true,
-		RequireExhaustiveMatch:   true,
+		EnablePatternMatchCheck:  boolPtr(true),
+		RequireExhaustiveMatch:   boolPtr(true),
 		MaxNestedMatchDepth:      3,
 		
 		// Trait and impl
 		MaxTraitBounds:          5,
 		MaxImplMethods:          20,
-		DetectOrphanInstances:   true,
+		DetectOrphanInstances:   boolPtr(true),
 		
 		// Unsafe code
-		AllowUnsafe:             true,  // Allow but track
-		RequireUnsafeComments:   true,
-		DetectTransmuteUsage:    true,
+		AllowUnsafe:             boolPtr(true),  // Allow but track
+		RequireUnsafeComments:   boolPtr(true),
+		DetectTransmuteUsage:    boolPtr(true),
 		
 		// Performance
-		DetectInefficientString: true,
-		DetectBoxedPrimitives:   true,
-		DetectBlockingInAsync:   true,
+		DetectInefficientString: boolPtr(true),
+		DetectBoxedPrimitives:   boolPtr(true),
+		DetectBlockingInAsync:   boolPtr(true),
 		
 		// Macro analysis
 		MaxMacroComplexity:      10,
-		AllowRecursiveMacros:    false,
+		AllowRecursiveMacros:    boolPtr(false),
 		
 		// Module structure
 		MaxModuleDepth:          5,
 		MaxFileLines:            500,
 		
 		// Naming conventions
-		EnforceSnakeCase:        true,
-		EnforcePascalCase:       true,
-		EnforceScreamingSnake:   true,
+		EnforceSnakeCase:        boolPtr(true),
+		EnforcePascalCase:       boolPtr(true),
+		EnforceScreamingSnake:   boolPtr(true),
 		
 		// Trait analysis defaults
 		MaxTraitComplexity:      15,
@@ -498,17 +583,68 @@ func mergeWithDefaults(config *Config) {
 
 // mergeRustConfig merges Rust configuration with defaults
 func mergeRustConfig(config *RustConfig, defaults *RustConfig) {
-	// Since booleans default to false, we need a different approach
-	// We'll only merge if the entire Rust config section appears to be unset
+	// Set default values only when fields are nil (not provided in YAML)
 	
-	// Check if config is completely empty (all defaults)
-	emptyConfig := RustConfig{}
-	if *config == emptyConfig {
-		*config = *defaults
-		return
+	// Bool fields - only set defaults when nil
+	if config.EnableOwnershipAnalysis == nil {
+		config.EnableOwnershipAnalysis = defaults.EnableOwnershipAnalysis
+	}
+	if config.DetectUnnecessaryClones == nil {
+		config.DetectUnnecessaryClones = defaults.DetectUnnecessaryClones
+	}
+	if config.EnableErrorHandlingCheck == nil {
+		config.EnableErrorHandlingCheck = defaults.EnableErrorHandlingCheck
+	}
+	if config.AllowUnwrap == nil {
+		config.AllowUnwrap = defaults.AllowUnwrap
+	}
+	if config.AllowExpect == nil {
+		config.AllowExpect = defaults.AllowExpect
+	}
+	if config.EnforceResultPropagation == nil {
+		config.EnforceResultPropagation = defaults.EnforceResultPropagation
+	}
+	if config.EnablePatternMatchCheck == nil {
+		config.EnablePatternMatchCheck = defaults.EnablePatternMatchCheck
+	}
+	if config.RequireExhaustiveMatch == nil {
+		config.RequireExhaustiveMatch = defaults.RequireExhaustiveMatch
+	}
+	if config.DetectOrphanInstances == nil {
+		config.DetectOrphanInstances = defaults.DetectOrphanInstances
+	}
+	if config.AllowUnsafe == nil {
+		config.AllowUnsafe = defaults.AllowUnsafe
+	}
+	if config.RequireUnsafeComments == nil {
+		config.RequireUnsafeComments = defaults.RequireUnsafeComments
+	}
+	if config.DetectTransmuteUsage == nil {
+		config.DetectTransmuteUsage = defaults.DetectTransmuteUsage
+	}
+	if config.DetectInefficientString == nil {
+		config.DetectInefficientString = defaults.DetectInefficientString
+	}
+	if config.DetectBoxedPrimitives == nil {
+		config.DetectBoxedPrimitives = defaults.DetectBoxedPrimitives
+	}
+	if config.DetectBlockingInAsync == nil {
+		config.DetectBlockingInAsync = defaults.DetectBlockingInAsync
+	}
+	if config.AllowRecursiveMacros == nil {
+		config.AllowRecursiveMacros = defaults.AllowRecursiveMacros
+	}
+	if config.EnforceSnakeCase == nil {
+		config.EnforceSnakeCase = defaults.EnforceSnakeCase
+	}
+	if config.EnforcePascalCase == nil {
+		config.EnforcePascalCase = defaults.EnforcePascalCase
+	}
+	if config.EnforceScreamingSnake == nil {
+		config.EnforceScreamingSnake = defaults.EnforceScreamingSnake
 	}
 	
-	// For integer fields, use defaults if zero
+	// Integer fields - use defaults if zero
 	if config.MaxLifetimeParams == 0 {
 		config.MaxLifetimeParams = defaults.MaxLifetimeParams
 	}
@@ -529,6 +665,21 @@ func mergeRustConfig(config *RustConfig, defaults *RustConfig) {
 	}
 	if config.MaxFileLines == 0 {
 		config.MaxFileLines = defaults.MaxFileLines
+	}
+	if config.MaxTraitComplexity == 0 {
+		config.MaxTraitComplexity = defaults.MaxTraitComplexity
+	}
+	if config.MaxTraitLines == 0 {
+		config.MaxTraitLines = defaults.MaxTraitLines
+	}
+	if config.MaxTraitMethods == 0 {
+		config.MaxTraitMethods = defaults.MaxTraitMethods
+	}
+	if config.MaxAssociatedTypes == 0 {
+		config.MaxAssociatedTypes = defaults.MaxAssociatedTypes
+	}
+	if config.MaxComplexTraitParams == 0 {
+		config.MaxComplexTraitParams = defaults.MaxComplexTraitParams
 	}
 }
 
