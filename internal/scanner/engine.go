@@ -85,12 +85,11 @@ func (e *Engine) SetMaxWorkers(workers int) {
 
 // SetMaxFileSize sets the maximum file size limit for scanning
 func (e *Engine) SetMaxFileSize(maxSizeStr string) error {
-	if e.fileWalker != nil {
-		return e.fileWalker.SetMaxFileSize(maxSizeStr)
-	}
-	return nil
+    if e.fileWalker != nil {
+        return e.fileWalker.SetMaxFileSize(maxSizeStr)
+    }
+    return fmt.Errorf("file walker is not initialized")
 }
-
 // EnableRustOptimization enables or disables Rust-specific performance optimizations
 func (e *Engine) EnableRustOptimization(enabled bool) {
 	e.enableRustOptimization = enabled
