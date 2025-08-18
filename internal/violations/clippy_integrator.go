@@ -7,9 +7,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/ericfisherdev/goclean/internal/models"
 )
+
+// Package-level cache for clippy violations to improve performance
+var (
+	clippyCache     map[string][]*models.Violation
+	clippyCacheLock sync.RWMutex
+)
+
+// Initialize the cache map
+func init() {
+	clippyCache = make(map[string][]*models.Violation)
+}
 
 // ClippyIntegrator integrates rust-clippy lints into GoClean's violation detection
 type ClippyIntegrator struct {
@@ -123,6 +135,17 @@ func (c *ClippyIntegrator) Detect(fileInfo *models.FileInfo, astInfo interface{}
 		return []*models.Violation{}
 	}
 
+	// Create cache key based on project root and file path
+	cacheKey := fmt.Sprintf("%s:%s", projectRoot, fileInfo.Path)
+	
+	// Check cache first (read lock)
+	clippyCacheLock.RLock()
+	if cachedViolations, exists := clippyCache[cacheKey]; exists {
+		clippyCacheLock.RUnlock()
+		return cachedViolations
+	}
+	clippyCacheLock.RUnlock()
+
 	// Run clippy and get JSON output
 	clippyOutput, err := c.runClippy(projectRoot)
 	if err != nil {
@@ -135,6 +158,11 @@ func (c *ClippyIntegrator) Detect(fileInfo *models.FileInfo, astInfo interface{}
 
 	// Parse clippy output and convert to violations
 	violations := c.parseClippyOutput(clippyOutput, fileInfo.Path)
+	
+	// Store in cache (write lock)
+	clippyCacheLock.Lock()
+	clippyCache[cacheKey] = violations
+	clippyCacheLock.Unlock()
 	
 	return violations
 }
@@ -354,4 +382,11 @@ func (c *ClippyIntegrator) isClippyAvailable() bool {
 	cmd := exec.Command("cargo", "clippy", "--version")
 	err := cmd.Run()
 	return err == nil
+}
+
+// ClearClippyCache clears the global clippy violation cache
+func ClearClippyCache() {
+	clippyCacheLock.Lock()
+	defer clippyCacheLock.Unlock()
+	clippyCache = make(map[string][]*models.Violation)
 }

@@ -265,7 +265,7 @@ func (r *JSONReporter) generateStatistics(violations []*models.Violation, fileLa
 
 	// Set overall statistics
 	stats.TotalFiles = totalFiles
-	stats.FilesWithViolations = len(filesByLanguage)
+	stats.FilesWithViolations = totalFiles
 	if totalFiles > 0 {
 		stats.AverageViolationsPerFile = float64(len(violations)) / float64(totalFiles)
 	}

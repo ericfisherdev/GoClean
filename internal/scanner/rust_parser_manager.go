@@ -430,19 +430,36 @@ func isCGOEnabled() bool {
 // Global parser manager instance
 var (
 	globalParserManager *RustParserManager
-	globalManagerOnce   sync.Once
+	globalManagerMutex  sync.RWMutex
 )
 
 // GetGlobalParserManager returns the global parser manager instance
 func GetGlobalParserManager(verbose bool) *RustParserManager {
-	globalManagerOnce.Do(func() {
+	// Fast path: check with read lock first
+	globalManagerMutex.RLock()
+	if globalParserManager != nil {
+		manager := globalParserManager
+		globalManagerMutex.RUnlock()
+		return manager
+	}
+	globalManagerMutex.RUnlock()
+
+	// Slow path: initialize with write lock
+	globalManagerMutex.Lock()
+	defer globalManagerMutex.Unlock()
+	
+	// Double-check in case another goroutine initialized it
+	if globalParserManager == nil {
 		globalParserManager = NewRustParserManager(verbose)
-	})
+	}
 	return globalParserManager
 }
 
 // CleanupGlobalParserManager cleans up the global parser manager
 func CleanupGlobalParserManager() {
+	globalManagerMutex.Lock()
+	defer globalManagerMutex.Unlock()
+	
 	if globalParserManager != nil {
 		globalParserManager.Cleanup()
 		globalParserManager = nil
