@@ -184,7 +184,7 @@ build-go-only:
 # Run tests
 test:
 	@echo "Running tests..."
-	GOCLEAN_TEST_MODE=1 $(GOTEST) -v ./...
+	LD_LIBRARY_PATH=$(PWD)/$(LIB_DIR):$$LD_LIBRARY_PATH GOCLEAN_TEST_MODE=1 $(GOTEST) -v ./...
 
 # Run tests with coverage
 test-coverage:

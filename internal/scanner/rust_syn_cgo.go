@@ -6,7 +6,7 @@
 package scanner
 
 /*
-#cgo LDFLAGS: -L/tmp -lgoclean_rust_parser -ldl -lm
+#cgo LDFLAGS: -L../../lib -lgoclean_rust_parser -ldl -lm
 #include <stdlib.h>
 #include <string.h>
 

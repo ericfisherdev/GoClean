@@ -204,6 +204,13 @@ func (e *MorphologyEngine) loadSuffixDatabase() {
 			Productivity: 0.8,
 			Examples:     []string{"processor", "executor", "validator"},
 		},
+		"ator": {
+			Suffix:       "ator",
+			Meaning:      "one who does (agent)",
+			Category:     WordCategoryNoun,
+			Productivity: 0.85,
+			Examples:     []string{"validator", "generator", "calculator"},
+		},
 		"tion": {
 			Suffix:       "tion",
 			Meaning:      "act or result of",
@@ -332,6 +339,13 @@ func (e *MorphologyEngine) loadSuffixDatabase() {
 			Productivity: 0.85,
 			Examples:     []string{"initialize", "optimize", "serialize"},
 		},
+		"izer": {
+			Suffix:       "izer",
+			Meaning:      "one who makes or causes",
+			Category:     WordCategoryNoun,
+			Productivity: 0.8,
+			Examples:     []string{"serializer", "optimizer", "initializer"},
+		},
 		"ise": {
 			Suffix:       "ise",
 			Meaning:      "to make, to cause",
@@ -396,6 +410,13 @@ func (e *MorphologyEngine) loadRootWordDatabase() {
 			Frequency:  7200,
 			Category:   WordCategoryNoun,
 			Variations: []string{"handle", "handler", "handling"},
+			IsTechnical: true,
+		},
+		"handle": {
+			Word:       "handle",
+			Frequency:  8500,
+			Category:   WordCategoryVerb,
+			Variations: []string{"handler", "handling", "handled"},
 			IsTechnical: true,
 		},
 		"manage": {

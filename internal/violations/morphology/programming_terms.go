@@ -344,6 +344,11 @@ func (p *ProgrammingTermAnalyzer) isSnakeCase(term string) bool {
 		return false
 	}
 
+	// Snake case requires at least one underscore for compound words
+	if !strings.Contains(term, "_") {
+		return false
+	}
+
 	// Should be all lowercase with underscores
 	for _, char := range term {
 		if !unicode.IsLower(char) && char != '_' && !unicode.IsDigit(char) {
@@ -367,6 +372,11 @@ func (p *ProgrammingTermAnalyzer) isSnakeCase(term string) bool {
 // isKebabCase checks if a term follows kebab-case convention
 func (p *ProgrammingTermAnalyzer) isKebabCase(term string) bool {
 	if len(term) == 0 {
+		return false
+	}
+
+	// Kebab case requires at least one hyphen for compound words
+	if !strings.Contains(term, "-") {
 		return false
 	}
 
