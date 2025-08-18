@@ -60,7 +60,7 @@ func (p *ProgrammingTermAnalyzer) AnalyzeProgrammingTerm(term string) *Programmi
 	result.Confidence = p.calculateTermConfidence(result)
 
 	// Generate suggestions if needed
-	if result.Confidence < 0.5 {
+	if result.Confidence < 0.5 || (len(term) <= 3 && !result.IsCommonTerm) {
 		result.SuggestedFixes = p.generateSuggestions(term, result)
 	}
 
@@ -173,10 +173,10 @@ func (p *ProgrammingTermAnalyzer) loadAcronymDatabase() {
 		"MD5":   "Message Digest Algorithm 5",
 
 		// Go-specific
-		"Ctx":  "Context",
-		"Cfg":  "Configuration",
-		"Repo": "Repository",
-		"Auth": "Authentication",
+		"CTX":  "Context",
+		"CFG":  "Configuration",
+		"REPO": "Repository",
+		"AUTH": "Authentication",
 		"Impl": "Implementation",
 	}
 
@@ -513,12 +513,14 @@ func (p *ProgrammingTermAnalyzer) calculateTermConfidence(result *ProgrammingTer
 func (p *ProgrammingTermAnalyzer) generateSuggestions(term string, result *ProgrammingTermResult) []string {
 	var suggestions []string
 
-	// If it's a potential acronym, suggest expansions
-	if len(term) <= 5 && strings.ToUpper(term) == term {
-		if expansion, exists := p.acronyms[term]; exists {
+	// If it's a potential acronym (uppercase or lowercase), suggest expansions
+	if len(term) <= 5 {
+		upperTerm := strings.ToUpper(term)
+		if expansion, exists := p.acronyms[upperTerm]; exists {
 			suggestions = append(suggestions, fmt.Sprintf("Consider using full form: %s", expansion))
-		} else {
-			suggestions = append(suggestions, "Consider using a more descriptive name instead of this acronym")
+		} else if len(term) <= 3 && !result.IsCommonTerm {
+			// Suggest for short non-common terms (likely abbreviations)
+			suggestions = append(suggestions, "Consider using a more descriptive name instead of this abbreviation")
 		}
 	}
 
