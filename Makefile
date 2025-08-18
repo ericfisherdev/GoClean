@@ -14,7 +14,11 @@ RUST_LIB_NAME=libgoclean_rust_parser
 RUST_TARGET_DIR=$(RUST_PARSER_PATH)/target
 
 # Platform detection
-UNAME_OS := $(shell uname -s)
+ifeq ($(OS),Windows_NT)
+  UNAME_OS := Windows
+else
+  UNAME_OS := $(shell uname -s)
+endif
 UNAME_ARCH := $(shell uname -m)
 
 # Platform-specific library extensions and names
@@ -26,7 +30,7 @@ ifeq ($(UNAME_OS),Darwin)
     LIB_EXT=.dylib
     CARGO_TARGET_OS=apple-darwin
 endif
-ifeq ($(UNAME_OS),Windows_NT)
+ifneq (,$(filter Windows MSYS% MINGW% CYGWIN%,$(UNAME_OS)))
     LIB_EXT=.dll
     CARGO_TARGET_OS=pc-windows-msvc
 endif
