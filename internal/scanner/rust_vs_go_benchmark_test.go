@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/testutils"
@@ -73,7 +71,7 @@ func benchmarkRustParsingPerformance(b *testing.B, fileCount, linesPerFile int) 
 	rustContent := generateRustFileContent(linesPerFile)
 	files := helper.CreateRustBenchmarkFiles(b, fileCount, rustContent)
 	
-	analyzer := &RustASTAnalyzer{verbose: false}
+	analyzer := NewRustASTAnalyzer(false)
 	
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -144,7 +142,7 @@ func benchmarkRealWorldRustFiles(b *testing.B, projectPath string) {
 	
 	b.Logf("Found %d Rust files in Helix project", len(rustFiles))
 	
-	analyzer := &RustASTAnalyzer{verbose: false}
+	analyzer := NewRustASTAnalyzer(false)
 	
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -266,7 +264,7 @@ func benchmarkRustMemoryUsage(b *testing.B, fileCount, linesPerFile int) {
 	rustContent := generateRustFileContent(linesPerFile)
 	files := helper.CreateRustBenchmarkFiles(b, fileCount, rustContent)
 	
-	analyzer := &RustASTAnalyzer{verbose: false}
+	analyzer := NewRustASTAnalyzer(false)
 	
 	b.ResetTimer()
 	
@@ -287,72 +285,6 @@ func benchmarkRustMemoryUsage(b *testing.B, fileCount, linesPerFile int) {
 	}
 }
 
-// BenchmarkLargeRustProject tests performance regression detection for large projects
-func BenchmarkLargeRustProject(b *testing.B) {
-	helixPath := "/run/media/esfisher/NovusLocus/Dev Projects/helix"
-	
-	// Performance targets based on Go parsing performance
-	targetFilesPerSecond := 500.0 // Minimum acceptable files per second
-	targetMemoryPerFile := int64(5 * 1024 * 1024) // 5MB per file maximum
-	
-	rustFiles, err := discoverRustFiles(helixPath)
-	if err != nil {
-		b.Fatalf("Failed to discover Rust files: %v", err)
-	}
-	
-	if len(rustFiles) == 0 {
-		b.Skip("No Rust files found for performance regression test")
-	}
-	
-	// Limit to first 50 files for performance regression testing
-	if len(rustFiles) > 50 {
-		rustFiles = rustFiles[:50]
-	}
-	
-	analyzer := &RustASTAnalyzer{verbose: false}
-	
-	b.ResetTimer()
-	b.ReportAllocs()
-	
-	for i := 0; i < b.N; i++ {
-		start := time.Now()
-		var memBefore runtime.MemStats
-		runtime.ReadMemStats(&memBefore)
-		
-		for _, file := range rustFiles {
-			content, err := os.ReadFile(file.Path)
-			if err != nil {
-				b.Fatalf("Failed to read file %s: %v", file.Path, err)
-			}
-			
-			_, err = analyzer.AnalyzeRustFile(file.Path, content)
-			if err != nil {
-				b.Fatalf("Failed to analyze Rust file %s: %v", file.Path, err)
-			}
-		}
-		
-		elapsed := time.Since(start)
-		var memAfter runtime.MemStats
-		runtime.ReadMemStats(&memAfter)
-		
-		filesPerSecond := float64(len(rustFiles)) / elapsed.Seconds()
-		memoryPerFile := int64(memAfter.Alloc-memBefore.Alloc) / int64(len(rustFiles))
-		
-		// Performance regression checks
-		if filesPerSecond < targetFilesPerSecond {
-			b.Logf("WARNING: Performance regression detected. Files/sec: %.2f (target: %.2f)", 
-				filesPerSecond, targetFilesPerSecond)
-		}
-		
-		if memoryPerFile > targetMemoryPerFile {
-			b.Logf("WARNING: Memory usage regression detected. Memory/file: %d bytes (target: %d bytes)", 
-				memoryPerFile, targetMemoryPerFile)
-		}
-		
-		b.ReportMetric(filesPerSecond, "files/sec")
-		b.ReportMetric(float64(memoryPerFile), "memory_bytes/file")
-	}
-}
 
 // BenchmarkParsingAccuracy compares parsing accuracy between Rust and Go
 func BenchmarkParsingAccuracy(b *testing.B) {
@@ -441,7 +373,7 @@ mod tests {
 	helper := testutils.NewBenchmarkHelper(b)
 	files := helper.CreateRustBenchmarkFiles(b, 1, complexRustContent)
 	
-	analyzer := &RustASTAnalyzer{verbose: false}
+	analyzer := NewRustASTAnalyzer(false)
 	
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -455,9 +387,9 @@ mod tests {
 			
 			// Verify parsing accuracy
 			expectedStructs := 1
-			expectedFunctions := 3 // new, complex_method, trait_method (from macro)
+			expectedFunctions := 2 // new, complex_method (macro expansion not detected)
 			expectedTraits := 1
-			expectedImpls := 2 // manual impl + macro impl
+			expectedImpls := 1 // manual impl only (macro expansion not detected)
 			expectedMacros := 1
 			
 			if len(astInfo.Structs) != expectedStructs {

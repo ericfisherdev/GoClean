@@ -160,6 +160,8 @@ cat > testdata/rust-samples/sample-project/src/main.rs << 'EOF'
 use serde::{Deserialize, Serialize};
 use tokio;
 
+mod violations;
+
 #[derive(Serialize, Deserialize)]
 struct Config {
     name: String,
@@ -174,6 +176,121 @@ async fn main() {
     };
     
     println!("Hello from {}!", config.name);
+}
+EOF
+
+# Create violations.rs with deliberate violations for testing
+cat > testdata/rust-samples/sample-project/src/violations.rs << 'EOF'
+// This file contains deliberate Rust violations for testing GoClean detection
+
+#![allow(dead_code)] // We expect dead code warnings
+
+use std::collections::HashMap;
+
+// Unused function (dead_code violation)
+fn unused_function() {
+    println!("This function is never called");
+}
+
+// Function with unused variables
+pub fn function_with_unused_vars() {
+    let unused_var = 42; // Unused variable
+    let _used_var = 10;
+    let another_unused = "hello"; // Another unused variable
+    
+    println!("Function executed");
+}
+
+// Unwrap on potentially None value (dangerous pattern)
+pub fn dangerous_unwrap() {
+    let maybe_value: Option<i32> = None;
+    let value = maybe_value.unwrap(); // This will panic!
+    println!("Value: {}", value);
+}
+
+// Unreachable code
+pub fn unreachable_code_example() {
+    println!("This executes");
+    return;
+    println!("This is unreachable!"); // Unreachable code
+}
+
+// Function that can panic
+pub fn panic_prone_function(input: i32) {
+    if input < 0 {
+        panic!("Negative input not allowed!"); // Explicit panic
+    }
+    println!("Input: {}", input);
+}
+
+// Inefficient string concatenation
+pub fn inefficient_string_concat(items: Vec<&str>) -> String {
+    let mut result = String::new();
+    for item in items {
+        result = result + item + " "; // Inefficient concatenation
+    }
+    result
+}
+
+// Magic numbers
+pub fn calculate_with_magic_numbers(x: f64) -> f64 {
+    x * 3.14159 + 42 - 1337 // Magic numbers everywhere
+}
+
+// Overly complex function with deep nesting
+pub fn overly_complex_function(data: Vec<i32>) -> HashMap<String, Vec<i32>> {
+    let mut result = HashMap::new();
+    
+    for item in data {
+        if item > 0 {
+            if item % 2 == 0 {
+                if item < 100 {
+                    if item > 10 {
+                        let key = if item < 50 {
+                            "small_even"
+                        } else {
+                            "large_even"
+                        };
+                        result.entry(key.to_string()).or_insert_with(Vec::new).push(item);
+                    }
+                }
+            }
+        }
+    }
+    
+    result
+}
+
+// Function with too many parameters
+pub fn too_many_parameters(
+    param1: i32,
+    param2: String, 
+    param3: bool,
+    param4: f64,
+    param5: Vec<u8>,
+    param6: HashMap<String, i32>,
+    param7: Option<String>,
+    param8: Result<i32, String>,
+    param9: &str,
+    param10: usize,
+) -> String {
+    format!("Too many parameters: {}", param1)
+}
+
+// Missing documentation for public function
+pub struct UndocumentedStruct {
+    pub field1: String,
+    pub field2: i32,
+}
+
+impl UndocumentedStruct {
+    pub fn new(field1: String, field2: i32) -> Self {
+        Self { field1, field2 }
+    }
+    
+    pub fn undocumented_method(&self) -> String {
+        format!("{}:{}", self.field1, self.field2)
+    }
 }
 EOF
 ```
@@ -397,7 +514,7 @@ validate-rust: test-rust benchmark-rust
 	@mkdir -p testdata/integration/rust
 	@echo 'fn main() { println!("Hello, world!"); }' > testdata/integration/rust/hello.rs
 	@echo 'pub struct TestStruct { pub field: i32 }' > testdata/integration/rust/struct.rs
-	./bin/goclean scan testdata/integration/rust --console
+	./bin/goclean scan testdata/integration/rust --console-violations
 	@echo "✓ Rust integration validation completed"
 ```
 
@@ -412,7 +529,7 @@ validate-rust: test-rust benchmark-rust
 ### Debug Commands
 ```bash
 # Debug Rust parsing
-./bin/goclean scan path/to/rust/project --verbose --console
+./bin/goclean scan path/to/rust/project --verbose --console-violations
 
 # Check memory usage
 go test -bench=BenchmarkRustMemoryUsage -memprofile=mem.prof ./internal/scanner
