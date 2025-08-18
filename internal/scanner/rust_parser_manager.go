@@ -184,33 +184,43 @@ struct TestStruct {
 func (m *RustParserManager) ParseRustFile(content []byte, filePath string) (*types.RustASTInfo, error) {
 	atomic.AddInt64(&m.attemptCount, 1)
 
-	m.mutex.RLock()
-	parserType := m.currentParserType
-	m.mutex.RUnlock()
+    m.mutex.RLock()
+    parserType := m.currentParserType
+    fallbackReason := m.fallbackReason
+    hasRegex := (m.regexAnalyzer != nil)
+    m.mutex.RUnlock()
 
-	var result *types.RustASTInfo
-	var err error
+    var result *types.RustASTInfo
+    var err error
 
-	switch parserType {
-	case ParserTypeSyn:
-		result, err = m.parseWithSyn(content, filePath)
-		if err != nil {
-			// Syn parser failed - attempt graceful degradation to regex
-			if m.verbose {
-				fmt.Printf("⚠️  Syn parser failed for %s, attempting regex fallback: %v\n", filePath, err)
-			}
-			result, err = m.parseWithRegexFallback(content, filePath)
-		}
+    switch parserType {
+    case ParserTypeSyn:
+        result, err = m.parseWithSyn(content, filePath)
+        if err != nil {
+            // Syn parser failed - attempt graceful degradation to regex
+            if m.verbose {
+                fmt.Printf("⚠️  Syn parser failed for %s, attempting regex fallback: %v\n", filePath, err)
+            }
+            // Lazily initialize regex analyzer if not already available
+            if !hasRegex {
+                m.mutex.Lock()
+                if m.regexAnalyzer == nil {
+                    m.regexAnalyzer = NewRustASTAnalyzer(m.verbose)
+                }
+                m.mutex.Unlock()
+            }
+            result, err = m.parseWithRegexFallback(content, filePath)
+        }
 
-	case ParserTypeRegex:
-		result, err = m.parseWithRegexFallback(content, filePath)
+    case ParserTypeRegex:
+        result, err = m.parseWithRegexFallback(content, filePath)
 
-	case ParserTypeFallback:
-		return nil, fmt.Errorf("Rust parsing is not available: %s", m.fallbackReason)
+    case ParserTypeFallback:
+        return nil, fmt.Errorf("Rust parsing is not available: %s", fallbackReason)
 
-	default:
-		return nil, fmt.Errorf("unknown parser type: %v", parserType)
-	}
+    default:
+        return nil, fmt.Errorf("unknown parser type: %v", parserType)
+    }
 
 	if err == nil {
 		atomic.AddInt64(&m.successCount, 1)
