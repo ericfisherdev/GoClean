@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewConsoleReporter(t *testing.T) {
-	reporter := NewConsoleReporter(true, true)
+	reporter := NewConsoleReporterLegacy(true, true)
 
 	if !reporter.verbose {
 		t.Error("Verbose flag not set correctly")
@@ -21,7 +21,7 @@ func TestNewConsoleReporter(t *testing.T) {
 	}
 
 	// Test with different settings
-	reporter2 := NewConsoleReporter(false, false)
+	reporter2 := NewConsoleReporterLegacy(false, false)
 	if reporter2.verbose {
 		t.Error("Verbose flag should be false")
 	}
@@ -37,7 +37,7 @@ func TestConsoleReporter_Generate(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	reporter := NewConsoleReporter(false, false) // No verbose, no colors for cleaner output
+	reporter := NewConsoleReporterLegacy(false, false) // No verbose, no colors for cleaner output
 	report := createTestReport()
 
 	err := reporter.Generate(report)
@@ -78,7 +78,7 @@ func TestConsoleReporter_GenerateVerbose(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	reporter := NewConsoleReporter(true, false) // Verbose mode
+	reporter := NewConsoleReporterLegacy(true, false) // Verbose mode
 	report := createTestReport()
 
 	err := reporter.Generate(report)
@@ -117,7 +117,7 @@ func TestConsoleReporter_GenerateWithColors(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	reporter := NewConsoleReporter(false, true) // Colors enabled
+	reporter := NewConsoleReporterLegacy(false, true) // Colors enabled
 	report := createTestReport()
 
 	err := reporter.Generate(report)
@@ -158,7 +158,7 @@ func TestConsoleReporter_GenerateNoViolations(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	reporter := NewConsoleReporter(false, false)
+	reporter := NewConsoleReporterLegacy(false, false)
 	
 	// Create report with no violations
 	report := createTestReportNoViolations()
@@ -202,7 +202,7 @@ func TestConsoleReporter_GenerateNoViolations(t *testing.T) {
 }
 
 func TestConsoleReporter_Colorize(t *testing.T) {
-	reporter := NewConsoleReporter(false, true) // Colors enabled
+	reporter := NewConsoleReporterLegacy(false, true) // Colors enabled
 
 	// Test colorization
 	colorized := reporter.colorize("test", "header")
@@ -211,7 +211,7 @@ func TestConsoleReporter_Colorize(t *testing.T) {
 	}
 
 	// Test without colors
-	reporterNoColor := NewConsoleReporter(false, false)
+	reporterNoColor := NewConsoleReporterLegacy(false, false)
 	plain := reporterNoColor.colorize("test", "header")
 	if plain != "test" {
 		t.Error("Colorize should return plain text when colors disabled")
@@ -219,7 +219,7 @@ func TestConsoleReporter_Colorize(t *testing.T) {
 }
 
 func TestConsoleReporter_SeverityIcons(t *testing.T) {
-	reporter := NewConsoleReporter(false, false)
+	reporter := NewConsoleReporterLegacy(false, false)
 
 	icons := map[models.Severity]string{
 		models.SeverityLow:      "ℹ️",

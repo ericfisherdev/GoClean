@@ -45,7 +45,7 @@ type ConsoleReporter struct {
 
 // NewConsoleReporter creates a new console reporter with config
 func NewConsoleReporter(cfg *config.ConsoleConfig) *ConsoleReporter {
-	output := os.Stdout
+	var output io.Writer = os.Stdout
 	if cfg.Output != nil {
 		if w, ok := cfg.Output.(io.Writer); ok {
 			output = w

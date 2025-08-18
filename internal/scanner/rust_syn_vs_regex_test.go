@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ericfisherdev/goclean/internal/types"
 )
@@ -335,7 +334,8 @@ func compareAccuracy(t *testing.T, testName string, expected AccuracyExpectation
 	}
 
 	// Check specific items
-	checkSpecificItems(t, "Functions", expected.HasFunction, regexAST.Functions, synAST.Functions)
+	checkSpecificItems(t, "Functions", expected.HasFunction, 
+		convertFunctionsToNames(regexAST.Functions), convertFunctionsToNames(synAST.Functions))
 	checkSpecificItems(t, "Structs", expected.HasStruct, 
 		convertStructsToNames(regexAST.Structs), convertStructsToNames(synAST.Structs))
 	checkSpecificItems(t, "Enums", expected.HasEnum,
@@ -395,6 +395,14 @@ func convertStructsToNames(structs []*types.RustStructInfo) []string {
 	names := make([]string, len(structs))
 	for i, s := range structs {
 		names[i] = s.Name
+	}
+	return names
+}
+
+func convertFunctionsToNames(functions []*types.RustFunctionInfo) []string {
+	names := make([]string, len(functions))
+	for i, f := range functions {
+		names[i] = f.Name
 	}
 	return names
 }

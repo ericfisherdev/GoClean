@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/ericfisherdev/goclean/internal/types"
 )
@@ -215,8 +214,6 @@ fn test_function() {
 `
 
 	// Parse multiple times and check memory tracking
-	initialMetrics := parser.GetMemorySafetyMetrics()
-	
 	for i := 0; i < 10; i++ {
 		_, err := parser.ParseRustFile([]byte(rustCode), fmt.Sprintf("test_%d.rs", i))
 		if err != nil {

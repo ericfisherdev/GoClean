@@ -97,7 +97,7 @@ func TestEnhancedRustReporting(t *testing.T) {
 	})
 
 	t.Run("ConsoleReporter_RustCategoryDisplay", func(t *testing.T) {
-		_ = NewConsoleReporter(true, false) // verbose=true, colors=false
+		_ = NewConsoleReporterLegacy(true, false) // verbose=true, colors=false
 		
 		// Capture console output by temporarily redirecting
 		// This is a simplified test - in practice you'd use a buffer

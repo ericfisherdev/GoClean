@@ -178,7 +178,7 @@ func BenchmarkConsoleReporting(b *testing.B) {
 		ScannedFiles:    1,
 	}
 	
-	reporter := NewConsoleReporter(false, true) // verbose=false, colors=true
+	reporter := NewConsoleReporterLegacy(false, true) // verbose=false, colors=true
 	
 	// Create full report
 	report := models.NewReport(summary, scanResults, &models.ReportConfig{
@@ -247,7 +247,7 @@ func BenchmarkReportManager(b *testing.B) {
 		IncludeExamples: false,
 	})
 	
-	consoleReporter := NewConsoleReporter(false, false) // no verbose, no colors
+	consoleReporter := NewConsoleReporterLegacy(false, false) // no verbose, no colors
 	
 	// Create full report
 	report := models.NewReport(summary, scanResults, &models.ReportConfig{
