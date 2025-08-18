@@ -1,0 +1,180 @@
+---
+# GoClean Strict Rust Configuration
+# High standards for production Rust code with zero tolerance for common issues
+
+scan:
+  paths:
+    - ./src
+    - ./benches
+    - ./examples
+  file_types:
+    - .rs
+  exclude:
+    - target/
+    - Cargo.lock
+    - "*.bak"
+    - "temp/"
+
+# Strict thresholds for high-quality code
+thresholds:
+  function_lines: 20
+  cyclomatic_complexity: 6
+  parameters: 3
+  nesting_depth: 2
+  class_lines: 100
+  duplicate_lines: 4
+  file_lines: 300
+
+# Comprehensive Rust-specific configuration
+rust:
+  # Ownership and borrowing analysis - very strict
+  enable_ownership_analysis: true
+  max_lifetime_params: 2
+  detect_unnecessary_clones: true
+
+  # Error handling analysis - zero tolerance
+  enable_error_handling_check: true
+  allow_unwrap: false          # Never allow unwrap() in production
+  allow_expect: false          # Never allow expect() in production
+  enforce_result_propagation: true
+
+  # Pattern matching analysis - require perfection
+  enable_pattern_match_check: true
+  require_exhaustive_match: true
+  max_nested_match_depth: 2
+
+  # Trait and impl analysis - keep interfaces simple
+  max_trait_bounds: 3
+  max_impl_methods: 15
+  detect_orphan_instances: true
+
+  # Unsafe code analysis - minimal unsafe usage
+  allow_unsafe: true
+  require_unsafe_comments: true
+  detect_transmute_usage: true
+
+  # Performance analysis - optimize everything
+  detect_inefficient_string: true
+  detect_boxed_primitives: true
+  detect_blocking_in_async: true
+
+  # Macro analysis - limit complexity
+  max_macro_complexity: 5
+  allow_recursive_macros: false
+
+  # Module structure - keep it organized
+  max_module_depth: 4
+  max_file_lines: 300
+
+  # Naming conventions - enforce strictly
+  enforce_snake_case: true
+  enforce_pascal_case: true
+  enforce_screaming_snake: true
+
+# Maximum clippy integration
+clippy:
+  enabled: true
+  categories:
+    - correctness
+    - suspicious
+    - style
+    - complexity
+    - perf
+    - pedantic       # Extra strict
+    - nursery        # Cutting-edge lints
+  severity_mapping:
+    error: critical
+    warn: high
+    info: medium
+    note: low
+  # Additional strict clippy lints
+  additional_lints:
+    - clippy::all
+    - clippy::pedantic
+    - clippy::nursery
+    - clippy::cargo
+
+# Comprehensive output for thorough review
+output:
+  html:
+    enabled: true
+    path: ./reports/strict-rust-report.html
+    theme: light
+    auto_refresh: true
+    refresh_interval: 5
+    show_code_snippets: true
+    snippet_lines: 5
+  markdown:
+    enabled: true
+    path: ./reports/strict-violations.md
+    include_examples: true
+    group_by_severity: true
+    ai_friendly: true
+  console:
+    enabled: true
+    format: table
+    show_summary: true
+    color: true
+  export:
+    json:
+      enabled: true
+      path: ./reports/violations.json
+      pretty_print: true
+    csv:
+      enabled: true
+      path: ./reports/violations.csv
+
+# Detailed logging for debugging
+logging:
+  level: debug
+  format: structured
+  file: ./logs/goclean-strict.log
+  timestamps: true
+
+# Enable all rule categories
+rules:
+  function_analysis:
+    enabled: true
+    check_length: true
+    check_complexity: true
+    check_parameters: true
+    check_nesting: true
+
+  naming_conventions:
+    enabled: true
+    check_descriptive_names: true
+    check_consistency: true
+    check_boolean_names: true
+    check_magic_numbers: true
+
+  code_structure:
+    enabled: true
+    check_class_size: true
+    check_duplication: true
+    check_god_objects: true
+
+  documentation:
+    enabled: true
+    check_missing_docs: true
+    check_outdated_comments: true
+    check_commented_code: true
+    check_todo_fixme: true
+
+# Custom naming patterns for Rust
+naming:
+  custom_patterns:
+    functions:
+      pattern: "^[a-z][a-z0-9_]*$"
+      message: "Function names must be snake_case"
+
+    structs:
+      pattern: "^[A-Z][A-Za-z0-9]*$"
+      message: "Struct names must be PascalCase"
+
+    constants:
+      pattern: "^[A-Z][A-Z0-9_]*$"
+      message: "Constants must be SCREAMING_SNAKE_CASE"
+
+    modules:
+      pattern: "^[a-z][a-z0-9_]*$"
+      message: "Module names must be snake_case"

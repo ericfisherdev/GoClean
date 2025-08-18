@@ -8,11 +8,13 @@ This document provides comprehensive information about configuring GoClean for y
 2. [Scanning Configuration](#scanning-configuration)
 3. [Violation Thresholds](#violation-thresholds)
 4. [Naming Rules](#naming-rules)
-5. [Output Configuration](#output-configuration)
-6. [Logging Configuration](#logging-configuration)
-7. [Environment Variables](#environment-variables)
-8. [Configuration Examples](#configuration-examples)
-9. [Migration Guide](#migration-guide)
+5. [Rust-Specific Configuration](#rust-specific-configuration)
+6. [Clippy Integration](#clippy-integration)
+7. [Output Configuration](#output-configuration)
+8. [Logging Configuration](#logging-configuration)
+9. [Environment Variables](#environment-variables)
+10. [Configuration Examples](#configuration-examples)
+11. [Migration Guide](#migration-guide)
 
 ## Configuration File Structure
 
@@ -77,6 +79,8 @@ scan:
     - "*.generated.go"
     - ".git/"
     - "dist/"
+    - "target/"     # Rust build artifacts
+    - "Cargo.lock"  # Rust lock file
 ```
 
 **Pattern Syntax**:
@@ -101,7 +105,7 @@ scan:
     - ".py"
     - ".java"
     - ".cs"
-    - ".rs"    # Rust (experimental)
+    - ".rs"    # Rust (full support)
     - ".cpp"   # C++ (experimental)
 ```
 
@@ -256,6 +260,332 @@ naming:
     variables:
       pattern: "^[a-z][a-zA-Z0-9]*$"
       message: "Variables should be camelCase"
+```
+
+## Rust-Specific Configuration
+
+GoClean provides comprehensive support for Rust projects with specialized analysis capabilities.
+
+### Basic Rust Configuration
+
+```yaml
+rust:
+  # Enable Rust-specific analysis
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  enable_pattern_match_check: true
+  
+  # Naming convention enforcement
+  enforce_snake_case: true      # Functions, variables, modules
+  enforce_pascal_case: true     # Types (structs, enums, traits)
+  enforce_screaming_snake: true # Constants
+```
+
+### Ownership and Borrowing Analysis
+
+```yaml
+rust:
+  enable_ownership_analysis: true
+  max_lifetime_params: 3
+  detect_unnecessary_clones: true
+```
+
+**Configuration Options**:
+- `enable_ownership_analysis`: Enable ownership pattern analysis
+- `max_lifetime_params`: Maximum lifetime parameters before flagging as complex
+- `detect_unnecessary_clones`: Flag unnecessary `.clone()` calls
+
+**Detected Violations**:
+- `RUST_UNNECESSARY_CLONE` - Unnecessary clone operations
+- `RUST_INEFFICIENT_BORROWING` - Suboptimal borrowing patterns
+- `RUST_COMPLEX_LIFETIME` - Overly complex lifetime parameters
+- `RUST_MOVE_SEMANTICS_VIOLATION` - Incorrect move semantics usage
+
+### Error Handling Analysis
+
+```yaml
+rust:
+  enable_error_handling_check: true
+  allow_unwrap: false
+  allow_expect: false
+  enforce_result_propagation: true
+```
+
+**Configuration Options**:
+- `enable_error_handling_check`: Enable error handling pattern analysis
+- `allow_unwrap`: Allow `.unwrap()` calls (not recommended for production)
+- `allow_expect`: Allow `.expect()` calls (not recommended for production)
+- `enforce_result_propagation`: Require proper error propagation with `?`
+
+**Detected Violations**:
+- `RUST_OVERUSE_UNWRAP` - Usage of `.unwrap()` method
+- `RUST_MISSING_ERROR_PROPAGATION` - Missing `?` operator usage
+- `RUST_INCONSISTENT_ERROR_TYPE` - Inconsistent error types
+- `RUST_PANIC_PRONE_CODE` - Code patterns that may cause panics
+
+### Pattern Matching Analysis
+
+```yaml
+rust:
+  enable_pattern_match_check: true
+  require_exhaustive_match: true
+  max_nested_match_depth: 3
+```
+
+**Configuration Options**:
+- `enable_pattern_match_check`: Enable pattern matching analysis
+- `require_exhaustive_match`: Require exhaustive pattern matching
+- `max_nested_match_depth`: Maximum nesting depth for match expressions
+
+**Detected Violations**:
+- `RUST_NON_EXHAUSTIVE_MATCH` - Non-exhaustive pattern matches
+- `RUST_NESTED_PATTERN_MATCHING` - Overly nested match expressions
+- `RUST_INEFFICIENT_DESTRUCTURING` - Inefficient destructuring patterns
+
+### Trait and Implementation Analysis
+
+```yaml
+rust:
+  max_trait_bounds: 5
+  max_impl_methods: 20
+  detect_orphan_instances: true
+```
+
+**Configuration Options**:
+- `max_trait_bounds`: Maximum trait bounds before flagging as complex
+- `max_impl_methods`: Maximum methods per impl block
+- `detect_orphan_instances`: Detect potential orphan trait implementations
+
+### Safety Analysis
+
+```yaml
+rust:
+  allow_unsafe: true
+  require_unsafe_comments: true
+  detect_transmute_usage: true
+```
+
+**Configuration Options**:
+- `allow_unsafe`: Allow unsafe code blocks
+- `require_unsafe_comments`: Require documentation for unsafe code
+- `detect_transmute_usage`: Flag potentially dangerous transmute usage
+
+**Detected Violations**:
+- `RUST_UNNECESSARY_UNSAFE` - Unnecessary unsafe blocks
+- `RUST_UNSAFE_WITHOUT_COMMENT` - Unsafe code without documentation
+- `RUST_TRANSMUTE_ABUSE` - Dangerous transmute usage
+
+### Performance Analysis
+
+```yaml
+rust:
+  detect_inefficient_string: true
+  detect_boxed_primitives: true
+  detect_blocking_in_async: true
+```
+
+**Configuration Options**:
+- `detect_inefficient_string`: Flag inefficient string operations
+- `detect_boxed_primitives`: Detect unnecessary boxing of primitives
+- `detect_blocking_in_async`: Find blocking calls in async functions
+
+**Detected Violations**:
+- `RUST_INEFFICIENT_STRING_CONCAT` - Inefficient string concatenation
+- `RUST_UNNECESSARY_ALLOCATION` - Unnecessary heap allocations
+- `RUST_BLOCKING_IN_ASYNC` - Blocking calls in async functions
+
+### Module and Structure Analysis
+
+```yaml
+rust:
+  max_module_depth: 5
+  max_file_lines: 500
+  enforce_module_privacy: true
+```
+
+**Configuration Options**:
+- `max_module_depth`: Maximum module nesting depth
+- `max_file_lines`: Maximum lines per file
+- `enforce_module_privacy`: Enforce proper module privacy patterns
+
+### Macro Analysis
+
+```yaml
+rust:
+  max_macro_complexity: 10
+  allow_recursive_macros: false
+  detect_macro_abuse: true
+```
+
+**Configuration Options**:
+- `max_macro_complexity`: Maximum macro complexity score
+- `allow_recursive_macros`: Allow recursive macro definitions
+- `detect_macro_abuse`: Flag overly complex macro usage
+
+## Clippy Integration
+
+GoClean integrates seamlessly with rust-clippy to provide comprehensive analysis.
+
+### Basic Clippy Configuration
+
+```yaml
+clippy:
+  enabled: true
+  categories:
+    - correctness    # Critical correctness issues
+    - suspicious     # Suspicious code patterns
+    - style         # Style and idiom violations
+    - complexity    # Code complexity issues
+    - perf          # Performance improvements
+```
+
+### Advanced Clippy Configuration
+
+```yaml
+clippy:
+  enabled: true
+  categories:
+    - correctness
+    - suspicious
+    - style
+    - complexity
+    - perf
+    - pedantic      # Extra strict lints
+    - nursery       # Experimental lints
+  
+  severity_mapping:
+    error: critical
+    warn: high
+    info: medium
+    note: low
+  
+  additional_lints:
+    - clippy::all
+    - clippy::pedantic
+    - clippy::cargo
+```
+
+### Clippy Categories
+
+| Category | Description | Example Lints |
+|----------|-------------|---------------|
+| `correctness` | Code that is definitely wrong | `clippy::absurd_extreme_comparisons` |
+| `suspicious` | Code that is probably wrong | `clippy::empty_loop` |
+| `style` | Code style violations | `clippy::redundant_field_names` |
+| `complexity` | Complex code patterns | `clippy::cyclomatic_complexity` |
+| `perf` | Performance improvements | `clippy::inefficient_to_string` |
+| `pedantic` | Extra strict style checks | `clippy::missing_docs_in_private_items` |
+| `nursery` | Experimental lints | `clippy::future_not_send` |
+
+### Severity Mapping
+
+Map clippy lint levels to GoClean severity levels:
+
+```yaml
+clippy:
+  severity_mapping:
+    error: critical    # Must fix before production
+    warn: high        # Should fix soon
+    info: medium      # Improvement opportunity
+    note: low         # Minor suggestion
+```
+
+### Custom Clippy Configuration
+
+```yaml
+clippy:
+  enabled: true
+  
+  # Run clippy with specific configuration
+  config_file: ".clippy.toml"
+  
+  # Additional command-line arguments
+  args:
+    - "--all-features"
+    - "--all-targets"
+  
+  # Override default categories
+  categories:
+    - correctness
+    - suspicious
+    - perf
+  
+  # Disable specific lints
+  disabled_lints:
+    - clippy::too_many_arguments
+    - clippy::module_name_repetitions
+```
+
+### Rust Configuration Examples
+
+#### Minimal Rust Configuration
+
+```yaml
+scan:
+  file_types: [".rs"]
+  exclude: ["target/", "Cargo.lock"]
+
+rust:
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  allow_unwrap: false
+
+clippy:
+  enabled: true
+  categories: [correctness, suspicious]
+
+thresholds:
+  function_lines: 30
+  cyclomatic_complexity: 10
+```
+
+#### Strict Rust Configuration
+
+```yaml
+scan:
+  file_types: [".rs"]
+  exclude: ["target/", "Cargo.lock"]
+
+rust:
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  enable_pattern_match_check: true
+  allow_unwrap: false
+  allow_expect: false
+  enforce_result_propagation: true
+  max_lifetime_params: 2
+  require_exhaustive_match: true
+
+clippy:
+  enabled: true
+  categories: [correctness, suspicious, style, complexity, perf, pedantic]
+
+thresholds:
+  function_lines: 20
+  cyclomatic_complexity: 6
+  parameters: 3
+```
+
+#### Mixed Go/Rust Configuration
+
+```yaml
+scan:
+  file_types: [".go", ".rs"]
+  exclude: ["vendor/", "target/", "*.test.go"]
+
+rust:
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  enforce_snake_case: true
+
+clippy:
+  enabled: true
+  categories: [correctness, suspicious, style, complexity, perf]
+
+thresholds:
+  function_lines: 25
+  cyclomatic_complexity: 8
+  parameters: 4
 ```
 
 ## Output Configuration

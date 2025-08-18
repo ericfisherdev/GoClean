@@ -24,7 +24,7 @@ A powerful Go CLI tool that scans codebases to identify clean code violations wi
 
 ### ⚙️ Highly Configurable  
 - **Custom Thresholds**: Adjust limits for functions, complexity, naming rules
-- **Language Support**: Go, JavaScript, TypeScript, Python, Java, C#
+- **Language Support**: Go, Rust, JavaScript, TypeScript, Python, Java, C#
 - **Flexible Output**: Choose report formats and customize styling
 - **Team Standards**: Version-controlled configuration for consistent rules
 
@@ -135,6 +135,21 @@ goclean scan
 open reports/clean-code-report.html
 ```
 
+### Rust Project Analysis
+```bash
+# Initialize Rust-specific configuration
+goclean config init --rust
+
+# Scan Rust project
+goclean scan --file-types .rs
+
+# Mixed Go/Rust project
+goclean scan --file-types .go,.rs --config configs/rust-mixed-project.yaml
+
+# Use strict Rust standards
+goclean scan --config configs/rust-strict.yaml
+```
+
 ### Advanced Configuration
 ```yaml
 # goclean.yaml
@@ -154,6 +169,30 @@ output:
   markdown:
     enabled: true
     ai_friendly: true
+```
+
+### Rust Configuration Example
+```yaml
+# goclean.yaml for Rust projects
+scan:
+  paths: ["./src", "./benches"]
+  file_types: [".rs"]
+  exclude: ["target/", "Cargo.lock"]
+
+rust:
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  allow_unwrap: false
+  enforce_snake_case: true
+
+clippy:
+  enabled: true
+  categories: [correctness, suspicious, style, complexity, perf]
+
+thresholds:
+  function_lines: 25
+  cyclomatic_complexity: 8
+  parameters: 4
 ```
 
 ### Programmatic Usage
