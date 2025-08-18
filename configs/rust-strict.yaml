@@ -115,14 +115,16 @@ output:
     format: table
     show_summary: true
     color: true
-  export:
-    json:
-      enabled: true
-      path: ./reports/violations.json
-      pretty_print: true
-    csv:
-      enabled: true
-      path: ./reports/violations.csv
+
+# Export configuration
+export:
+  json:
+    enabled: true
+    path: ./reports/violations.json
+    pretty_print: true
+  csv:
+    enabled: true
+    path: ./reports/violations.csv
 
 # Detailed logging for debugging
 logging:

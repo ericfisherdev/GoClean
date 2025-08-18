@@ -2,8 +2,10 @@ package reporters
 
 import (
 	"fmt"
+	"io"
 	"testing"
 
+	"github.com/ericfisherdev/goclean/internal/config"
 	"github.com/ericfisherdev/goclean/internal/models"
 	"github.com/ericfisherdev/goclean/internal/testutils"
 )
@@ -178,7 +180,13 @@ func BenchmarkConsoleReporting(b *testing.B) {
 		ScannedFiles:    1,
 	}
 	
-	reporter := NewConsoleReporterLegacy(false, true) // verbose=false, colors=true
+	// Create console config with equivalent settings and output to io.Discard
+	consoleConfig := &config.ConsoleConfig{
+		Verbose: false,
+		Colored: true,
+		Output:  io.Discard,
+	}
+	reporter := NewConsoleReporter(consoleConfig)
 	
 	// Create full report
 	report := models.NewReport(summary, scanResults, &models.ReportConfig{
@@ -247,7 +255,11 @@ func BenchmarkReportManager(b *testing.B) {
 		IncludeExamples: false,
 	})
 	
-	consoleReporter := NewConsoleReporterLegacy(false, false) // no verbose, no colors
+	consoleReporter := NewConsoleReporter(&config.ConsoleConfig{
+		Verbose: false,
+		Colored: false,
+		Output:  io.Discard, // Suppress output during benchmarks
+	})
 	
 	// Create full report
 	report := models.NewReport(summary, scanResults, &models.ReportConfig{

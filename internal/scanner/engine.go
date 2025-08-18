@@ -111,6 +111,19 @@ func (e *Engine) GetRustPerformanceMetrics() map[string]interface{} {
 	return nil
 }
 
+// GetRustMemoryUsage returns memory usage estimates for Rust parsing cache
+func (e *Engine) GetRustMemoryUsage() map[string]interface{} {
+	if e.rustOptimizer != nil {
+		return e.rustOptimizer.EstimateMemoryUsage()
+	}
+	return map[string]interface{}{
+		"estimated_cache_memory_bytes": 0,
+		"estimated_cache_memory_mb":    0.0,
+		"cache_entries":                0,
+		"avg_memory_per_entry_bytes":   0,
+	}
+}
+
 // ClearRustCache clears the Rust AST cache
 func (e *Engine) ClearRustCache() {
 	if e.rustOptimizer != nil {

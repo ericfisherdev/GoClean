@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -238,6 +239,9 @@ func TestGetRustViolationDescription(t *testing.T) {
 			if len(result) < 10 {
 				t.Errorf("GetRustViolationDescription(%v) returned suspiciously short description: %q", tt.violationType, result)
 			}
+			if !strings.Contains(result, tt.expectedContains) {
+				t.Errorf("GetRustViolationDescription(%v) returned %q, expected it to contain %q", tt.violationType, result, tt.expectedContains)
+			}
 		})
 	}
 }
@@ -288,6 +292,9 @@ func TestGetRustViolationSuggestion(t *testing.T) {
 			}
 			if len(result) < 10 {
 				t.Errorf("GetRustViolationSuggestion(%v) returned suspiciously short suggestion: %q", tt.violationType, result)
+			}
+			if !strings.Contains(result, tt.expectedContains) {
+				t.Errorf("GetRustViolationSuggestion(%v) returned %q, expected it to contain %q", tt.violationType, result, tt.expectedContains)
 			}
 		})
 	}

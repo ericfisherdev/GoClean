@@ -68,11 +68,13 @@ output:
     enabled: true
     format: summary  # Fast summary format
     show_progress: false
-  export:
-    json:
-      enabled: true
-      path: ./reports/performance-scan.json
-      pretty_print: false  # Faster generation
+
+# Export configuration
+export:
+  json:
+    enabled: true
+    path: ./reports/performance-scan.json
+    pretty_print: false  # Faster generation
 
 # Minimal logging for speed
 logging:
