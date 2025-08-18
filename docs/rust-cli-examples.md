@@ -2,6 +2,8 @@
 
 This document provides comprehensive command-line examples for using GoClean with Rust projects.
 
+**Note: This documentation has been updated to reflect only the actually implemented CLI flags. Many flags shown in previous versions were not implemented in the codebase.**
+
 ## Table of Contents
 
 1. [Basic Commands](#basic-commands)
@@ -19,30 +21,30 @@ This document provides comprehensive command-line examples for using GoClean wit
 
 ```bash
 # Scan current directory for Rust files
-goclean scan --file-types .rs
+goclean scan --types .rs
 
 # Scan specific directory
-goclean scan --path ./src --file-types .rs
+goclean scan ./src --types .rs
 
-# Scan with console output
-goclean scan --path ./src --file-types .rs --console
+# Scan with structured console output for AI processing
+goclean scan ./src --types .rs --console-violations
 
-# Scan with HTML report
-goclean scan --path ./src --file-types .rs --html
+# Scan with HTML report (default format)
+goclean scan ./src --types .rs --format html
 ```
 
 ### Quick Start Examples
 
 ```bash
 # First-time setup for Rust project
-goclean config init --rust
-goclean scan
+goclean config init
+goclean scan --languages rust
 
-# Quick validation scan
-goclean scan --file-types .rs --console --format table
+# Quick validation scan with structured output
+goclean scan --types .rs --console-violations
 
-# Generate comprehensive report
-goclean scan --file-types .rs --html --markdown --console
+# Generate HTML report to specific location
+goclean scan --types .rs --format html --output ./reports/rust-report.html
 ```
 
 ## Configuration Management
@@ -66,297 +68,160 @@ goclean scan --config configs/rust-mixed-project.yaml
 ### Configuration Generation
 
 ```bash
-# Generate basic Rust configuration
-goclean config init --template rust --output my-rust-config.yaml
+# Generate basic configuration file
+goclean config init
 
-# Generate strict configuration
-goclean config init --template rust-strict --output strict.yaml
-
-# Generate minimal configuration
-goclean config init --template rust-minimal --output minimal.yaml
-
-# Validate configuration
-goclean config validate --config my-rust-config.yaml
-```
-
-### Environment Variable Overrides
-
-```bash
-# Override paths via environment
-export GOCLEAN_SCAN_PATHS="./src,./benches"
-goclean scan --file-types .rs
-
-# Override thresholds
-export GOCLEAN_THRESHOLDS_FUNCTION_LINES=20
-export GOCLEAN_RUST_ALLOW_UNWRAP=false
-goclean scan --config configs/rust-minimal.yaml
-
-# Override output settings
-export GOCLEAN_OUTPUT_HTML_THEME=dark
-export GOCLEAN_OUTPUT_MARKDOWN_ENABLED=true
-goclean scan --file-types .rs
+# The generated config can be customized for Rust-specific settings
+# Edit goclean.yaml to adjust thresholds and enable Rust features
 ```
 
 ## Scanning Strategies
 
-### Selective File Scanning
+### Basic Scanning
 
 ```bash
-# Scan only source files (exclude tests and examples)
-goclean scan --path ./src --exclude "tests/" --exclude "examples/" --file-types .rs
+# Simple Rust scan
+goclean scan --types .rs
 
-# Scan specific Rust files
-goclean scan --path ./src/main.rs --path ./src/lib.rs
-
-# Scan with size limits
-goclean scan --file-types .rs --max-file-size 1MB
-
-# Concurrent scanning for performance
-goclean scan --file-types .rs --concurrent 20
+# Scan with configuration file
+goclean scan --config configs/rust-minimal.yaml
 ```
 
-### Project Structure Scanning
+### Targeted Scanning
 
 ```bash
-# Typical Rust project structure
-goclean scan \
-  --path ./src \
-  --path ./benches \
-  --path ./examples \
-  --exclude "target/" \
-  --exclude "Cargo.lock" \
-  --file-types .rs
+# Scan specific files by type
+goclean scan --types .rs
 
-# Library project focus
-goclean scan \
-  --path ./src \
-  --exclude "target/" \
-  --exclude "tests/" \
-  --file-types .rs
+# Scan with exclusions
+goclean scan ./src --exclude "tests/" --exclude "examples/" --types .rs
 
-# Workspace scanning
-goclean scan \
-  --path ./crates \
-  --exclude "target/" \
-  --exclude "*/target/" \
-  --file-types .rs
+# Scan specific paths only
+goclean scan ./src/main.rs ./src/lib.rs
+
+# Include test files in analysis
+goclean scan --types .rs --include-tests
 ```
 
-### Violation-Specific Scanning
+### Advanced Scanning Options
 
 ```bash
-# Focus on ownership issues
-goclean scan --file-types .rs --config configs/ownership-focus.yaml
+# Verbose output for debugging
+goclean scan --types .rs --verbose
 
-# Error handling analysis only
-goclean scan --file-types .rs --enable-rules error_handling
+# Enable Rust optimizations explicitly
+goclean scan --types .rs --rust-opt
 
-# Performance-focused analysis
-goclean scan --file-types .rs --enable-rules performance,naming
+# Configure Rust cache settings
+goclean scan --types .rs --rust-cache-size 1000 --rust-cache-ttl 60
 ```
 
 ## Output Formats
 
-### Console Output Variations
+### Console Output
 
 ```bash
-# Table format (default)
-goclean scan --file-types .rs --console --format table
+# Structured console output for AI processing
+goclean scan --types .rs --console-violations
 
-# JSON output for automation
-goclean scan --file-types .rs --console --format json
-
-# CSV output for analysis
-goclean scan --file-types .rs --console --format csv
-
-# Summary format for quick overview
-goclean scan --file-types .rs --console --format summary
-
-# No color output for logs
-goclean scan --file-types .rs --console --no-color
+# Verbose console output
+goclean scan --types .rs --verbose
 ```
 
-### HTML Report Generation
+### HTML Reports
 
 ```bash
-# Basic HTML report
-goclean scan --file-types .rs --html
+# Generate HTML report (default)
+goclean scan --types .rs --format html
 
-# Custom HTML output path
-goclean scan --file-types .rs --html --html-output ./reports/rust-analysis.html
-
-# Dark theme HTML report
-goclean scan --file-types .rs --html --theme dark
-
-# Auto-refreshing report for development
-goclean scan --file-types .rs --html --auto-refresh --refresh-interval 5
-
-# HTML with code snippets
-goclean scan --file-types .rs --html --show-snippets --snippet-lines 10
+# HTML report to specific file
+goclean scan --types .rs --format html --output ./reports/rust-analysis.html
 ```
 
-### Markdown Output
+### Markdown Reports
 
 ```bash
-# Basic markdown report
-goclean scan --file-types .rs --markdown
+# Generate Markdown report
+goclean scan --types .rs --format markdown
 
-# AI-friendly markdown format
-goclean scan --file-types .rs --markdown --ai-friendly
-
-# Markdown with examples included
-goclean scan --file-types .rs --markdown --include-examples
-
-# Custom markdown output path
-goclean scan --file-types .rs --markdown --markdown-output ./docs/violations.md
+# Markdown to specific file
+goclean scan --types .rs --format markdown --output ./docs/violations.md
 ```
 
-### Export Formats
+### JSON Export
 
 ```bash
-# Export to JSON
-goclean scan --file-types .rs --export-json --json-output results.json
+# Generate JSON output
+goclean scan --types .rs --format json
 
-# Export to CSV for spreadsheet analysis
-goclean scan --file-types .rs --export-csv --csv-output violations.csv
-
-# Pretty-printed JSON
-goclean scan --file-types .rs --export-json --pretty-print
-
-# Multiple export formats
-goclean scan --file-types .rs --export-json --export-csv --html --markdown
+# JSON to specific file
+goclean scan --types .rs --format json --output results.json
 ```
 
 ## Mixed Language Projects
 
-### Go + Rust Projects
+### Multi-Language Scanning
 
 ```bash
 # Scan both Go and Rust files
-goclean scan --file-types .go,.rs
+goclean scan --types .go,.rs
 
-# Mixed project with custom exclusions
-goclean scan \
-  --file-types .go,.rs \
-  --exclude "vendor/" \
-  --exclude "target/" \
-  --exclude "*.test.go"
-
-# Use mixed project configuration
+# Use configuration for mixed projects
 goclean scan --config configs/rust-mixed-project.yaml
 
-# Separate reports for each language
-goclean scan --file-types .go --html --html-output go-report.html
-goclean scan --file-types .rs --html --html-output rust-report.html
+# Language-specific reports
+goclean scan --languages go --format html --output go-report.html
+goclean scan --languages rust --format html --output rust-report.html
 ```
 
 ### Microservices Architecture
 
 ```bash
-# Scan Go services
-goclean scan \
-  --path ./services/api \
-  --path ./services/auth \
-  --file-types .go \
-  --html --html-output go-services-report.html
+# Scan specific service directories
+goclean scan ./services/api --types .go --format html --output go-services-report.html
+goclean scan ./services/processor --types .rs --format html --output rust-services-report.html
 
-# Scan Rust services
-goclean scan \
-  --path ./services/processor \
-  --path ./services/analytics \
-  --file-types .rs \
-  --html --html-output rust-services-report.html
-
-# Combined microservices scan
-goclean scan \
-  --path ./services \
-  --file-types .go,.rs \
-  --exclude "vendor/" \
-  --exclude "target/" \
-  --html --markdown
+# Combined analysis
+goclean scan ./services --types .go,.rs --exclude "vendor/" --exclude "target/"
 ```
 
 ## CI/CD Integration
 
-### GitHub Actions Examples
+### Basic CI Usage
 
 ```bash
-# Basic CI scan
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --format json \
-  --no-color \
-  --quiet > goclean-results.json
+# CI-friendly JSON output
+goclean scan --config configs/rust-minimal.yaml --format json --verbose > goclean-results.json
 
-# Quality gate with error codes
-goclean scan \
-  --config configs/rust-strict.yaml \
-  --format json \
-  --fail-on critical,high
-
-# Performance monitoring
-goclean scan \
-  --config configs/rust-performance-focused.yaml \
-  --benchmark \
-  --benchmark-output benchmark-results.json
-
-# Artifact generation
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --html --html-output ./artifacts/code-quality-report.html \
-  --markdown --markdown-output ./artifacts/violations.md \
-  --export-json --json-output ./artifacts/scan-results.json
+# Exit with non-zero code on violations
+goclean scan --config configs/rust-strict.yaml --console-violations
 ```
 
-### GitLab CI Examples
+### Advanced CI Integration
 
 ```bash
-# GitLab CI job
-goclean scan \
-  --config .goclean-ci.yaml \
-  --format json \
-  --export-json \
-  --json-output gl-code-quality-report.json
+# Generate multiple report formats for CI artifacts
+goclean scan --config configs/rust-minimal.yaml --format html --output ./artifacts/code-quality-report.html
 
-# Parallel analysis
-goclean scan \
-  --file-types .rs \
-  --concurrent 10 \
-  --format summary \
-  --quiet
-
-# Cache-friendly scanning
-goclean scan \
-  --config configs/rust-performance-focused.yaml \
-  --cache-dir ./.goclean-cache \
-  --format json
+# Performance-optimized scanning for large repositories
+goclean scan --types .rs --rust-opt --verbose
 ```
 
-### Jenkins Pipeline Examples
+### Platform-Specific Examples
 
+#### Jenkins
 ```bash
-# Jenkins stage
-goclean scan \
-  --config jenkins-rust.yaml \
-  --format json \
-  --export-json \
-  --json-output target/goclean-report.json \
-  --html \
-  --html-output target/goclean-report.html
+goclean scan --config jenkins-rust.yaml --format json --output target/goclean-report.json
+```
 
-# Quality gate
-goclean scan \
-  --config configs/rust-strict.yaml \
-  --format json \
-  --fail-on critical \
-  --quiet || exit 1
+#### GitLab CI
+```bash
+goclean scan --config .goclean-ci.yaml --format json --output gl-code-quality-report.json
+```
 
-# Trend analysis
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --format json \
-  --export-json \
-  --json-output "reports/scan-$(date +%Y%m%d).json"
+#### GitHub Actions
+```bash
+goclean scan --config configs/rust-strict.yaml --console-violations
 ```
 
 ## Advanced Usage
@@ -364,280 +229,104 @@ goclean scan \
 ### Performance Optimization
 
 ```bash
-# High-performance scanning
-goclean scan \
-  --file-types .rs \
-  --concurrent 50 \
-  --max-file-size 2MB \
-  --exclude "target/" \
-  --exclude "benchmarks/" \
-  --format summary
+# Large codebase scanning with optimizations
+goclean scan --types .rs --rust-opt --rust-cache-size 2000
 
-# Memory-conscious scanning
-goclean scan \
-  --file-types .rs \
-  --concurrent 5 \
-  --max-memory 1GB \
-  --streaming \
-  --format json
-
-# Profile performance
-goclean scan \
-  --file-types .rs \
-  --profile \
-  --profile-output performance.prof \
-  --benchmark
+# Verbose performance information
+goclean scan --types .rs --rust-opt --verbose
 ```
 
-### Custom Rule Configuration
+### Custom Thresholds
 
-```bash
-# Enable specific Rust rules
-goclean scan \
-  --file-types .rs \
-  --enable-rules ownership,error_handling,naming \
-  --console
+These are configured in the YAML configuration file, not via CLI flags:
 
-# Disable specific rules
-goclean scan \
-  --file-types .rs \
-  --disable-rules magic_numbers,todo_comments \
-  --console
-
-# Custom thresholds via CLI
-goclean scan \
-  --file-types .rs \
-  --function-lines 20 \
-  --complexity 6 \
-  --parameters 3 \
-  --console
+```yaml
+# In goclean.yaml
+thresholds:
+  function_lines: 20
+  cyclomatic_complexity: 6
+  parameters: 3
 ```
 
-### Filtering and Selection
+### Debug and Development
 
 ```bash
-# Severity filtering
-goclean scan --file-types .rs --severity critical,high --console
+# Verbose output for debugging
+goclean scan --types .rs --verbose
 
-# File pattern filtering
-goclean scan \
-  --file-types .rs \
-  --include "src/**/*.rs" \
-  --exclude "src/generated/**" \
-  --console
-
-# Violation type filtering
-goclean scan \
-  --file-types .rs \
-  --include-violations "RUST_FUNCTION_TOO_LONG,RUST_TOO_MANY_PARAMETERS" \
-  --console
-
-# Time-based filtering (files modified in last 7 days)
-goclean scan \
-  --file-types .rs \
-  --modified-since "7 days ago" \
-  --console
-```
-
-### Reporting Customization
-
-```bash
-# Custom HTML theme
-goclean scan \
-  --file-types .rs \
-  --html \
-  --theme custom \
-  --css-file ./custom-styles.css
-
-# Grouped reporting
-goclean scan \
-  --file-types .rs \
-  --markdown \
-  --group-by severity,file \
-  --sort-by severity
-
-# Statistical reporting
-goclean scan \
-  --file-types .rs \
-  --format json \
-  --include-stats \
-  --include-metrics \
-  --export-json
+# Aggressive mode (includes test files)
+goclean scan --types .rs --aggressive
 ```
 
 ## Troubleshooting Commands
 
-### Debugging Issues
+### Configuration Issues
 
 ```bash
-# Verbose output for debugging
-goclean scan \
-  --file-types .rs \
-  --verbose \
-  --debug \
-  --console
+# Check configuration loading
+goclean scan --config configs/rust-strict.yaml --verbose
 
-# Dry run to test configuration
-goclean scan \
-  --config configs/rust-strict.yaml \
-  --dry-run \
-  --verbose
-
-# Check file discovery
-goclean scan \
-  --file-types .rs \
-  --list-files \
-  --verbose
-
-# Debug specific files
-goclean scan \
-  --path ./src/problematic_file.rs \
-  --debug \
-  --verbose \
-  --console
+# Test with minimal configuration
+goclean config init
+goclean scan --types .rs --verbose
 ```
 
-### Configuration Validation
+### Performance Issues
 
 ```bash
-# Validate configuration syntax
-goclean config validate --config configs/rust-strict.yaml
+# Enable Rust optimizations
+goclean scan --types .rs --rust-opt --verbose
 
-# Test configuration with sample files
-goclean scan \
-  --config configs/rust-strict.yaml \
-  --path ./testdata/rust \
-  --verbose
-
-# Show effective configuration
-goclean config show --config configs/rust-strict.yaml
-
-# Compare configurations
-goclean config diff \
-  --config1 configs/rust-minimal.yaml \
-  --config2 configs/rust-strict.yaml
+# Adjust cache settings
+goclean scan --types .rs --rust-cache-size 500 --rust-cache-ttl 30
 ```
 
-### Performance Analysis
+### File Detection Issues
 
 ```bash
-# Memory profiling
-goclean scan \
-  --file-types .rs \
-  --memory-profile \
-  --profile-output memory.prof
+# Verify file type detection
+goclean scan --types .rs --verbose
 
-# CPU profiling
-goclean scan \
-  --file-types .rs \
-  --cpu-profile \
-  --profile-output cpu.prof
-
-# Benchmark comparison
-goclean scan \
-  --file-types .rs \
-  --benchmark \
-  --compare-baseline baseline-bench.json
-
-# Resource monitoring
-goclean scan \
-  --file-types .rs \
-  --monitor-resources \
-  --resource-output resources.json
+# Check exclusion patterns
+goclean scan ./src --exclude "target/" --types .rs --verbose
 ```
 
-### Error Diagnosis
-
-```bash
-# Check clippy availability
-goclean doctor --check-clippy
-
-# Verify Rust toolchain
-goclean doctor --check-rust
-
-# Test parsing capabilities
-goclean test-parse --file ./src/main.rs --verbose
-
-# Validate output generation
-goclean scan \
-  --file-types .rs \
-  --test-output \
-  --html \
-  --markdown \
-  --dry-run
-```
-
-## Practical Workflows
+## Common Workflows
 
 ### Development Workflow
 
 ```bash
-# Daily development scan
-goclean scan --config configs/rust-minimal.yaml --console --format table
+# Quick check during development
+goclean scan --types .rs --console-violations
 
-# Pre-commit validation
-goclean scan \
-  --file-types .rs \
-  --modified-since "1 hour ago" \
-  --severity critical,high \
-  --console
-
-# Code review preparation
-goclean scan \
-  --file-types .rs \
-  --html \
-  --theme light \
-  --markdown \
-  --ai-friendly
-```
-
-### Release Workflow
-
-```bash
-# Pre-release quality check
-goclean scan \
-  --config configs/rust-strict.yaml \
-  --html \
-  --markdown \
-  --export-json \
-  --fail-on critical
-
-# Release documentation
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --markdown \
-  --include-stats \
-  --markdown-output QUALITY_REPORT.md
-
-# Archive quality metrics
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --export-json \
-  --json-output "releases/quality-$(git describe --tags).json"
+# Detailed analysis for code review
+goclean scan --types .rs --format html --output ./reports/review.html
 ```
 
 ### Team Collaboration
 
 ```bash
-# Team standards enforcement
-goclean scan \
-  --config team-standards.yaml \
-  --html \
-  --html-output shared/team-quality-report.html
+# Generate team report
+goclean scan --config team-standards.yaml --format html --output shared/team-quality-report.html
 
-# Onboarding scan for new developers
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --console \
-  --format table \
-  --educational
-
-# Code quality metrics for management
-goclean scan \
-  --config configs/rust-minimal.yaml \
-  --format json \
-  --include-metrics \
-  --summary-only
+# Console summary for standups
+goclean scan --config configs/rust-minimal.yaml --console-violations
 ```
 
-This comprehensive CLI reference provides practical examples for every common GoClean Rust usage scenario. For additional help with specific commands, use `goclean help` or consult the main documentation.
+### Release Preparation
+
+```bash
+# Comprehensive pre-release scan
+goclean scan --config configs/rust-strict.yaml --format html --format json
+
+# Quality metrics export
+goclean scan --config configs/rust-minimal.yaml --format json --output "releases/quality-report.json"
+```
+
+## Notes
+
+- Many flags shown in earlier versions of this documentation were not implemented
+- Use `goclean scan --help` to see all available flags
+- Configuration files provide more flexibility than CLI flags for complex setups
+- The `--console-violations` flag provides structured output suitable for AI processing
+- Rust optimizations are automatically enabled when scanning Rust files

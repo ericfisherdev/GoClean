@@ -42,12 +42,36 @@ jobs:
           - rust-tests
           - integration-tests
           - benchmark-tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: go.sum
+          
+      - name: Set up Rust toolchain
+        if: matrix.test-suite == 'rust-tests'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
 ```
 
 ### 2. Test Suite Components
 
 #### Go Tests
 ```yaml
+- name: Build GoClean binary
+  run: |
+    mkdir -p ./bin
+    go build -o ./bin/goclean ./cmd/goclean
+    
 - name: Run Go tests
   if: matrix.test-suite == 'go-tests'
   run: |
@@ -77,6 +101,12 @@ jobs:
 
 #### Benchmark Tests
 ```yaml
+- name: Install benchstat
+  if: matrix.test-suite == 'benchmark-tests'
+  run: |
+    GO111MODULE=on go install golang.org/x/perf/cmd/benchstat@latest
+    echo "$GOPATH/bin" >> $GITHUB_PATH
+
 - name: Run benchmark tests
   if: matrix.test-suite == 'benchmark-tests'
   run: |
@@ -104,6 +134,28 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
+EOF
+
+# Create main.rs with sample code
+cat > testdata/rust-samples/sample-project/src/main.rs << 'EOF'
+use serde::{Deserialize, Serialize};
+use tokio;
+
+#[derive(Serialize, Deserialize)]
+struct Config {
+    name: String,
+    version: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let config = Config {
+        name: "sample-project".to_string(),
+        version: "0.1.0".to_string(),
+    };
+    
+    println!("Hello from {}!", config.name);
+}
 EOF
 ```
 
@@ -152,6 +204,12 @@ pub fn calculate_score(base: i32) -> i32 {
 
 ### Rust Parsing Validation
 ```bash
+# Ensure binary exists and build if needed
+if [ ! -f ./bin/goclean ]; then
+  mkdir -p ./bin
+  go build -o ./bin/goclean ./cmd/goclean
+fi
+
 # Test GoClean's Rust parsing
 ./bin/goclean scan testdata/rust-samples/sample-project --console --format table
 
@@ -227,7 +285,7 @@ benchstat baseline-benchmarks.txt current-benchmarks.txt
 ```bash
 # Check for Rust support documentation
 grep -q -i "rust" README.md || echo "Update README.md with Rust support"
-grep -q -i "rust" docs/ || echo "Add Rust-specific documentation"
+grep -r -q -i "rust" docs/ || echo "Add Rust-specific documentation"
 ```
 
 ### Documentation Requirements

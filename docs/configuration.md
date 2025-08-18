@@ -472,7 +472,7 @@ clippy:
 | `correctness` | Code that is definitely wrong | `clippy::absurd_extreme_comparisons` |
 | `suspicious` | Code that is probably wrong | `clippy::empty_loop` |
 | `style` | Code style violations | `clippy::redundant_field_names` |
-| `complexity` | Complex code patterns | `clippy::cyclomatic_complexity` |
+| `complexity` | Complex code patterns | `clippy::cognitive_complexity` |
 | `perf` | Performance improvements | `clippy::inefficient_to_string` |
 | `pedantic` | Extra strict style checks | `clippy::missing_docs_in_private_items` |
 | `nursery` | Experimental lints | `clippy::future_not_send` |
