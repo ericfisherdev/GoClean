@@ -89,7 +89,6 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 		
 		htmlReporter, err := NewHTMLReporter(&HTMLConfig{
 			OutputPath: outputPath,
-			Title:      "Rust Code Analysis Report",
 		})
 		if err != nil {
 			t.Fatalf("Failed to create HTML reporter: %v", err)
@@ -339,8 +338,7 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 		outputPath := filepath.Join(tempDir, "mixed-report.html")
 		
 		htmlReporter, err := NewHTMLReporter(&HTMLConfig{
-			Path:  outputPath,
-			Theme: "default",
+			OutputPath: outputPath,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create HTML reporter: %v", err)
