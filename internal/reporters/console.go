@@ -2,6 +2,7 @@ package reporters
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -39,14 +40,33 @@ type typeCount struct {
 type ConsoleReporter struct {
 	verbose bool
 	colors  bool
+	output  io.Writer
 }
 
-// NewConsoleReporter creates a new console reporter
-func NewConsoleReporter(verbose, colors bool) *ConsoleReporter {
-	return &ConsoleReporter{
-		verbose: verbose,
-		colors:  colors,
+// NewConsoleReporter creates a new console reporter with config
+func NewConsoleReporter(cfg *config.ConsoleConfig) *ConsoleReporter {
+	output := os.Stdout
+	if cfg.Output != nil {
+		if w, ok := cfg.Output.(io.Writer); ok {
+			output = w
+		}
 	}
+	
+	return &ConsoleReporter{
+		verbose: cfg.Verbose,
+		colors:  cfg.Colored,
+		output:  output,
+	}
+}
+
+// NewConsoleReporterLegacy creates a new console reporter (compatibility wrapper)
+func NewConsoleReporterLegacy(verbose, colors bool) *ConsoleReporter {
+	cfg := &config.ConsoleConfig{
+		Verbose: verbose,
+		Colored: colors,
+		Output:  os.Stdout,
+	}
+	return NewConsoleReporter(cfg)
 }
 
 // Generate prints a report to the console
@@ -67,9 +87,9 @@ func (c *ConsoleReporter) Generate(report *models.Report) error {
 
 // printHeader prints the report header
 func (c *ConsoleReporter) printHeader(report *models.Report) {
-	fmt.Println(c.colorize("=== GoClean Code Analysis Report ===", "header"))
-	fmt.Printf("Generated: %s\n", report.GeneratedAt.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Report ID: %s\n\n", report.ID)
+	fmt.Fprintln(c.output, c.colorize("=== GoClean Code Analysis Report ===", "header"))
+	fmt.Fprintf(c.output, "Generated: %s\n", report.GeneratedAt.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(c.output, "Report ID: %s\n\n", report.ID)
 }
 
 // printSummary prints the scan summary

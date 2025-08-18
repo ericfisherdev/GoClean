@@ -78,6 +78,13 @@ type MarkdownConfig struct {
 	IncludeExamples bool   `yaml:"include_examples"`
 }
 
+// ConsoleConfig contains console report settings
+type ConsoleConfig struct {
+	Colored bool        `yaml:"colored"`
+	Verbose bool        `yaml:"verbose"`
+	Output  interface{} `yaml:"-"` // io.Writer, not serializable
+}
+
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
 	Level  string `yaml:"level"`

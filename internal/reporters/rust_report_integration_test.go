@@ -21,7 +21,7 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			Severity:    models.SeverityMedium,
 			Rule:        "RUST_INVALID_FUNCTION_NAMING",
 			Message:     "Function 'getUserData' should use snake_case naming",
-			FilePath:    "src/lib.rs",
+			File:        "src/lib.rs",
 			Line:        10,
 			Column:      1,
 			Suggestion:  "Rename to 'get_user_data'",
@@ -32,7 +32,7 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			Severity:    models.SeverityHigh,
 			Rule:        "RUST_OVERUSE_UNWRAP",
 			Message:     "Use of unwrap() may cause panic - consider using ? operator",
-			FilePath:    "src/main.rs",
+			File:        "src/main.rs",
 			Line:        25,
 			Column:      15,
 			Suggestion:  "Replace .unwrap() with ? operator for proper error propagation",
@@ -43,7 +43,7 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			Severity:    models.SeverityLow,
 			Rule:        "RUST_MAGIC_NUMBER",
 			Message:     "Magic number 42 should be extracted to a named constant",
-			FilePath:    "src/utils.rs",
+			File:        "src/utils.rs",
 			Line:        8,
 			Column:      20,
 			Suggestion:  "Extract to a const like 'const DEFAULT_VALUE: i32 = 42;'",
@@ -54,7 +54,7 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 			Severity:    models.SeverityLow,
 			Rule:        "RUST_MISSING_DOCUMENTATION",
 			Message:     "Missing documentation for public function 'process_data'",
-			FilePath:    "src/lib.rs",
+			File:        "src/lib.rs",
 			Line:        50,
 			Column:      1,
 			Suggestion:  "Add documentation comment: /// Process the input data",
@@ -85,12 +85,15 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "rust-report.html")
 		
-		htmlReporter := NewHTMLReporter(&HTMLConfig{
+		htmlReporter, err := NewHTMLReporter(&HTMLConfig{
 			OutputPath: outputPath,
 			Title:      "Rust Code Analysis Report",
 		})
+		if err != nil {
+			t.Fatalf("Failed to create HTML reporter: %v", err)
+		}
 
-		err := htmlReporter.Generate(violations, stats)
+		err = htmlReporter.Generate(violations, stats)
 		if err != nil {
 			t.Fatalf("Failed to generate HTML report: %v", err)
 		}

@@ -130,7 +130,7 @@ func (m *Manager) GenerateConsoleReport(summary *models.ScanSummary, files []*mo
 	report := models.NewReport(summary, files, reportConfig)
 
 	// Create and use console reporter
-	consoleReporter := NewConsoleReporter(verbose, colors)
+	consoleReporter := NewConsoleReporterLegacy(verbose, colors)
 	return consoleReporter.Generate(report)
 }
 

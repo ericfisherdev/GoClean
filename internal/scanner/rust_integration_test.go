@@ -24,7 +24,7 @@ func TestRustScanningEndToEnd(t *testing.T) {
 				"vendor/",
 			},
 		},
-		Thresholds: config.ThresholdConfig{
+		Thresholds: config.Thresholds{
 			FunctionLines:        25,
 			CyclomaticComplexity: 8,
 			Parameters:           4,
@@ -33,7 +33,7 @@ func TestRustScanningEndToEnd(t *testing.T) {
 	}
 
 	// Create scanner engine
-	engine := NewEngine(cfg)
+	engine := NewEngine(cfg.Scan.Paths, cfg.Scan.Exclude, cfg.Scan.FileTypes, false)
 	if engine == nil {
 		t.Fatal("Failed to create scanner engine")
 	}
@@ -221,7 +221,7 @@ pub fn ProcessDataWrong() {
 	}
 
 	// Scan the mixed project
-	engine := NewEngine(cfg)
+	engine := NewEngine(cfg.Scan.Paths, cfg.Scan.Exclude, cfg.Scan.FileTypes, false)
 	result, err := engine.Scan()
 	if err != nil {
 		t.Fatalf("Failed to scan mixed project: %v", err)
@@ -422,10 +422,10 @@ fn magic_number() -> i32 {
 }
 
 // Helper function to get violations for a specific file
-func getViolationsForFile(violations []models.Violation, filename string) []models.Violation {
-	var result []models.Violation
+func getViolationsForFile(violations []*models.Violation, filename string) []*models.Violation {
+	var result []*models.Violation
 	for _, v := range violations {
-		if strings.Contains(v.FilePath, filename) {
+		if strings.Contains(v.File, filename) {
 			result = append(result, v)
 		}
 	}

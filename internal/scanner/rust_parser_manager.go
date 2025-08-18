@@ -319,9 +319,11 @@ func (m *RustParserManager) GetStatus() map[string]interface{} {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
+	attemptCount := atomic.LoadInt64(&m.attemptCount)
+	successCount := atomic.LoadInt64(&m.successCount)
 	successRate := float64(0)
-	if m.attemptCount > 0 {
-		successRate = float64(m.successCount) / float64(m.attemptCount) * 100
+	if attemptCount > 0 {
+		successRate = float64(successCount) / float64(attemptCount) * 100
 	}
 
 	recentErrors := make([]string, len(m.errorHistory))
@@ -334,8 +336,8 @@ func (m *RustParserManager) GetStatus() map[string]interface{} {
 		"fallback_reason":    m.fallbackReason,
 		"initialized_at":     m.initializationTime,
 		"uptime_seconds":     time.Since(m.initializationTime).Seconds(),
-		"attempt_count":      atomic.LoadInt64(&m.attemptCount),
-		"success_count":      atomic.LoadInt64(&m.successCount),
+		"attempt_count":      attemptCount,
+		"success_count":      successCount,
 		"success_rate":       successRate,
 		"has_syn_parser":     m.synParser != nil,
 		"has_regex_parser":   m.regexAnalyzer != nil,
@@ -364,6 +366,9 @@ func (m *RustParserManager) Cleanup() {
 
 // recordError records an error in the error history
 func (m *RustParserManager) recordError(err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	
 	// Keep only the last 10 errors
 	if len(m.errorHistory) >= 10 {
 		m.errorHistory = m.errorHistory[1:]
