@@ -112,7 +112,7 @@ type RustDetectorConfig struct {
 	DetectTransmuteUsage    bool
 	
 	// Performance
-	DetectIneffcientString  bool
+	DetectInefficientString bool
 	DetectBoxedPrimitives   bool
 	DetectBlockingInAsync   bool
 	
@@ -197,7 +197,7 @@ func DefaultRustDetectorConfig() *RustDetectorConfig {
 		DetectTransmuteUsage:    true,
 		
 		// Performance
-		DetectIneffcientString:  true,
+		DetectInefficientString: true,
 		DetectBoxedPrimitives:   true,
 		DetectBlockingInAsync:   true,
 		

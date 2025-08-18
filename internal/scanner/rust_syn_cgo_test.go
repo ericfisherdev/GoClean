@@ -4,7 +4,6 @@
 package scanner
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"runtime"
@@ -12,7 +11,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/ericfisherdev/goclean/internal/types"
 )

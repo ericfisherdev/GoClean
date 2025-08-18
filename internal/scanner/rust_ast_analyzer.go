@@ -8,6 +8,19 @@ import (
 	"github.com/ericfisherdev/goclean/internal/types"
 )
 
+// Pre-compiled regex patterns for Rust AST parsing
+var (
+	fnRegex      = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?(async\s+)?(unsafe\s+)?(const\s+)?fn\s+(\w+)\s*\(`)
+	structRegex  = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?struct\s+(\w+)`)
+	enumRegex    = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?enum\s+(\w+)`)
+	traitRegex   = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?trait\s+(\w+)`)
+	implRegex    = regexp.MustCompile(`^\s*impl\s+(?:(\w+)\s+for\s+)?(\w+)`)
+	moduleRegex  = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?mod\s+(\w+)`)
+	constRegex   = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?const\s+(\w+)\s*:\s*([^=]+)`)
+	useRegex     = regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?use\s+([^;]+)`)
+	macroRegex   = regexp.MustCompile(`^\s*macro_rules!\s+(\w+)`)
+)
+
 // RustASTAnalyzer handles Rust AST parsing and analysis
 // Note: This is a simplified implementation that will be enhanced with syn crate integration
 type RustASTAnalyzer struct {
@@ -187,10 +200,8 @@ func (a *RustASTAnalyzer) extractCrateName(content string) string {
 
 // parseFunctionDeclaration parses Rust function declarations
 func (a *RustASTAnalyzer) parseFunctionDeclaration(line string, lineNum int) *types.RustFunctionInfo {
-	// Regex pattern for Rust function declarations
+	// Use pre-compiled regex pattern for Rust function declarations
 	// Matches: [visibility] [async] [unsafe] [const] fn function_name
-	fnRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?(async\s+)?(unsafe\s+)?(const\s+)?fn\s+(\w+)\s*\(`)
-	
 	matches := fnRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -222,8 +233,6 @@ func (a *RustASTAnalyzer) parseFunctionDeclaration(line string, lineNum int) *ty
 
 // parseStructDeclaration parses Rust struct declarations
 func (a *RustASTAnalyzer) parseStructDeclaration(line string, lineNum int) *types.RustStructInfo {
-	structRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?struct\s+(\w+)`)
-	
 	matches := structRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -249,8 +258,6 @@ func (a *RustASTAnalyzer) parseStructDeclaration(line string, lineNum int) *type
 
 // parseEnumDeclaration parses Rust enum declarations
 func (a *RustASTAnalyzer) parseEnumDeclaration(line string, lineNum int) *types.RustEnumInfo {
-	enumRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?enum\s+(\w+)`)
-	
 	matches := enumRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -276,8 +283,6 @@ func (a *RustASTAnalyzer) parseEnumDeclaration(line string, lineNum int) *types.
 
 // parseTraitDeclaration parses Rust trait declarations
 func (a *RustASTAnalyzer) parseTraitDeclaration(line string, lineNum int) *types.RustTraitInfo {
-	traitRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?trait\s+(\w+)`)
-	
 	matches := traitRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -303,8 +308,6 @@ func (a *RustASTAnalyzer) parseTraitDeclaration(line string, lineNum int) *types
 
 // parseImplDeclaration parses Rust impl blocks
 func (a *RustASTAnalyzer) parseImplDeclaration(line string, lineNum int) *types.RustImplInfo {
-	implRegex := regexp.MustCompile(`^\s*impl\s+(?:(\w+)\s+for\s+)?(\w+)`)
-	
 	matches := implRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -323,8 +326,6 @@ func (a *RustASTAnalyzer) parseImplDeclaration(line string, lineNum int) *types.
 
 // parseModuleDeclaration parses Rust module declarations
 func (a *RustASTAnalyzer) parseModuleDeclaration(line string, lineNum int) *types.RustModuleInfo {
-	moduleRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?mod\s+(\w+)`)
-	
 	matches := moduleRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -349,8 +350,6 @@ func (a *RustASTAnalyzer) parseModuleDeclaration(line string, lineNum int) *type
 
 // parseConstantDeclaration parses Rust constant declarations
 func (a *RustASTAnalyzer) parseConstantDeclaration(line string, lineNum int) *types.RustConstantInfo {
-	constRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?const\s+(\w+)\s*:\s*([^=]+)`)
-	
 	matches := constRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -374,8 +373,6 @@ func (a *RustASTAnalyzer) parseConstantDeclaration(line string, lineNum int) *ty
 
 // parseUseDeclaration parses Rust use declarations
 func (a *RustASTAnalyzer) parseUseDeclaration(line string, lineNum int) *types.RustUseInfo {
-	useRegex := regexp.MustCompile(`^\s*(pub(?:\([^)]*\))?\s+)?use\s+([^;]+)`)
-	
 	matches := useRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -403,8 +400,6 @@ func (a *RustASTAnalyzer) parseUseDeclaration(line string, lineNum int) *types.R
 
 // parseMacroDeclaration parses Rust macro declarations
 func (a *RustASTAnalyzer) parseMacroDeclaration(line string, lineNum int) *types.RustMacroInfo {
-	macroRegex := regexp.MustCompile(`^\s*macro_rules!\s+(\w+)`)
-	
 	matches := macroRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil

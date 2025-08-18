@@ -148,7 +148,7 @@ type RustConfig struct {
 	DetectTransmuteUsage    bool `yaml:"detect_transmute_usage"`
 	
 	// Performance analysis
-	DetectIneffcientString  bool `yaml:"detect_inefficient_string"`
+	DetectInefficientString bool `yaml:"detect_inefficient_string"`
 	DetectBoxedPrimitives   bool `yaml:"detect_boxed_primitives"`
 	DetectBlockingInAsync   bool `yaml:"detect_blocking_in_async"`
 	
@@ -336,7 +336,7 @@ func GetDefaultRustConfig() RustConfig {
 		DetectTransmuteUsage:    true,
 		
 		// Performance
-		DetectIneffcientString:  true,
+		DetectInefficientString: true,
 		DetectBoxedPrimitives:   true,
 		DetectBlockingInAsync:   true,
 		

@@ -1,6 +1,6 @@
 # GoClean
 
-A powerful multi-language CLI tool that scans codebases to identify clean code violations with real-time HTML reporting and AI-friendly markdown output. **Now with full Rust support!**
+A powerful multi-language CLI tool that scans codebases to identify clean code violations with real-time HTML reporting and AI-friendly markdown output. **Now with initial Rust support!** (regex-based parsing with planned syn crate integration)
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
 [![Rust Support](https://img.shields.io/badge/Rust-✅%20Supported-orange.svg)](#rust-support)

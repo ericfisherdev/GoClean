@@ -149,7 +149,7 @@ func GetRustViolationDescription(violationType ViolationType) string {
 		
 	// Performance violations
 	case ViolationTypeRustInefficientStringConcat:
-		return "Inefficient string concatenation - consider using format! or StringBuilder"
+		return "Inefficient string concatenation - consider using format!(), String::with_capacity(), or push_str()"
 	case ViolationTypeRustUnnecessaryAllocation:
 		return "Unnecessary heap allocation detected"
 	case ViolationTypeRustBlockingInAsync:

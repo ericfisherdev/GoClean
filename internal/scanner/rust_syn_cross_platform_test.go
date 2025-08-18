@@ -241,6 +241,11 @@ func TestRustSynParser_LargePathLengths(t *testing.T) {
 			remaining := length
 			
 			for remaining > 0 {
+				// Guard against underflow - need at least 3 chars for ".rs"
+				if remaining <= 3 {
+					break
+				}
+				
 				segment := "very_long_directory_name_segment"
 				if remaining < len(segment) {
 					segment = segment[:remaining-3] // Leave room for ".rs"
