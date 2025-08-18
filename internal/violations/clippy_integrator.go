@@ -28,7 +28,7 @@ type ClippyMessage struct {
 // ClippyDiagnostic represents the diagnostic information from clippy
 type ClippyDiagnostic struct {
 	Message  string              `json:"message"`
-	Code     ClippyCode          `json:"code"`
+	Code     *ClippyCode         `json:"code"`
 	Level    string              `json:"level"`
 	Spans    []ClippySpan        `json:"spans"`
 	Children []ClippyDiagnostic  `json:"children"`
@@ -243,11 +243,19 @@ func (c *ClippyIntegrator) convertDiagnosticToViolation(diagnostic ClippyDiagnos
 		return nil
 	}
 	
+	// Handle potential nil diagnostic.Code safely
+	var codeStr string
+	if diagnostic.Code != nil {
+		codeStr = diagnostic.Code.Code
+	} else {
+		codeStr = "unknown"
+	}
+	
 	// Map clippy severity to GoClean severity
-	severity := c.mapClippySeverity(diagnostic.Level, diagnostic.Code.Code)
+	severity := c.mapClippySeverity(diagnostic.Level, codeStr)
 	
 	// Determine violation type based on clippy lint category
-	violationType := c.mapClippyLintToViolationType(diagnostic.Code.Code)
+	violationType := c.mapClippyLintToViolationType(codeStr)
 	
 	// Create the violation with clear clippy attribution
 	violation := &models.Violation{
@@ -258,7 +266,7 @@ func (c *ClippyIntegrator) convertDiagnosticToViolation(diagnostic ClippyDiagnos
 		Column:      primarySpan.ColumnStart,
 		Message:     fmt.Sprintf("Detected by rust-clippy: %s", diagnostic.Message),
 		Description: "Violation detected by rust-clippy static analysis tool",
-		Rule:        fmt.Sprintf("clippy::%s", diagnostic.Code.Code),
+		Rule:        fmt.Sprintf("clippy::%s", codeStr),
 		Suggestion:  c.generateClippySuggestion(diagnostic),
 		CodeSnippet: c.extractCodeSnippet(primarySpan),
 	}
@@ -324,7 +332,7 @@ func (c *ClippyIntegrator) generateClippySuggestion(diagnostic ClippyDiagnostic)
 	}
 	
 	// If we have an explanation, use that
-	if diagnostic.Code.Explanation != "" {
+	if diagnostic.Code != nil && diagnostic.Code.Explanation != "" {
 		suggestion += ". " + diagnostic.Code.Explanation
 	}
 	

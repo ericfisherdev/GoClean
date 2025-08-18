@@ -236,7 +236,7 @@ func TestClippyIntegrator_GenerateClippySuggestion(t *testing.T) {
 			name: "Diagnostic with explanation",
 			diagnostic: ClippyDiagnostic{
 				Message: "magic number detected",
-				Code: ClippyCode{
+				Code: &ClippyCode{
 					Explanation: "Magic numbers make code harder to maintain",
 				},
 			},
@@ -313,7 +313,7 @@ func TestClippyIntegrator_ConvertDiagnosticToViolation(t *testing.T) {
 	
 	diagnostic := ClippyDiagnostic{
 		Message: "this function has too many arguments (5/4)",
-		Code: ClippyCode{
+		Code: &ClippyCode{
 			Code: "too_many_arguments",
 		},
 		Level: "warning",
@@ -417,6 +417,38 @@ func TestClippyIntegrator_ConvertDiagnosticToViolationInfoLevel(t *testing.T) {
 	
 	if violation != nil {
 		t.Error("Expected no violation for info level diagnostic")
+	}
+}
+
+func TestClippyIntegrator_ConvertDiagnosticToViolationNilCode(t *testing.T) {
+	integrator := NewClippyIntegrator(DefaultDetectorConfig())
+	
+	diagnostic := ClippyDiagnostic{
+		Message: "test message",
+		Code:    nil, // Nil code field
+		Level:   "warning",
+		Spans: []ClippySpan{
+			{
+				FileName:    "src/main.rs",
+				LineStart:   10,
+				ColumnStart: 5,
+				IsPrimary:   true,
+			},
+		},
+	}
+	
+	violation := integrator.convertDiagnosticToViolation(diagnostic, "src/main.rs")
+	
+	if violation == nil {
+		t.Fatal("Expected violation to be created even with nil Code")
+	}
+	
+	if !strings.Contains(violation.Rule, "clippy::unknown") {
+		t.Errorf("Expected rule to contain 'clippy::unknown', got '%s'", violation.Rule)
+	}
+	
+	if !strings.Contains(violation.Message, "Detected by rust-clippy") {
+		t.Errorf("Expected message to contain 'Detected by rust-clippy', got '%s'", violation.Message)
 	}
 }
 

@@ -145,7 +145,7 @@ func TestRustPerformanceOptimizer_MemoryPools(t *testing.T) {
 	
 	// Add some data
 	result1.Violations = append(result1.Violations, &models.Violation{
-		Type:    "TEST_VIOLATION",
+		Type:    models.ViolationTypeFunctionLength,
 		Message: "Test message",
 	})
 	
