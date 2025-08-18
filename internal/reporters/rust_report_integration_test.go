@@ -189,10 +189,11 @@ func TestRustHTMLReportGeneration(t *testing.T) {
 	t.Run("Console Report", func(t *testing.T) {
 		var buf bytes.Buffer
 		
-		consoleReporter := NewConsoleReporter(&ConsoleConfig{
-			Colored: false, // Disable colors for testing
-			Output:  &buf,
-		})
+ 		consoleReporter := NewConsoleReporter(&config.ConsoleConfig{
+ 			Colored: false, // Disable colors for testing
+ 			Output:  &buf,
+ 			Verbose: false,
+ 		})
 
 		rpt := &models.Report{Violations: violations, Stats: stats}
 		err := consoleReporter.Generate(rpt)
