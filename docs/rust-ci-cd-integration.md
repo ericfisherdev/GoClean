@@ -54,12 +54,11 @@ jobs:
           cache-dependency-path: go.sum
           
       - name: Set up Rust toolchain
-        if: matrix.test-suite == 'rust-tests' || matrix.test-suite == 'integration-tests'
-        uses: dtolnay/rust-toolchain@stable
+        if: matrix.test-suite == 'rust-tests' || matrix.test-suite == 'integration-tests' || matrix.test-suite == 'benchmark-tests'
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
-          
       - name: Cache Cargo dependencies
         if: matrix.test-suite == 'rust-tests' || matrix.test-suite == 'integration-tests'
         uses: actions/cache@v4
