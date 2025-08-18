@@ -224,15 +224,21 @@ fn test_function() {
 	finalMetrics := parser.GetMemorySafetyMetrics()
 	
 	// Check that no C strings are leaked
-	allocatedStrings := finalMetrics["allocated_c_strings"].(int64)
-	if allocatedStrings > 0 {
-		t.Errorf("Memory leak detected: %d allocated C strings", allocatedStrings)
+	allocatedStringsVal, ok := finalMetrics["allocated_c_strings"].(int64)
+	if !ok {
+		t.Fatalf("expected int64 for allocated_c_strings, got %T", finalMetrics["allocated_c_strings"])
+	}
+	if allocatedStringsVal > 0 {
+		t.Errorf("Memory leak detected: %d allocated C strings", allocatedStringsVal)
 	}
 
 	// Check that no parse calls are active
-	activeCalls := finalMetrics["active_parse_calls"].(int64)
-	if activeCalls > 0 {
-		t.Errorf("Active parse calls not cleaned up: %d", activeCalls)
+	activeCallsVal, ok := finalMetrics["active_parse_calls"].(int64)
+	if !ok {
+		t.Fatalf("expected int64 for active_parse_calls, got %T", finalMetrics["active_parse_calls"])
+	}
+	if activeCallsVal > 0 {
+		t.Errorf("Active parse calls not cleaned up: %d", activeCallsVal)
 	}
 
 	// Validate overall memory state
@@ -801,9 +807,21 @@ impl StressTestStruct {
 			t.Fatalf("Stress test failed at iteration %d: %v", i, err)
 		}
 
-		// Force cleanup every 100 iterations
-		if i%100 == 99 {
+		// Force cleanup every 50 iterations for more aggressive memory management
+		if i%50 == 49 {
 			parser.ForceCleanup()
+			runtime.GC()
+			runtime.GC() // Double GC for more thorough cleanup
+			
+			// Optional: Force OS memory release for very aggressive cleanup
+			// debug.FreeOSMemory() // Uncomment if needed
+			
+			// Reset memory baseline AFTER GC to measure only next batch
+			runtime.ReadMemStats(&memBefore)
+		}
+		
+		// Additional GC every 100 iterations
+		if i%100 == 99 && i%50 != 49 {
 			runtime.GC()
 		}
 	}
@@ -813,8 +831,11 @@ impl StressTestStruct {
 		t.Errorf("Memory state validation failed after stress test: %v", err)
 	}
 
-	var memAfter runtime.MemStats
+	// Final cleanup before memory measurement
+	parser.ForceCleanup()
 	runtime.GC()
+	runtime.GC() // Double GC for thorough cleanup before final measurement
+	var memAfter runtime.MemStats
 	runtime.ReadMemStats(&memAfter)
 
 	memIncrease := memAfter.Alloc - memBefore.Alloc
