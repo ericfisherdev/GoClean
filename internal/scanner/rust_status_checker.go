@@ -84,7 +84,7 @@ func (c *RustStatusChecker) generateRecommendations(capabilities *RustParserCapa
 	}
 
 	// Add CGO-specific recommendations
-	if !status["cgo_enabled"].(bool) {
+	if !getBoolFromMap(status, "cgo_enabled") {
 		recommendations = append(recommendations,
 			"ℹ️  CGO is disabled. To enable full Rust support:",
 			"  • Set CGO_ENABLED=1 environment variable",
