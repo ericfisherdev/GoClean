@@ -9,7 +9,7 @@ MAIN_PATH=./cmd/goclean
 LIB_DIR=lib
 
 # Rust library configuration
-RUST_PARSER_PATH=../../playground/goclean-rust-parser
+RUST_PARSER_PATH ?= ./rust/parser
 RUST_LIB_NAME=libgoclean_rust_parser
 RUST_TARGET_DIR=$(RUST_PARSER_PATH)/target
 

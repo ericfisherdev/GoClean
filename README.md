@@ -64,6 +64,20 @@ git clone https://github.com/ericfisherdev/goclean.git
 cd goclean && make build
 ```
 
+#### Build Configuration
+The build system supports configurable paths for enhanced Rust support:
+
+```bash
+# Default: uses ./rust/parser relative to project root
+make build
+
+# Override Rust parser path via environment variable
+RUST_PARSER_PATH=/path/to/rust-parser make build
+
+# Override via command line
+make build RUST_PARSER_PATH=/custom/path
+```
+
 ## Quick Start
 
 ### Go Projects
@@ -96,7 +110,7 @@ goclean scan --languages rust --enable-clippy
 goclean scan --languages go,rust
 
 # Use mixed project configuration
-goclean scan --config configs/mixed-project.yaml
+goclean scan --config configs/rust-mixed-project.yaml
 ```
 
 ## Rust Support
@@ -356,7 +370,7 @@ Comprehensive documentation is available in the `docs/` directory:
 | Document | Description |
 |----------|-------------|
 | 📖 [User Guide](docs/user-guide.md) | Installation, configuration, and usage guide |
-| 🦀 [Rust Integration Guide](docs/rust-integration-guide.md) | Complete Rust analysis setup and usage |
+| 🦀 [Rust Integration Examples](docs/rust-integration-examples.md) | Complete Rust analysis setup and usage |
 | ⚙️ [Configuration Reference](docs/configuration.md) | Detailed configuration options |
 | 🛠️ [Developer Guide](docs/developer-guide.md) | Contributing guidelines and architecture |
 | 📚 [API Reference](docs/api-reference.md) | Programmatic API documentation |
@@ -364,7 +378,7 @@ Comprehensive documentation is available in the `docs/` directory:
 ### Rust-Specific Documentation
 - [Rust Configuration Examples](docs/rust-configuration-guide.md)
 - [Rust CLI Usage Examples](docs/rust-cli-examples.md) 
-- [Rust Violation Guide](docs/rust-violations-guide.md)
+- [Rust CI/CD Integration](docs/rust-ci-cd-integration.md)
 - [Rust Performance Optimizations](docs/rust-performance-optimizations.md)
 
 ## Contributing

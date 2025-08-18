@@ -96,14 +96,36 @@ func benchmarkRustParsingPerformance(b *testing.B, fileCount, linesPerFile int) 
 
 // BenchmarkRealWorldProject tests performance on the real Helix project
 func BenchmarkRealWorldProject(b *testing.B) {
-	helixPath := "/run/media/esfisher/NovusLocus/Dev Projects/helix"
+	// Get paths from environment variables
+	helixPath := os.Getenv("HELIX_PATH")
+	if helixPath == "" {
+		b.Skipf("HELIX_PATH environment variable not set - skipping Helix benchmarks")
+		return
+	}
+	
+	// Check if Helix path exists
+	if _, err := os.Stat(helixPath); os.IsNotExist(err) {
+		b.Skipf("Helix path does not exist: %s - skipping Helix benchmarks", helixPath)
+		return
+	}
 	
 	b.Run("RustFiles_Helix", func(b *testing.B) {
 		benchmarkRealWorldRustFiles(b, helixPath)
 	})
 	
 	// For comparison, we'll use the GoClean codebase for Go files
-	goCleanPath := "/run/media/esfisher/NovusLocus/Dev Projects/GoClean/GoClean"
+	goCleanPath := os.Getenv("GOCLEAN_PATH")
+	if goCleanPath == "" {
+		b.Skipf("GOCLEAN_PATH environment variable not set - skipping GoClean benchmarks")
+		return
+	}
+	
+	// Check if GoClean path exists
+	if _, err := os.Stat(goCleanPath); os.IsNotExist(err) {
+		b.Skipf("GoClean path does not exist: %s - skipping GoClean benchmarks", goCleanPath)
+		return
+	}
+	
 	b.Run("GoFiles_GoClean", func(b *testing.B) {
 		benchmarkRealWorldGoFiles(b, goCleanPath)
 	})
@@ -343,7 +365,7 @@ func BenchmarkParsingAccuracy(b *testing.B) {
 	})
 }
 
-func benchmarkRustParsingAccuracy(b *testing.B, ) {
+func benchmarkRustParsingAccuracy(b *testing.B) {
 	// Use a complex Rust file to test parsing accuracy
 	complexRustContent := `
 use std::collections::HashMap;
