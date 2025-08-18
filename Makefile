@@ -150,12 +150,12 @@ rust-clean:
 # Install Rust toolchain and cross-compilation setup
 rust-install:
 	@echo "Installing Rust toolchain and cross-compilation targets..."
-	@which cargo >/dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env)
-	@rustup target add x86_64-unknown-linux-gnu
-	@rustup target add aarch64-unknown-linux-gnu
-	@rustup target add x86_64-apple-darwin
-	@rustup target add aarch64-apple-darwin
-	@rustup target add x86_64-pc-windows-gnu
+	@command -v cargo >/dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y)
+	@$${HOME}/.cargo/bin/rustup target add x86_64-unknown-linux-gnu
+	@$${HOME}/.cargo/bin/rustup target add aarch64-unknown-linux-gnu
+	@$${HOME}/.cargo/bin/rustup target add x86_64-apple-darwin
+	@$${HOME}/.cargo/bin/rustup target add aarch64-apple-darwin
+	@$${HOME}/.cargo/bin/rustup target add x86_64-pc-windows-gnu
 	@echo "✓ Rust cross-compilation setup completed"
 
 # =============================
