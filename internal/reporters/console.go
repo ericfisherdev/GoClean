@@ -171,7 +171,10 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 		category := models.GetRustViolationCategory(tc.Type)
 		fmt.Fprintf(w, "%s 🦀 [%s]:\t%s\n", 
 			tc.Type.GetDisplayName(),
-			strings.Title(string(category)),
+         fmt.Fprintf(w, "%s 🦀 [%s]:\t%s\n", 
+             tc.Type.GetDisplayName(),
+             titleCase(string(category)),
+             c.colorizeViolationCount(tc.Count))
 			c.colorizeViolationCount(tc.Count))
 	}
 	
