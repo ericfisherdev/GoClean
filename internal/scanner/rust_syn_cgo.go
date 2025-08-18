@@ -448,8 +448,8 @@ func (p *RustSynParser) CanParse(content []byte) (int, error) {
 		return -1, fmt.Errorf("Rust parser not initialized")
 	}
 
-	sourceC := C.CString(string(content))
-	defer C.free(unsafe.Pointer(sourceC))
+	sourceC := p.allocateCString(string(content))
+	defer p.freeCString(sourceC)
 
 	result := C.goclean_rust_can_parse(sourceC, C.size_t(len(content)))
 	return int(result), nil
