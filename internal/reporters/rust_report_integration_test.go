@@ -338,8 +338,9 @@ func TestMixedLanguageReportGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := filepath.Join(tempDir, "mixed-report.html")
 		
-		htmlReporter, err := NewHTMLReporter(&config.HTMLConfig{
-			Path: outputPath,
+		htmlReporter, err := NewHTMLReporter(&HTMLConfig{
+			Path:  outputPath,
+			Theme: "default",
 		})
 		if err != nil {
 			t.Fatalf("Failed to create HTML reporter: %v", err)
