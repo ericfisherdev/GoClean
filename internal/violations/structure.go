@@ -220,7 +220,7 @@ func (d *StructureDetector) findMagicNumbers(fn *ast.FuncDecl, fileSet *token.Fi
 			if d.isMagicNumber(lit) {
 				pos := fileSet.Position(lit.Pos())
 				violations = append(violations, &models.Violation{
-					Type:        models.ViolationTypeMagicNumbers,
+					Type:        models.ViolationTypeMagicNumber,
 					Severity:    models.SeverityLow,
 					Message:     fmt.Sprintf("Magic number '%s' should be replaced with a named constant", lit.Value),
 					File:        filePath,

@@ -34,7 +34,7 @@ func TestViolationTypes(t *testing.T) {
 		ViolationTypeNaming:                 "naming_convention",
 		ViolationTypeClassSize:              "class_size",
 		ViolationTypeMissingDocumentation:   "missing_documentation",
-		ViolationTypeMagicNumbers:           "magic_numbers",
+		ViolationTypeMagicNumber:            "magic_number",
 		ViolationTypeDuplication:            "code_duplication",
 	}
 
@@ -243,7 +243,7 @@ func TestViolationTypeConstants(t *testing.T) {
 		ViolationTypeNaming,
 		ViolationTypeClassSize,
 		ViolationTypeMissingDocumentation,
-		ViolationTypeMagicNumbers,
+		ViolationTypeMagicNumber,
 		ViolationTypeDuplication,
 	}
 

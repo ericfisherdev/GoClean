@@ -41,9 +41,10 @@ const (
 	ViolationTypeNaming               ViolationType = "naming_convention"
 	ViolationTypeClassSize            ViolationType = "class_size"
 	ViolationTypeMissingDocumentation ViolationType = "missing_documentation"
-	ViolationTypeMagicNumbers         ViolationType = "magic_numbers"
-	ViolationTypeDuplication          ViolationType = "code_duplication"
 	ViolationTypeMagicNumber          ViolationType = "magic_number"
+	ViolationTypeDuplication          ViolationType = "code_duplication"
+	// Deprecated: Use ViolationTypeMagicNumber instead. Will be removed in future version.
+	ViolationTypeMagicNumbers         ViolationType = ViolationTypeMagicNumber
 	ViolationTypeCommentedCode        ViolationType = "commented_code"
 	ViolationTypeTodo                 ViolationType = "todo_marker"
 	ViolationTypeDocumentation        ViolationType = "documentation_quality"

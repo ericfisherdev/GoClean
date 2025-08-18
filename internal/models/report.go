@@ -256,7 +256,7 @@ func (vt ViolationType) GetDisplayName() string {
 		return "Large Classes"
 	case ViolationTypeMissingDocumentation:
 		return "Missing Documentation"
-	case ViolationTypeMagicNumbers:
+	case ViolationTypeMagicNumber:
 		return "Magic Numbers"
 	case ViolationTypeDuplication:
 		return "Code Duplication"
