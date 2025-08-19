@@ -356,7 +356,7 @@ dev: clean-reports dev-check test
             "label": "GoClean: Scan",
             "type": "shell",
             "command": "goclean",
-            "args": ["scan", "--console"],
+            "args": ["scan", "--console-violations"],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -378,10 +378,17 @@ dev: clean-reports dev-check test
             }
         },
         {
-            "label": "GoClean: Generate Report",
+            "label": "GoClean: Generate HTML Report",
             "type": "shell",
             "command": "goclean",
-            "args": ["scan", "--html", "--markdown"],
+            "args": ["scan", "--format", "html", "--output", "reports/goclean-report.html"],
+            "group": "build"
+        },
+        {
+            "label": "GoClean: Generate Markdown Report",
+            "type": "shell",
+            "command": "goclean",
+            "args": ["scan", "--format", "markdown", "--output", "reports/goclean-report.md"],
             "group": "build"
         }
     ]
