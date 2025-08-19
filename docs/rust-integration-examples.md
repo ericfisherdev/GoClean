@@ -471,10 +471,13 @@ jobs:
       run: |
         goclean scan \
           --config configs/rust-ci.yaml \
-          --html \
-          --html-output quality-report.html \
-          --markdown \
-          --markdown-output quality-report.md
+          --format html \
+          --output quality-report.html
+        
+        goclean scan \
+          --config configs/rust-ci.yaml \
+          --format markdown \
+          --output quality-report.md
 
     - name: Upload quality report
       uses: actions/upload-artifact@v4
