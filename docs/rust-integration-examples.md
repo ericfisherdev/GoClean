@@ -306,15 +306,16 @@ check: quality test
 
 # Development workflow
 dev-check:
-	goclean scan --config configs/rust-minimal.yaml --console
+	goclean scan --config configs/rust-minimal.yaml --console-violations
 
 # CI workflow
 ci-check:
-	goclean scan --config configs/rust-ci.yaml --format json --fail-on critical
+	goclean scan --config configs/rust-ci.yaml --format json --output reports/ci-results.json
 
 # Release preparation
 release-check:
-	goclean scan --config configs/rust-strict.yaml --html --markdown
+	goclean scan --config configs/rust-strict.yaml --format html --output reports/release-report.html
+	goclean scan --config configs/rust-strict.yaml --format markdown --output reports/release-report.md
 
 # Clean reports
 clean-reports:
