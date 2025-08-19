@@ -280,8 +280,13 @@ if memStats["estimated_cache_memory_mb"].(float64) > 100 {
 ### Performance Monitoring
 
 ```go
+import (
+    "log"
+    "github.com/ericfisherdev/goclean/internal/scanner"
+)
+
 // Regular metrics collection
-func monitorPerformance(engine *Engine) {
+func monitorPerformance(engine *scanner.Engine) {
     metrics := engine.GetRustPerformanceMetrics()
     
     log.Printf("Cache hit rate: %.1f%%", metrics["cache_hit_rate"].(float64))
