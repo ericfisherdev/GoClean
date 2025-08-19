@@ -2,7 +2,9 @@ package scanner
 
 import (
 	"hash/fnv"
+	"math"
 	"runtime"
+	"sort"
 	"sync"
 	"time"
 
@@ -171,13 +173,9 @@ func (opt *RustPerformanceOptimizer) cleanupCacheUnsafe() {
 		}
 		
 		// Sort by timestamp (oldest first)
-		for i := 0; i < len(items)-1; i++ {
-			for j := i + 1; j < len(items); j++ {
-				if items[i].timestamp.After(items[j].timestamp) {
-					items[i], items[j] = items[j], items[i]
-				}
-			}
-		}
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].timestamp.Before(items[j].timestamp)
+		})
 		
 		// Remove oldest entries until we're under the limit
 		removeCount := len(opt.astCache) - opt.cacheMaxSize/2 // Remove half when cleaning
@@ -632,7 +630,7 @@ func (pp *PerformanceProfiler) GetBenchmarkSummary() map[string]interface{} {
 		successCount      int
 		avgFileSize       int64
 		maxThroughput     float64
-		minThroughput     float64 = float64(^uint64(0) >> 1) // Max float64
+		minThroughput     float64 = math.MaxFloat64
 	)
 	
 	for _, bench := range pp.benchmarks {

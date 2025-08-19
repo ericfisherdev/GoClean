@@ -20,6 +20,49 @@ func NewRustStatusChecker() *RustStatusChecker {
 	}
 }
 
+// getFloat64FromMap safely extracts a float64 value from a map
+func getFloat64FromMap(m map[string]interface{}, key string) float64 {
+	val, ok := m[key]
+	if !ok {
+		return 0.0
+	}
+	
+	switch v := val.(type) {
+	case float64:
+		return v
+	case float32:
+		return float64(v)
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	case int32:
+		return float64(v)
+	case uint:
+		return float64(v)
+	case uint64:
+		return float64(v)
+	case uint32:
+		return float64(v)
+	default:
+		return 0.0
+	}
+}
+
+// getBoolFromMap safely extracts a bool value from a map
+func getBoolFromMap(m map[string]interface{}, key string) bool {
+	val, ok := m[key]
+	if !ok {
+		return false
+	}
+	
+	boolVal, ok := val.(bool)
+	if !ok {
+		return false
+	}
+	return boolVal
+}
+
 // CheckStatus performs a comprehensive status check
 func (c *RustStatusChecker) CheckStatus() *RustStatusReport {
 	capabilities := c.manager.GetCapabilities()
@@ -29,8 +72,8 @@ func (c *RustStatusChecker) CheckStatus() *RustStatusReport {
 		Timestamp:       time.Now(),
 		ParserType:      capabilities.ParserType,
 		FallbackReason:  capabilities.FallbackReason,
-		CGOEnabled:      status["cgo_enabled"].(bool),
-		RustAvailable:   status["rust_available"].(bool),
+		CGOEnabled:      getBoolFromMap(status, "cgo_enabled"),
+		RustAvailable:   getBoolFromMap(status, "rust_available"),
 		AccuracyLevel:   capabilities.AccuracyLevel,
 		PerformanceLevel: capabilities.PerformanceLevel,
 		Features:        c.getFeatureStatus(capabilities),
@@ -93,7 +136,7 @@ func (c *RustStatusChecker) generateRecommendations(capabilities *RustParserCapa
 	}
 
 	// Add performance recommendations
-	successRate := status["success_rate"].(float64)
+	successRate := getFloat64FromMap(status, "success_rate")
 	if successRate < 90.0 && successRate > 0 {
 		recommendations = append(recommendations,
 			fmt.Sprintf("⚠️  Low success rate (%.1f%%). Consider checking:", successRate),
