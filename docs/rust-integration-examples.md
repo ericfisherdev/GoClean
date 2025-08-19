@@ -706,8 +706,8 @@ services:
     working_dir: /workspace
     command: >
       sh -c "
-        goclean scan --config goclean.yaml --html --html-output /workspace/reports/quality-report.html &&
-        goclean scan --config goclean.yaml --format json --export-json --json-output /workspace/reports/quality-data.json
+        goclean scan --config goclean.yaml --format html --output /workspace/reports/quality-report.html &&
+        goclean scan --config goclean.yaml --format json --output /workspace/reports/quality-data.json
       "
     depends_on:
       - rust-dev
