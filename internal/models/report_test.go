@@ -221,7 +221,7 @@ func TestViolationTypeGetDisplayName(t *testing.T) {
 		ViolationTypeNaming:                 "Naming Convention",
 		ViolationTypeClassSize:              "Large Classes",
 		ViolationTypeMissingDocumentation:   "Missing Documentation",
-		ViolationTypeMagicNumbers:           "Magic Numbers",
+		ViolationTypeMagicNumber:            "Magic Numbers",
 		ViolationTypeDuplication:            "Code Duplication",
 	}
 

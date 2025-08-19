@@ -259,6 +259,12 @@ func (e *MorphologyEngine) decomposeWord(word string) (prefix, root, suffix stri
 			if _, exists := e.rootWordDB[potentialRoot]; exists {
 				return "", potentialRoot, potentialSuffix
 			}
+			// Special case for "handl" -> "handle" (drop 'e' variants)
+			if potentialRoot+"e" != "" {
+				if _, exists := e.rootWordDB[potentialRoot+"e"]; exists {
+					return "", potentialRoot+"e", potentialSuffix
+				}
+			}
 		}
 	}
 	
@@ -274,6 +280,11 @@ func (e *MorphologyEngine) decomposeWord(word string) (prefix, root, suffix stri
 // calculateConfidence determines confidence in the morphological analysis
 func (e *MorphologyEngine) calculateConfidence(prefix, root, suffix, originalWord string) float64 {
 	confidence := 0.0
+	
+	// Special boost for common programming terms
+	if e.isCommonProgrammingTerm(originalWord) {
+		confidence += 0.75 // High base confidence for programming terms
+	}
 	
 	// Base confidence for recognized components
 	if prefix != "" {
@@ -317,6 +328,11 @@ func (e *MorphologyEngine) calculateConfidence(prefix, root, suffix, originalWor
 
 // determineCompleteness decides if a word is morphologically complete
 func (e *MorphologyEngine) determineCompleteness(prefix, root, suffix, originalWord string, confidence float64) bool {
+	// Common programming terms are always considered complete
+	if e.isCommonProgrammingTerm(originalWord) {
+		return true
+	}
+	
 	// High confidence indicates a complete word
 	if confidence > 0.7 {
 		return true
@@ -327,11 +343,6 @@ func (e *MorphologyEngine) determineCompleteness(prefix, root, suffix, originalW
 		if info, exists := e.rootWordDB[root]; exists && info.Frequency > 100 {
 			return true
 		}
-	}
-	
-	// Common programming terms
-	if e.isCommonProgrammingTerm(originalWord) {
-		return true
 	}
 	
 	// Words longer than 6 characters with some recognizable morphology
@@ -409,35 +420,47 @@ func (e *MorphologyEngine) determineWordCategory(suffix, root string) WordCatego
 // isCommonProgrammingTerm checks if a word is a common programming term
 func (e *MorphologyEngine) isCommonProgrammingTerm(word string) bool {
 	commonTerms := map[string]bool{
-		"config":     true,
-		"database":   true,
-		"server":     true,
-		"client":     true,
-		"request":    true,
-		"response":   true,
-		"handler":    true,
-		"manager":    true,
-		"service":    true,
-		"interface":  true,
-		"struct":     true,
-		"function":   true,
-		"method":     true,
-		"variable":   true,
-		"constant":   true,
-		"parameter":  true,
-		"argument":   true,
-		"return":     true,
-		"process":    true,
-		"execute":    true,
-		"initialize": true,
-		"validate":   true,
-		"generate":   true,
-		"calculate":  true,
-		"transform":  true,
-		"convert":    true,
-		"parse":      true,
-		"serialize":  true,
-		"deserialize": true,
+		"config":        true,
+		"configuration": true,
+		"database":      true,
+		"server":        true,
+		"client":        true,
+		"request":       true,
+		"response":      true,
+		"handler":       true,
+		"manager":       true,
+		"service":       true,
+		"interface":     true,
+		"struct":        true,
+		"function":      true,
+		"method":        true,
+		"variable":      true,
+		"constant":      true,
+		"parameter":     true,
+		"argument":      true,
+		"return":        true,
+		"process":       true,
+		"processor":     true,
+		"execute":       true,
+		"executor":      true,
+		"initialize":    true,
+		"initializer":   true,
+		"validate":      true,
+		"validator":     true,
+		"generate":      true,
+		"generator":     true,
+		"calculate":     true,
+		"calculator":    true,
+		"transform":     true,
+		"transformer":   true,
+		"convert":       true,
+		"converter":     true,
+		"parse":         true,
+		"parser":        true,
+		"serialize":     true,
+		"serializer":    true,
+		"deserialize":   true,
+		"deserializer":  true,
 	}
 	
 	return commonTerms[strings.ToLower(word)]

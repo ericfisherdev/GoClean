@@ -1,0 +1,103 @@
+---
+# GoClean Performance-Focused Rust Configuration
+# Optimized for large Rust codebases and performance-critical analysis
+
+scan:
+  paths:
+    - ./src
+    - ./crates
+  file_types:
+    - .rs
+  exclude:
+    - target/
+    - Cargo.lock
+    - "*.bak"
+    - "benchmarks/"
+    - "examples/"
+  # Performance optimizations
+  concurrent_files: 20
+  max_file_size: "1MB"
+
+# Balanced thresholds for performance vs quality
+thresholds:
+  function_lines: 40
+  cyclomatic_complexity: 12
+  parameters: 6
+  nesting_depth: 4
+  class_lines: 250
+
+# Focused Rust analysis for performance
+rust:
+  # Enable only high-impact analysis
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  enable_pattern_match_check: false  # Disable for performance
+
+  # Performance-critical settings
+  detect_unnecessary_clones: true
+  detect_inefficient_string: true
+  detect_boxed_primitives: true
+  detect_blocking_in_async: true
+
+  # Relaxed safety for performance
+  allow_unsafe: true
+  require_unsafe_comments: false
+
+  # Basic naming enforcement
+  enforce_snake_case: true
+  enforce_pascal_case: true
+  enforce_screaming_snake: true
+
+# Minimal clippy integration for speed
+clippy:
+  enabled: true
+  categories:
+    - correctness
+    - perf
+  severity_mapping:
+    error: critical
+    warn: high
+
+# Fast output generation
+output:
+  html:
+    enabled: false  # Disable for speed
+  markdown:
+    enabled: false  # Disable for speed
+  console:
+    enabled: true
+    format: summary  # Fast summary format
+    show_progress: false
+
+# Export configuration
+export:
+  json:
+    enabled: true
+    path: ./reports/performance-scan.json
+    pretty_print: false  # Faster generation
+
+# Minimal logging for speed
+logging:
+  level: warn  # Only warnings and errors
+  format: simple
+
+# Enable only essential rules
+rules:
+  function_analysis:
+    enabled: true
+    check_length: true
+    check_complexity: true
+    check_parameters: false  # Disable for speed
+    check_nesting: false     # Disable for speed
+
+  naming_conventions:
+    enabled: true
+    check_descriptive_names: false  # Disable for speed
+    check_consistency: true
+    check_magic_numbers: true
+
+  code_structure:
+    enabled: false  # Disable for speed
+
+  documentation:
+    enabled: false  # Disable for speed

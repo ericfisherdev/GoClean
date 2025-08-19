@@ -208,7 +208,7 @@ func processData() {
 	// Should detect magic number violations
 	magicNumberCount := 0
 	for _, v := range violations {
-		if v.Type == models.ViolationTypeMagicNumbers {
+		if v.Type == models.ViolationTypeMagicNumber {
 			magicNumberCount++
 		}
 	}

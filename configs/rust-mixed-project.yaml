@@ -1,0 +1,126 @@
+---
+# GoClean Configuration for Mixed Go/Rust Projects
+# Use this configuration when your project contains both Go and Rust code
+
+scan:
+  paths:
+    - ./src
+    - ./internal
+    - ./cmd
+    - ./rust-modules
+  file_types:
+    - .go
+    - .rs
+  exclude:
+    - vendor/
+    - target/
+    - node_modules/
+    - "*.test.go"
+    - Cargo.lock
+    - .git/
+
+thresholds:
+  function_lines: 25
+  cyclomatic_complexity: 8
+  parameters: 4
+  nesting_depth: 3
+  class_lines: 150
+
+# Rust-specific configuration
+rust:
+  # Ownership and borrowing analysis
+  enable_ownership_analysis: true
+  max_lifetime_params: 3
+  detect_unnecessary_clones: true
+
+  # Error handling analysis
+  enable_error_handling_check: true
+  allow_unwrap: false
+  allow_expect: false
+  enforce_result_propagation: true
+
+  # Pattern matching analysis
+  enable_pattern_match_check: true
+  require_exhaustive_match: true
+  max_nested_match_depth: 3
+
+  # Trait and impl analysis
+  max_trait_bounds: 5
+  max_impl_methods: 20
+
+  # Safety analysis
+  allow_unsafe: true
+  require_unsafe_comments: true
+  detect_transmute_usage: true
+
+  # Performance analysis
+  detect_inefficient_string: true
+  detect_blocking_in_async: true
+
+  # Module structure
+  max_module_depth: 5
+  max_file_lines: 400
+
+  # Naming conventions
+  enforce_snake_case: true
+  enforce_pascal_case: true
+  enforce_screaming_snake: true
+
+# Clippy integration
+clippy:
+  enabled: true
+  categories:
+    - correctness
+    - suspicious
+    - style
+    - complexity
+    - perf
+  severity_mapping:
+    error: critical
+    warn: high
+    info: medium
+    note: low
+
+output:
+  html:
+    enabled: true
+    path: ./reports/mixed-project-report.html
+    theme: auto
+    auto_refresh: false
+  markdown:
+    enabled: true
+    path: ./reports/violations.md
+    include_examples: true
+    ai_friendly: true
+  console:
+    enabled: true
+    format: table
+    show_summary: true
+
+logging:
+  level: info
+  format: structured
+
+rules:
+  function_analysis:
+    enabled: true
+    check_length: true
+    check_complexity: true
+    check_parameters: true
+    check_nesting: true
+
+  naming_conventions:
+    enabled: true
+    check_descriptive_names: true
+    check_consistency: true
+    check_magic_numbers: true
+
+  code_structure:
+    enabled: true
+    check_duplication: true
+
+  documentation:
+    enabled: true
+    check_missing_docs: true
+    check_commented_code: true
+    check_todo_fixme: true

@@ -41,6 +41,8 @@ type HTMLOptions struct {
 
 // Statistics provides detailed statistics about violations and files
 type Statistics struct {
+	TotalViolations      int                      `json:"total_violations"`
+	FilesScanned         int                      `json:"files_scanned"`
 	ViolationsByType     map[ViolationType]int    `json:"violations_by_type"`
 	ViolationsBySeverity map[Severity]int         `json:"violations_by_severity"`
 	FilesByLanguage      map[string]int           `json:"files_by_language"`
@@ -100,6 +102,8 @@ func generateReportID() string {
 // calculateStatistics calculates detailed statistics from scan results
 func calculateStatistics(files []*ScanResult) *Statistics {
 	stats := &Statistics{
+		TotalViolations:      0,
+		FilesScanned:         len(files),
 		ViolationsByType:     make(map[ViolationType]int),
 		ViolationsBySeverity: make(map[Severity]int),
 		FilesByLanguage:      make(map[string]int),
@@ -128,6 +132,9 @@ func calculateStatistics(files []*ScanResult) *Statistics {
 		}
 
 		for _, violation := range file.Violations {
+			// Count total violations
+			stats.TotalViolations++
+			
 			// Count by type
 			stats.ViolationsByType[violation.Type]++
 			fileSummary.ViolationsByType[violation.Type]++
@@ -249,7 +256,7 @@ func (vt ViolationType) GetDisplayName() string {
 		return "Large Classes"
 	case ViolationTypeMissingDocumentation:
 		return "Missing Documentation"
-	case ViolationTypeMagicNumbers:
+	case ViolationTypeMagicNumber:
 		return "Magic Numbers"
 	case ViolationTypeDuplication:
 		return "Code Duplication"

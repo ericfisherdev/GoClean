@@ -397,3 +397,80 @@ func test%d() {
 		}
 	}
 }
+
+// TestScanFilesWithErrorsNoDeadlock tests that scanning files with many parse errors
+// doesn't cause a deadlock in the error handling channels
+func TestScanFilesWithErrorsNoDeadlock(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create multiple files with syntax errors to trigger error conditions
+	for i := 0; i < 50; i++ {
+		fileName := filepath.Join(tmpDir, fmt.Sprintf("broken%d.go", i))
+		// Create intentionally broken Go files
+		content := fmt.Sprintf(`package main
+
+// Broken file %d with syntax errors
+func broken%d( {
+	invalid syntax here
+	missing closing brace
+	random text that's not valid Go
+`, i, i)
+		err := os.WriteFile(fileName, []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create broken test file %d: %v", i, err)
+		}
+	}
+
+	engine := NewEngine([]string{tmpDir}, []string{}, []string{".go"}, false)
+	engine.SetMaxWorkers(4) // Use multiple workers to test concurrency
+	
+	// Set a small buffer size to increase chance of channel blocking
+	engine.workerBufferSize = 2
+
+	// Test with timeout to detect deadlock
+	done := make(chan struct{})
+	var summary *models.ScanSummary
+	var results []*models.ScanResult
+	var err error
+
+	go func() {
+		summary, results, err = engine.Scan()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Scan completed successfully - no deadlock
+	case <-time.After(30 * time.Second):
+		t.Fatal("Scan timed out - likely deadlock in error handling")
+	}
+
+	// Even with parse errors, scan should complete
+	if err != nil {
+		t.Fatalf("Scan failed: %v", err)
+	}
+
+	if summary.TotalFiles != 50 {
+		t.Errorf("Expected 50 total files, got %d", summary.TotalFiles)
+	}
+
+	if len(results) != 50 {
+		t.Errorf("Expected 50 results, got %d", len(results))
+	}
+
+	// Verify that files with errors are still included in results
+	errorCount := 0
+	for _, result := range results {
+		if result.File.Error != "" {
+			errorCount++
+		}
+	}
+
+	// We expect most/all files to have errors since they contain invalid syntax
+	if errorCount == 0 {
+		t.Error("Expected some files to have parse errors, but none were found")
+	}
+
+	t.Logf("Successfully processed %d files with %d parse errors without deadlock", 
+		len(results), errorCount)
+}

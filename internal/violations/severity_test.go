@@ -110,7 +110,7 @@ func TestSeverityClassifier_ViolationTypeWeights(t *testing.T) {
 	)
 	// Test low-weight violation type (should decrease severity)
 	lowWeightSeverity := classifier.ClassifySeverity(
-		models.ViolationTypeMagicNumbers, // weight: 0.5
+		models.ViolationTypeMagicNumber, // weight: 0.5
 		30, 20, // 1.5x threshold -> should be Medium, but reduced to Low
 		nil,
 	)

@@ -263,7 +263,13 @@ func (m *MarkdownReporter) writeDetailedViolations(md *strings.Builder, report *
 		}
 		
 		for vtype, violations := range violationsByType {
-			md.WriteString(fmt.Sprintf("**%s (%d)**\n\n", vtype.GetDisplayName(), len(violations)))
+			// Add Rust-specific violation categorization if applicable
+			if models.IsRustSpecificViolation(vtype) {
+				category := models.GetRustViolationCategory(vtype)
+				md.WriteString(fmt.Sprintf("**%s (%d) - %s Category**\n\n", vtype.GetDisplayName(), len(violations), strings.Title(string(category))))
+			} else {
+				md.WriteString(fmt.Sprintf("**%s (%d)**\n\n", vtype.GetDisplayName(), len(violations)))
+			}
 			
 			for _, violation := range violations {
 				md.WriteString(fmt.Sprintf("- **Line %d** (%s): %s\n", 
@@ -279,7 +285,8 @@ func (m *MarkdownReporter) writeDetailedViolations(md *strings.Builder, report *
 				
 				if m.config.IncludeExamples && violation.CodeSnippet != "" {
 					md.WriteString("  - **Code:**\n")
-					md.WriteString("    ```go\n")
+					language := m.detectLanguageFromFile(fv.File)
+					md.WriteString(fmt.Sprintf("    ```%s\n", language))
 					lines := strings.Split(violation.CodeSnippet, "\n")
 					for _, line := range lines {
 						if strings.TrimSpace(line) != "" {
@@ -403,5 +410,42 @@ func (m *MarkdownReporter) getSeverityStatus(severity models.Severity) string {
 		return "💥 Critical"
 	default:
 		return "❓ Unknown"
+	}
+}
+
+// detectLanguageFromFile detects programming language from file extension for syntax highlighting
+func (m *MarkdownReporter) detectLanguageFromFile(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".rs":
+		return "rust"
+	case ".go":
+		return "go"
+	case ".js", ".jsx":
+		return "javascript"
+	case ".ts", ".tsx":
+		return "typescript"
+	case ".py":
+		return "python"
+	case ".java":
+		return "java"
+	case ".cs":
+		return "csharp"
+	case ".c", ".h":
+		return "c"
+	case ".cpp", ".cc", ".cxx", ".hpp":
+		return "cpp"
+	case ".php":
+		return "php"
+	case ".rb":
+		return "ruby"
+	case ".swift":
+		return "swift"
+	case ".kt", ".kts":
+		return "kotlin"
+	case ".scala":
+		return "scala"
+	default:
+		return "text"
 	}
 }

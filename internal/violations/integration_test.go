@@ -80,7 +80,7 @@ func processData(a, b, c, d, e, f string) string {
 		models.ViolationTypeParameterCount,
 		models.ViolationTypeNestingDepth,
 		models.ViolationTypeClassSize,
-		models.ViolationTypeMagicNumbers,
+		models.ViolationTypeMagicNumber,
 		models.ViolationTypeNaming,
 	}
 	for _, expectedType := range expectedTypes {

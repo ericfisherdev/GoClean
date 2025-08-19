@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ericfisherdev/goclean/internal/models"
@@ -19,6 +21,7 @@ type FileWalker struct {
 	aggressiveMode    bool
 	testPatterns      *TestFilePatterns
 	customTestPatterns []string
+	maxFileSize       int64 // Maximum file size in bytes, 0 means no limit
 }
 
 // NewFileWalker creates a new FileWalker instance
@@ -32,6 +35,7 @@ func NewFileWalker(includePaths []string, excludePatterns []string, fileTypes []
 		aggressiveMode:    false,
 		testPatterns:      DefaultTestPatterns(),
 		customTestPatterns: []string{},
+		maxFileSize:       0, // No limit by default
 	}
 }
 
@@ -126,6 +130,14 @@ func (fw *FileWalker) walkPath(rootPath string) ([]*models.FileInfo, error) {
 		if err != nil {
 			if fw.verbose {
 				fmt.Printf("Warning: cannot get info for %s: %v\n", path, err)
+			}
+			return nil
+		}
+		
+		// Check file size limit
+		if !fw.isFileSizeAllowed(info.Size()) {
+			if fw.verbose {
+				fmt.Printf("Skipping file due to size limit: %s (%d bytes)\n", path, info.Size())
 			}
 			return nil
 		}
@@ -280,4 +292,70 @@ func (fw *FileWalker) detectLanguage(path string) string {
 	}
 	
 	return "Unknown"
+}
+
+// parseSizeString parses size strings like "1MB", "500KB", "2GB" into bytes
+func parseSizeString(sizeStr string) (int64, error) {
+	if sizeStr == "" {
+		return 0, nil // No limit
+	}
+	
+	// Regular expression to match size format like "1MB", "500KB", etc.
+	re := regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB)?$`)
+	matches := re.FindStringSubmatch(strings.ToUpper(strings.TrimSpace(sizeStr)))
+	
+	if len(matches) == 0 {
+		return 0, fmt.Errorf("invalid size format: %s", sizeStr)
+	}
+	
+	// Parse the numeric part
+	size, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid numeric value in size: %s", sizeStr)
+	}
+	
+	// Get the unit (default to bytes if not specified)
+	unit := "B"
+	if len(matches) > 2 && matches[2] != "" {
+		unit = matches[2]
+	}
+	
+	// Convert to bytes
+	var multiplier int64
+	switch unit {
+	case "B":
+		multiplier = 1
+	case "KB":
+		multiplier = 1024
+	case "MB":
+		multiplier = 1024 * 1024
+	case "GB":
+		multiplier = 1024 * 1024 * 1024
+	case "TB":
+		multiplier = 1024 * 1024 * 1024 * 1024
+	default:
+		return 0, fmt.Errorf("unsupported size unit: %s", unit)
+	}
+	
+	return int64(size * float64(multiplier)), nil
+}
+
+// SetMaxFileSize sets the maximum file size limit
+func (fw *FileWalker) SetMaxFileSize(maxSizeStr string) error {
+	maxSize, err := parseSizeString(maxSizeStr)
+	if err != nil {
+		return err
+	}
+	fw.maxFileSize = maxSize
+	return nil
+}
+
+// isFileSizeAllowed checks if the file size is within the allowed limit
+func (fw *FileWalker) isFileSizeAllowed(fileSize int64) bool {
+	// If no limit is set (maxFileSize == 0), allow all files
+	if fw.maxFileSize == 0 {
+		return true
+	}
+	
+	return fileSize <= fw.maxFileSize
 }

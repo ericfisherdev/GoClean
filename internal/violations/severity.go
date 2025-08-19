@@ -67,7 +67,7 @@ func DefaultSeverityConfig() *SeverityConfig {
 			models.ViolationTypeNaming:               0.7,
 			models.ViolationTypeClassSize:            1.0,
 			models.ViolationTypeMissingDocumentation: 0.6, // Less critical
-			models.ViolationTypeMagicNumbers:         0.5, // Least critical
+			models.ViolationTypeMagicNumber:          0.5, // Least critical
 			models.ViolationTypeDuplication:          1.3, // Very critical
 		},
 	}

@@ -19,10 +19,11 @@ type FileInfo struct {
 
 // ScanResult represents the result of scanning a single file
 type ScanResult struct {
-	File       *FileInfo    `json:"file"`
-	Violations []*Violation `json:"violations"`
-	Metrics    *FileMetrics `json:"metrics"`
-	ASTInfo    interface{}  `json:"ast_info,omitempty"` // Go AST info when available
+	File        *FileInfo    `json:"file"`
+	Violations  []*Violation `json:"violations"`
+	Metrics     *FileMetrics `json:"metrics"`
+	ASTInfo     interface{}  `json:"ast_info,omitempty"`      // Go AST info when available
+	RustASTInfo interface{}  `json:"rust_ast_info,omitempty"` // Rust AST info when available
 }
 
 // FileMetrics contains basic metrics about a file

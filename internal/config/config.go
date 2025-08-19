@@ -26,7 +26,10 @@ type Config struct {
 	Scan        ScanConfig    `yaml:"scan"`
 	Thresholds  Thresholds    `yaml:"thresholds"`
 	Output      OutputConfig  `yaml:"output"`
+	Export      ExportConfig  `yaml:"export"`
 	Logging     LoggingConfig `yaml:"logging"`
+	Rust        RustConfig    `yaml:"rust"`
+	Clippy      ClippyConfig  `yaml:"clippy"`
 }
 
 // ScanConfig contains scanning-related settings
@@ -39,6 +42,10 @@ type ScanConfig struct {
 	SkipTestFiles    *bool    `yaml:"skip_test_files"`    // Default: true
 	AggressiveMode   *bool    `yaml:"aggressive_mode"`    // Default: false
 	CustomTestPatterns []string `yaml:"custom_test_patterns"`
+	
+	// Performance optimization settings
+	ConcurrentFiles  int    `yaml:"concurrent_files"`   // Maximum concurrent file processing
+	MaxFileSize      string `yaml:"max_file_size"`      // Maximum file size to process (e.g., "1MB", "500KB")
 }
 
 // Thresholds contains clean code thresholds
@@ -71,10 +78,184 @@ type MarkdownConfig struct {
 	IncludeExamples bool   `yaml:"include_examples"`
 }
 
+// ConsoleConfig contains console report settings
+type ConsoleConfig struct {
+	Colored bool        `yaml:"colored"`
+	Verbose bool        `yaml:"verbose"`
+	Output  interface{} `yaml:"-"` // io.Writer, not serializable
+}
+
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
+}
+
+// ExportConfig contains export-related settings
+type ExportConfig struct {
+	JSON JSONConfig `yaml:"json"`
+	CSV  CSVConfig  `yaml:"csv"`
+}
+
+// JSONConfig contains JSON export settings
+type JSONConfig struct {
+	Enabled     bool   `yaml:"enabled"`
+	Path        string `yaml:"path"`
+	PrettyPrint bool   `yaml:"pretty_print"`
+}
+
+// CSVConfig contains CSV export settings
+type CSVConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Path    string `yaml:"path"`
+}
+
+// ClippyConfig contains rust-clippy integration settings
+type ClippyConfig struct {
+	Enabled           bool                       `yaml:"enabled"`
+	Categories        []string                   `yaml:"categories"`
+	SeverityMapping   map[string]string          `yaml:"severity_mapping"`
+	AdditionalLints   []string                   `yaml:"additional_lints"`
+	FailOnClippyErrors bool                      `yaml:"fail_on_clippy_errors"`
+}
+
+// RustConfig contains Rust-specific analysis settings
+type RustConfig struct {
+	// Ownership and borrowing analysis
+	EnableOwnershipAnalysis *bool `yaml:"enable_ownership_analysis"`
+	MaxLifetimeParams       int   `yaml:"max_lifetime_params"`
+	DetectUnnecessaryClones *bool `yaml:"detect_unnecessary_clones"`
+	
+	// Error handling analysis
+	EnableErrorHandlingCheck *bool `yaml:"enable_error_handling_check"`
+	AllowUnwrap             *bool `yaml:"allow_unwrap"`
+	AllowExpect             *bool `yaml:"allow_expect"`
+	EnforceResultPropagation *bool `yaml:"enforce_result_propagation"`
+	
+	// Pattern matching analysis
+	EnablePatternMatchCheck  *bool `yaml:"enable_pattern_match_check"`
+	RequireExhaustiveMatch   *bool `yaml:"require_exhaustive_match"`
+	MaxNestedMatchDepth      int   `yaml:"max_nested_match_depth"`
+	
+	// Trait and impl analysis
+	MaxTraitBounds          int   `yaml:"max_trait_bounds"`
+	MaxImplMethods          int   `yaml:"max_impl_methods"`
+	DetectOrphanInstances   *bool `yaml:"detect_orphan_instances"`
+	
+	// Unsafe code analysis
+	AllowUnsafe             *bool `yaml:"allow_unsafe"`
+	RequireUnsafeComments   *bool `yaml:"require_unsafe_comments"`
+	DetectTransmuteUsage    *bool `yaml:"detect_transmute_usage"`
+	
+	// Performance analysis
+	DetectInefficientString *bool `yaml:"detect_inefficient_string"`
+	DetectBoxedPrimitives   *bool `yaml:"detect_boxed_primitives"`
+	DetectBlockingInAsync   *bool `yaml:"detect_blocking_in_async"`
+	
+	// Macro analysis
+	MaxMacroComplexity      int   `yaml:"max_macro_complexity"`
+	AllowRecursiveMacros    *bool `yaml:"allow_recursive_macros"`
+	
+	// Module structure
+	MaxModuleDepth          int  `yaml:"max_module_depth"`
+	MaxFileLines            int  `yaml:"max_file_lines"`
+	
+	// Naming conventions (Rust-specific)
+	EnforceSnakeCase        *bool `yaml:"enforce_snake_case"`
+	EnforcePascalCase       *bool `yaml:"enforce_pascal_case"`
+	EnforceScreamingSnake   *bool `yaml:"enforce_screaming_snake"`
+	
+	// Trait analysis (additional configuration)
+	MaxTraitComplexity      int  `yaml:"max_trait_complexity"`
+	MaxTraitLines           int  `yaml:"max_trait_lines"`
+	MaxTraitMethods         int  `yaml:"max_trait_methods"`
+	MaxAssociatedTypes      int  `yaml:"max_associated_types"`
+	MaxComplexTraitParams   int  `yaml:"max_complex_trait_params"`
+}
+
+// getBoolDefault returns the value pointed to by p, or d if p is nil
+func getBoolDefault(p *bool, d bool) bool {
+	if p != nil {
+		return *p
+	}
+	return d
+}
+
+// Getter methods for RustConfig bool fields with defaults
+func (r *RustConfig) GetEnableOwnershipAnalysis() bool {
+	return getBoolDefault(r.EnableOwnershipAnalysis, true)
+}
+
+func (r *RustConfig) GetDetectUnnecessaryClones() bool {
+	return getBoolDefault(r.DetectUnnecessaryClones, true)
+}
+
+func (r *RustConfig) GetEnableErrorHandlingCheck() bool {
+	return getBoolDefault(r.EnableErrorHandlingCheck, true)
+}
+
+func (r *RustConfig) GetAllowUnwrap() bool {
+	return getBoolDefault(r.AllowUnwrap, false)
+}
+
+func (r *RustConfig) GetAllowExpect() bool {
+	return getBoolDefault(r.AllowExpect, false)
+}
+
+func (r *RustConfig) GetEnforceResultPropagation() bool {
+	return getBoolDefault(r.EnforceResultPropagation, true)
+}
+
+func (r *RustConfig) GetEnablePatternMatchCheck() bool {
+	return getBoolDefault(r.EnablePatternMatchCheck, true)
+}
+
+func (r *RustConfig) GetRequireExhaustiveMatch() bool {
+	return getBoolDefault(r.RequireExhaustiveMatch, true)
+}
+
+func (r *RustConfig) GetDetectOrphanInstances() bool {
+	return getBoolDefault(r.DetectOrphanInstances, true)
+}
+
+func (r *RustConfig) GetAllowUnsafe() bool {
+	return getBoolDefault(r.AllowUnsafe, false)
+}
+
+func (r *RustConfig) GetRequireUnsafeComments() bool {
+	return getBoolDefault(r.RequireUnsafeComments, true)
+}
+
+func (r *RustConfig) GetDetectTransmuteUsage() bool {
+	return getBoolDefault(r.DetectTransmuteUsage, true)
+}
+
+func (r *RustConfig) GetDetectInefficientString() bool {
+	return getBoolDefault(r.DetectInefficientString, true)
+}
+
+func (r *RustConfig) GetDetectBoxedPrimitives() bool {
+	return getBoolDefault(r.DetectBoxedPrimitives, true)
+}
+
+func (r *RustConfig) GetDetectBlockingInAsync() bool {
+	return getBoolDefault(r.DetectBlockingInAsync, true)
+}
+
+func (r *RustConfig) GetAllowRecursiveMacros() bool {
+	return getBoolDefault(r.AllowRecursiveMacros, false)
+}
+
+func (r *RustConfig) GetEnforceSnakeCase() bool {
+	return getBoolDefault(r.EnforceSnakeCase, true)
+}
+
+func (r *RustConfig) GetEnforcePascalCase() bool {
+	return getBoolDefault(r.EnforcePascalCase, true)
+}
+
+func (r *RustConfig) GetEnforceScreamingSnake() bool {
+	return getBoolDefault(r.EnforceScreamingSnake, true)
 }
 
 // Load loads configuration from a file
@@ -162,10 +343,13 @@ func GetDefaultConfig() *Config {
 				".c",
 				".h",
 				".hpp",
+				".rs",
 			},
 			SkipTestFiles:  boolPtr(true),  // Skip test files by default
 			AggressiveMode: boolPtr(false), // Normal mode by default
 			CustomTestPatterns: []string{},
+			ConcurrentFiles: 0, // Use default (number of CPU cores)
+			MaxFileSize:     "", // No limit by default
 		},
 		Thresholds: Thresholds{
 			FunctionLines:        DefaultFunctionLines,
@@ -187,10 +371,101 @@ func GetDefaultConfig() *Config {
 				IncludeExamples: true,
 			},
 		},
+		Export: ExportConfig{
+			JSON: JSONConfig{
+				Enabled:     false,
+				Path:        "./reports/violations.json",
+				PrettyPrint: true,
+			},
+			CSV: CSVConfig{
+				Enabled: false,
+				Path:    "./reports/violations.csv",
+			},
+		},
 		Logging: LoggingConfig{
 			Level:  "info",
 			Format: "structured",
 		},
+		Rust: GetDefaultRustConfig(),
+		Clippy: GetDefaultClippyConfig(),
+	}
+}
+
+// GetDefaultRustConfig returns the default Rust configuration
+func GetDefaultRustConfig() RustConfig {
+	return RustConfig{
+		// Ownership and borrowing
+		EnableOwnershipAnalysis: boolPtr(true),
+		MaxLifetimeParams:       3,
+		DetectUnnecessaryClones: boolPtr(true),
+		
+		// Error handling
+		EnableErrorHandlingCheck: boolPtr(true),
+		AllowUnwrap:             boolPtr(false),
+		AllowExpect:             boolPtr(false),
+		EnforceResultPropagation: boolPtr(true),
+		
+		// Pattern matching
+		EnablePatternMatchCheck:  boolPtr(true),
+		RequireExhaustiveMatch:   boolPtr(true),
+		MaxNestedMatchDepth:      3,
+		
+		// Trait and impl
+		MaxTraitBounds:          5,
+		MaxImplMethods:          20,
+		DetectOrphanInstances:   boolPtr(true),
+		
+		// Unsafe code
+		AllowUnsafe:             boolPtr(true),  // Allow but track
+		RequireUnsafeComments:   boolPtr(true),
+		DetectTransmuteUsage:    boolPtr(true),
+		
+		// Performance
+		DetectInefficientString: boolPtr(true),
+		DetectBoxedPrimitives:   boolPtr(true),
+		DetectBlockingInAsync:   boolPtr(true),
+		
+		// Macro analysis
+		MaxMacroComplexity:      10,
+		AllowRecursiveMacros:    boolPtr(false),
+		
+		// Module structure
+		MaxModuleDepth:          5,
+		MaxFileLines:            500,
+		
+		// Naming conventions
+		EnforceSnakeCase:        boolPtr(true),
+		EnforcePascalCase:       boolPtr(true),
+		EnforceScreamingSnake:   boolPtr(true),
+		
+		// Trait analysis defaults
+		MaxTraitComplexity:      15,
+		MaxTraitLines:           50,
+		MaxTraitMethods:         8,
+		MaxAssociatedTypes:      4,
+		MaxComplexTraitParams:   2,
+	}
+}
+
+// GetDefaultClippyConfig returns the default Clippy configuration
+func GetDefaultClippyConfig() ClippyConfig {
+	return ClippyConfig{
+		Enabled: false, // Disabled by default since it requires cargo
+		Categories: []string{
+			"correctness",
+			"suspicious",
+			"style",
+			"complexity",
+			"perf",
+		},
+		SeverityMapping: map[string]string{
+			"error": "critical",
+			"warn":  "high",
+			"info":  "medium",
+			"note":  "low",
+		},
+		AdditionalLints:   []string{},
+		FailOnClippyErrors: false,
 	}
 }
 
@@ -275,6 +550,25 @@ func mergeWithDefaults(config *Config) {
 		config.Output.Markdown.Path = defaults.Output.Markdown.Path
 	}
 
+	// Merge scan config additional fields
+	if config.Scan.ConcurrentFiles == 0 {
+		config.Scan.ConcurrentFiles = defaults.Scan.ConcurrentFiles
+	}
+	if config.Scan.MaxFileSize == "" {
+		config.Scan.MaxFileSize = defaults.Scan.MaxFileSize
+	}
+
+	// Merge export config
+	if config.Export.JSON.Path == "" {
+		config.Export.JSON.Path = defaults.Export.JSON.Path
+	}
+	if config.Export.CSV.Path == "" {
+		config.Export.CSV.Path = defaults.Export.CSV.Path
+	}
+
+	// Merge clippy config
+	mergeClippyConfig(&config.Clippy, &defaults.Clippy)
+
 	// Merge logging config
 	if config.Logging.Level == "" {
 		config.Logging.Level = defaults.Logging.Level
@@ -282,6 +576,134 @@ func mergeWithDefaults(config *Config) {
 	if config.Logging.Format == "" {
 		config.Logging.Format = defaults.Logging.Format
 	}
+	
+	// Merge Rust config - use defaults if not explicitly set
+	mergeRustConfig(&config.Rust, &defaults.Rust)
+}
+
+// mergeRustConfig merges Rust configuration with defaults
+func mergeRustConfig(config *RustConfig, defaults *RustConfig) {
+	// Set default values only when fields are nil (not provided in YAML)
+	
+	// Bool fields - only set defaults when nil
+	if config.EnableOwnershipAnalysis == nil {
+		config.EnableOwnershipAnalysis = defaults.EnableOwnershipAnalysis
+	}
+	if config.DetectUnnecessaryClones == nil {
+		config.DetectUnnecessaryClones = defaults.DetectUnnecessaryClones
+	}
+	if config.EnableErrorHandlingCheck == nil {
+		config.EnableErrorHandlingCheck = defaults.EnableErrorHandlingCheck
+	}
+	if config.AllowUnwrap == nil {
+		config.AllowUnwrap = defaults.AllowUnwrap
+	}
+	if config.AllowExpect == nil {
+		config.AllowExpect = defaults.AllowExpect
+	}
+	if config.EnforceResultPropagation == nil {
+		config.EnforceResultPropagation = defaults.EnforceResultPropagation
+	}
+	if config.EnablePatternMatchCheck == nil {
+		config.EnablePatternMatchCheck = defaults.EnablePatternMatchCheck
+	}
+	if config.RequireExhaustiveMatch == nil {
+		config.RequireExhaustiveMatch = defaults.RequireExhaustiveMatch
+	}
+	if config.DetectOrphanInstances == nil {
+		config.DetectOrphanInstances = defaults.DetectOrphanInstances
+	}
+	if config.AllowUnsafe == nil {
+		config.AllowUnsafe = defaults.AllowUnsafe
+	}
+	if config.RequireUnsafeComments == nil {
+		config.RequireUnsafeComments = defaults.RequireUnsafeComments
+	}
+	if config.DetectTransmuteUsage == nil {
+		config.DetectTransmuteUsage = defaults.DetectTransmuteUsage
+	}
+	if config.DetectInefficientString == nil {
+		config.DetectInefficientString = defaults.DetectInefficientString
+	}
+	if config.DetectBoxedPrimitives == nil {
+		config.DetectBoxedPrimitives = defaults.DetectBoxedPrimitives
+	}
+	if config.DetectBlockingInAsync == nil {
+		config.DetectBlockingInAsync = defaults.DetectBlockingInAsync
+	}
+	if config.AllowRecursiveMacros == nil {
+		config.AllowRecursiveMacros = defaults.AllowRecursiveMacros
+	}
+	if config.EnforceSnakeCase == nil {
+		config.EnforceSnakeCase = defaults.EnforceSnakeCase
+	}
+	if config.EnforcePascalCase == nil {
+		config.EnforcePascalCase = defaults.EnforcePascalCase
+	}
+	if config.EnforceScreamingSnake == nil {
+		config.EnforceScreamingSnake = defaults.EnforceScreamingSnake
+	}
+	
+	// Integer fields - use defaults if zero
+	if config.MaxLifetimeParams == 0 {
+		config.MaxLifetimeParams = defaults.MaxLifetimeParams
+	}
+	if config.MaxNestedMatchDepth == 0 {
+		config.MaxNestedMatchDepth = defaults.MaxNestedMatchDepth
+	}
+	if config.MaxTraitBounds == 0 {
+		config.MaxTraitBounds = defaults.MaxTraitBounds
+	}
+	if config.MaxImplMethods == 0 {
+		config.MaxImplMethods = defaults.MaxImplMethods
+	}
+	if config.MaxMacroComplexity == 0 {
+		config.MaxMacroComplexity = defaults.MaxMacroComplexity
+	}
+	if config.MaxModuleDepth == 0 {
+		config.MaxModuleDepth = defaults.MaxModuleDepth
+	}
+	if config.MaxFileLines == 0 {
+		config.MaxFileLines = defaults.MaxFileLines
+	}
+	if config.MaxTraitComplexity == 0 {
+		config.MaxTraitComplexity = defaults.MaxTraitComplexity
+	}
+	if config.MaxTraitLines == 0 {
+		config.MaxTraitLines = defaults.MaxTraitLines
+	}
+	if config.MaxTraitMethods == 0 {
+		config.MaxTraitMethods = defaults.MaxTraitMethods
+	}
+	if config.MaxAssociatedTypes == 0 {
+		config.MaxAssociatedTypes = defaults.MaxAssociatedTypes
+	}
+	if config.MaxComplexTraitParams == 0 {
+		config.MaxComplexTraitParams = defaults.MaxComplexTraitParams
+	}
+}
+
+// mergeClippyConfig merges Clippy configuration with defaults
+func mergeClippyConfig(config *ClippyConfig, defaults *ClippyConfig) {
+	// Check if config is completely empty (all defaults)
+	if !config.Enabled && len(config.Categories) == 0 && len(config.SeverityMapping) == 0 && 
+	   len(config.AdditionalLints) == 0 && !config.FailOnClippyErrors {
+		*config = *defaults
+		return
+	}
+	
+	// Merge categories if empty
+	if len(config.Categories) == 0 {
+		config.Categories = defaults.Categories
+	}
+	
+	// Merge severity mapping if empty
+	if len(config.SeverityMapping) == 0 {
+		config.SeverityMapping = defaults.SeverityMapping
+	}
+	
+	// Additional lints is an additive list, so we don't replace if empty
+	// This allows users to explicitly set an empty list if desired
 }
 
 // Validate checks if the configuration is valid

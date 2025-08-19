@@ -2,11 +2,13 @@ package reporters
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
+	"unicode"
 
 	"github.com/ericfisherdev/goclean/internal/config"
 	"github.com/ericfisherdev/goclean/internal/models"
@@ -29,18 +31,63 @@ const (
 	LowViolationThreshold = 5
 )
 
+// titleCase converts a string to title case, replacing the deprecated strings.Title
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	
+	words := strings.Fields(s)
+	for i, word := range words {
+		if len(word) > 0 {
+			runes := []rune(word)
+			runes[0] = unicode.ToUpper(runes[0])
+			for j := 1; j < len(runes); j++ {
+				runes[j] = unicode.ToLower(runes[j])
+			}
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+// typeCount represents a violation type with its count
+type typeCount struct {
+	Type  models.ViolationType
+	Count int
+}
+
 // ConsoleReporter outputs reports to the console
 type ConsoleReporter struct {
 	verbose bool
 	colors  bool
+	output  io.Writer
 }
 
-// NewConsoleReporter creates a new console reporter
-func NewConsoleReporter(verbose, colors bool) *ConsoleReporter {
-	return &ConsoleReporter{
-		verbose: verbose,
-		colors:  colors,
+// NewConsoleReporter creates a new console reporter with config
+func NewConsoleReporter(cfg *config.ConsoleConfig) *ConsoleReporter {
+	var output io.Writer = os.Stdout
+	if cfg.Output != nil {
+		if w, ok := cfg.Output.(io.Writer); ok {
+			output = w
+		}
 	}
+	
+	return &ConsoleReporter{
+		verbose: cfg.Verbose,
+		colors:  cfg.Colored,
+		output:  output,
+	}
+}
+
+// NewConsoleReporterLegacy creates a new console reporter (compatibility wrapper)
+func NewConsoleReporterLegacy(verbose, colors bool) *ConsoleReporter {
+	cfg := &config.ConsoleConfig{
+		Verbose: verbose,
+		Colored: colors,
+		Output:  os.Stdout,
+	}
+	return NewConsoleReporter(cfg)
 }
 
 // Generate prints a report to the console
@@ -61,9 +108,9 @@ func (c *ConsoleReporter) Generate(report *models.Report) error {
 
 // printHeader prints the report header
 func (c *ConsoleReporter) printHeader(report *models.Report) {
-	fmt.Println(c.colorize("=== GoClean Code Analysis Report ===", "header"))
-	fmt.Printf("Generated: %s\n", report.GeneratedAt.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Report ID: %s\n\n", report.ID)
+	fmt.Fprintln(c.output, c.colorize("=== GoClean Code Analysis Report ===", "header"))
+	fmt.Fprintf(c.output, "Generated: %s\n", report.GeneratedAt.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(c.output, "Report ID: %s\n\n", report.ID)
 }
 
 // printSummary prints the scan summary
@@ -92,28 +139,49 @@ func (c *ConsoleReporter) printStatistics(stats *models.Statistics) {
 	fmt.Println(strings.Repeat("-", SeparatorLength))
 	
 	// Sort violation types by count (descending)
-	type typeCount struct {
-		Type  models.ViolationType
-		Count int
-	}
 	
 	var sortedTypes []typeCount
+	var rustViolations []typeCount
 	for vtype, count := range stats.ViolationsByType {
-		sortedTypes = append(sortedTypes, typeCount{Type: vtype, Count: count})
+		if models.IsRustSpecificViolation(vtype) {
+			rustViolations = append(rustViolations, typeCount{Type: vtype, Count: count})
+		} else {
+			sortedTypes = append(sortedTypes, typeCount{Type: vtype, Count: count})
+		}
 	}
 	
 	sort.Slice(sortedTypes, func(i, j int) bool {
 		return sortedTypes[i].Count > sortedTypes[j].Count
 	})
+	sort.Slice(rustViolations, func(i, j int) bool {
+		return rustViolations[i].Count > rustViolations[j].Count
+	})
 	
 	w := tabwriter.NewWriter(os.Stdout, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
+	
+	// Print general violations
 	for _, tc := range sortedTypes {
 		fmt.Fprintf(w, "%s:\t%s\n", 
 			tc.Type.GetDisplayName(), 
 			c.colorizeViolationCount(tc.Count))
 	}
+	
+	// Print Rust-specific violations with category indicators
+	for _, tc := range rustViolations {
+		category := models.GetRustViolationCategory(tc.Type)
+		fmt.Fprintf(w, "%s 🦀 [%s]:\t%s\n", 
+			tc.Type.GetDisplayName(), 
+			titleCase(string(category)), 
+			c.colorizeViolationCount(tc.Count))
+	}
+	
 	w.Flush()
 	fmt.Println()
+	
+	// Print Rust violation categories summary if there are Rust violations
+	if len(rustViolations) > 0 {
+		c.printRustCategorySummary(rustViolations)
+	}
 
 	fmt.Println(c.colorize("🚨 VIOLATIONS BY SEVERITY", "section"))
 	fmt.Println(strings.Repeat("-", SeparatorLength))
@@ -227,33 +295,41 @@ func (c *ConsoleReporter) printViolation(v *models.Violation) {
 	severityIcon := c.getSeverityIcon(v.Severity)
 	severityColor := c.getSeverityColor(v.Severity)
 	
-	fmt.Printf("  %s %s [Line %d] %s\n",
+	// Add Rust category indicator if it's a Rust-specific violation
+	categoryInfo := ""
+	if models.IsRustSpecificViolation(v.Type) {
+		category := models.GetRustViolationCategory(v.Type)
+		categoryInfo = fmt.Sprintf(" [🦀 %s]", titleCase(string(category)))
+	}
+	
+	fmt.Fprintf(c.output, "  %s %s [Line %d] %s%s\n",
 		severityIcon,
 		c.colorize(v.Severity.String(), severityColor),
 		v.Line,
-		v.Type.GetDisplayName())
+		v.Type.GetDisplayName(),
+		c.colorize(categoryInfo, "rust-category"))
 	
-	fmt.Printf("    %s\n", v.Message)
+	fmt.Fprintf(c.output, "    %s\n", v.Message)
 	
 	if v.Description != "" {
-		fmt.Printf("    %s\n", c.colorize(v.Description, "description"))
+		fmt.Fprintf(c.output, "    %s\n", c.colorize(v.Description, "description"))
 	}
 	
 	if v.Suggestion != "" {
-		fmt.Printf("    💡 %s\n", c.colorize(v.Suggestion, "suggestion"))
+		fmt.Fprintf(c.output, "    💡 %s\n", c.colorize(v.Suggestion, "suggestion"))
 	}
 	
 	if c.verbose && v.CodeSnippet != "" {
-		fmt.Printf("    Code:\n")
+		fmt.Fprintf(c.output, "    Code:\n")
 		lines := strings.Split(v.CodeSnippet, "\n")
 		for i, line := range lines {
 			if strings.TrimSpace(line) != "" {
-				fmt.Printf("      %d: %s\n", v.Line+i, line)
+				fmt.Fprintf(c.output, "      %d: %s\n", v.Line+i, line)
 			}
 		}
 	}
 	
-	fmt.Println()
+	fmt.Fprintln(c.output)
 }
 
 // printFooter prints the report footer
@@ -277,16 +353,17 @@ func (c *ConsoleReporter) colorize(text, colorType string) string {
 	}
 	
 	colors := map[string]string{
-		"header":      "\033[1;36m",  // Cyan bold
-		"section":     "\033[1;34m",  // Blue bold
-		"success":     "\033[1;32m",  // Green bold
-		"warning":     "\033[1;33m",  // Yellow bold
-		"error":       "\033[1;31m",  // Red bold
-		"filename":    "\033[1;37m",  // White bold
-		"description": "\033[0;90m",  // Dark gray
-		"suggestion":  "\033[0;36m",  // Cyan
-		"file":        "\033[0;35m",  // Magenta
-		"reset":       "\033[0m",     // Reset
+		"header":       "\033[1;36m",  // Cyan bold
+		"section":      "\033[1;34m",  // Blue bold
+		"success":      "\033[1;32m",  // Green bold
+		"warning":      "\033[1;33m",  // Yellow bold
+		"error":        "\033[1;31m",  // Red bold
+		"filename":     "\033[1;37m",  // White bold
+		"description":  "\033[0;90m",  // Dark gray
+		"suggestion":   "\033[0;36m",  // Cyan
+		"file":         "\033[0;35m",  // Magenta
+		"rust-category": "\033[0;33m",  // Yellow for Rust categories
+		"reset":        "\033[0m",     // Reset
 	}
 	
 	if color, exists := colors[colorType]; exists {
@@ -294,6 +371,43 @@ func (c *ConsoleReporter) colorize(text, colorType string) string {
 	}
 	
 	return text
+}
+
+// printRustCategorySummary prints a summary of Rust violations by category
+func (c *ConsoleReporter) printRustCategorySummary(rustViolations []typeCount) {
+	fmt.Fprintln(c.output, c.colorize("🦀 RUST VIOLATIONS BY CATEGORY", "section"))
+	fmt.Fprintln(c.output, strings.Repeat("-", SeparatorLength))
+	
+	// Group by category
+	categoryCount := make(map[models.RustViolationCategory]int)
+	for _, tv := range rustViolations {
+		category := models.GetRustViolationCategory(tv.Type)
+		categoryCount[category] += tv.Count
+	}
+	
+	// Sort categories by count
+	type categoryInfo struct {
+		Category models.RustViolationCategory
+		Count    int
+	}
+	
+	var categories []categoryInfo
+	for cat, count := range categoryCount {
+		categories = append(categories, categoryInfo{Category: cat, Count: count})
+	}
+	
+	sort.Slice(categories, func(i, j int) bool {
+		return categories[i].Count > categories[j].Count
+	})
+	
+	w := tabwriter.NewWriter(c.output, TabwriterMinWidth, TabwriterTabWidth, TabwriterPadding, TabwriterPadChar, TabwriterFlags)
+	for _, cat := range categories {
+		fmt.Fprintf(w, "%s:\t%s\n", 
+			titleCase(string(cat.Category)), 
+			c.colorizeViolationCount(cat.Count))
+	}
+	w.Flush()
+	fmt.Fprintln(c.output)
 }
 
 // colorizeBySeverity applies color based on severity level

@@ -1,0 +1,175 @@
+{
+  "naming_violations.rs": {
+    "expected_count": 25,
+    "violation_types": [
+      "RUST_INVALID_FUNCTION_NAMING",
+      "RUST_INVALID_STRUCT_NAMING",
+      "RUST_INVALID_ENUM_NAMING",
+      "RUST_INVALID_TRAIT_NAMING",
+      "RUST_INVALID_CONSTANT_NAMING",
+      "RUST_INVALID_MODULE_NAMING"
+    ],
+    "sample_violations": [
+      {
+        "line": 4,
+        "type": "RUST_INVALID_FUNCTION_NAMING",
+        "message": "Function 'getUserName' should use snake_case naming"
+      },
+      {
+        "line": 14,
+        "type": "RUST_INVALID_STRUCT_NAMING",
+        "message": "Struct 'user_profile' should use PascalCase naming"
+      },
+      {
+        "line": 37,
+        "type": "RUST_INVALID_CONSTANT_NAMING",
+        "message": "Constant 'maxRetryCount' should use SCREAMING_SNAKE_CASE naming"
+      }
+    ]
+  },
+  "ownership_issues.rs": {
+    "expected_count": 15,
+    "violation_types": [
+      "RUST_UNNECESSARY_CLONE",
+      "RUST_INEFFICIENT_BORROWING",
+      "RUST_COMPLEX_LIFETIME",
+      "RUST_MOVE_SEMANTICS_VIOLATION"
+    ],
+    "sample_violations": [
+      {
+        "line": 7,
+        "type": "RUST_UNNECESSARY_CLONE",
+        "message": "Unnecessary clone detected - value is not used after clone"
+      },
+      {
+        "line": 23,
+        "type": "RUST_COMPLEX_LIFETIME",
+        "message": "Function has 4 lifetime parameters, which may indicate overly complex lifetime management"
+      }
+    ]
+  },
+  "error_handling_bad.rs": {
+    "expected_count": 20,
+    "violation_types": [
+      "RUST_OVERUSE_UNWRAP",
+      "RUST_MISSING_ERROR_PROPAGATION",
+      "RUST_INCONSISTENT_ERROR_TYPE",
+      "RUST_PANIC_PRONE_CODE"
+    ],
+    "sample_violations": [
+      {
+        "line": 8,
+        "type": "RUST_OVERUSE_UNWRAP",
+        "message": "Use of unwrap() may cause panic - consider using ? operator or proper error handling"
+      },
+      {
+        "line": 69,
+        "type": "RUST_PANIC_PRONE_CODE",
+        "message": "Use of panic! in library code - consider returning Result instead"
+      }
+    ]
+  },
+  "pattern_matching_issues.rs": {
+    "expected_count": 12,
+    "violation_types": [
+      "RUST_NON_EXHAUSTIVE_MATCH",
+      "RUST_NESTED_PATTERN_MATCHING",
+      "RUST_INEFFICIENT_DESTRUCTURING"
+    ],
+    "sample_violations": [
+      {
+        "line": 21,
+        "type": "RUST_NESTED_PATTERN_MATCHING",
+        "message": "Deeply nested pattern matching (3 levels) reduces readability"
+      },
+      {
+        "line": 44,
+        "type": "RUST_INEFFICIENT_DESTRUCTURING",
+        "message": "Inefficient pattern destructuring - consider direct field access"
+      }
+    ]
+  },
+  "unsafe_code.rs": {
+    "expected_count": 18,
+    "violation_types": [
+      "RUST_UNNECESSARY_UNSAFE",
+      "RUST_UNSAFE_WITHOUT_COMMENT",
+      "RUST_TRANSMUTE_ABUSE"
+    ],
+    "sample_violations": [
+      {
+        "line": 6,
+        "type": "RUST_UNNECESSARY_UNSAFE",
+        "message": "Unsafe block contains only safe operations"
+      },
+      {
+        "line": 21,
+        "type": "RUST_TRANSMUTE_ABUSE",
+        "message": "Use of transmute is dangerous and often unnecessary"
+      }
+    ]
+  },
+  "function_violations.rs": {
+    "expected_count": 10,
+    "violation_types": [
+      "ViolationTypeFunctionLength",
+      "ViolationTypeTooManyParameters",
+      "ViolationTypeCyclomaticComplexity",
+      "ViolationTypeDeepNesting"
+    ],
+    "sample_violations": [
+      {
+        "line": 3,
+        "type": "ViolationTypeFunctionLength",
+        "message": "Function 'very_long_function' is 40 lines long (max: 25)"
+      },
+      {
+        "line": 46,
+        "type": "ViolationTypeTooManyParameters",
+        "message": "Function 'too_many_parameters' has 6 parameters (max: 4)"
+      }
+    ]
+  },
+  "documentation_missing.rs": {
+    "expected_count": 20,
+    "violation_types": [
+      "ViolationTypeMissingDocumentation",
+      "RUST_MISSING_SAFETY_DOC"
+    ],
+    "sample_violations": [
+      {
+        "line": 3,
+        "type": "ViolationTypeMissingDocumentation",
+        "message": "Missing documentation for public struct 'UndocumentedStruct'"
+      },
+      {
+        "line": 83,
+        "type": "RUST_MISSING_SAFETY_DOC",
+        "message": "Unsafe function 'unsafe_undocumented' lacks safety documentation"
+      }
+    ]
+  },
+  "magic_numbers.rs": {
+    "expected_count": 25,
+    "violation_types": [
+      "ViolationTypeMagicNumber"
+    ],
+    "sample_violations": [
+      {
+        "line": 5,
+        "type": "ViolationTypeMagicNumber",
+        "message": "Magic number 19.99 should be extracted to a named constant"
+      },
+      {
+        "line": 8,
+        "type": "ViolationTypeMagicNumber",
+        "message": "Magic number 0.15 should be extracted to a named constant (e.g., TAX_RATE)"
+      }
+    ]
+  },
+  "good_code_example.rs": {
+    "expected_count": 0,
+    "violation_types": [],
+    "sample_violations": []
+  }
+}

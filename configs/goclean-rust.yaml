@@ -1,0 +1,88 @@
+---
+# GoClean configuration with Rust support
+# This configuration file demonstrates Rust-specific settings
+
+scan:
+  paths:
+    - ./src
+    - ./internal
+    - ./cmd
+  exclude:
+    - vendor/
+    - node_modules/
+    - .git/
+    - target/           # Rust build directory
+    - Cargo.lock       # Lock file
+  file_types:
+    - .go
+    - .rs              # Include Rust files
+  skip_test_files: true
+  aggressive_mode: false
+
+thresholds:
+  function_lines: 30
+  cyclomatic_complexity: 10
+  parameters: 5
+  nesting_depth: 4
+  class_lines: 200
+
+# Rust-specific configuration
+rust:
+  # Ownership and borrowing analysis
+  enable_ownership_analysis: true
+  max_lifetime_params: 3
+  detect_unnecessary_clones: true
+
+  # Error handling analysis
+  enable_error_handling_check: true
+  allow_unwrap: false          # Disallow unwrap() in production code
+  allow_expect: false          # Disallow expect() in production code
+  enforce_result_propagation: true
+
+  # Pattern matching analysis
+  enable_pattern_match_check: true
+  require_exhaustive_match: true
+  max_nested_match_depth: 3
+
+  # Trait and impl analysis
+  max_trait_bounds: 5
+  max_impl_methods: 20
+  detect_orphan_instances: true
+
+  # Unsafe code analysis
+  allow_unsafe: true            # Allow but track unsafe code
+  require_unsafe_comments: true
+  detect_transmute_usage: true
+
+  # Performance analysis
+  detect_inefficient_string: true
+  detect_boxed_primitives: true
+  detect_blocking_in_async: true
+
+  # Macro analysis
+  max_macro_complexity: 10
+  allow_recursive_macros: false
+
+  # Module structure
+  max_module_depth: 5
+  max_file_lines: 500
+
+  # Naming conventions (Rust-specific)
+  enforce_snake_case: true      # Functions, variables, modules
+  enforce_pascal_case: true     # Types (structs, enums, traits)
+  enforce_screaming_snake: true  # Constants
+
+output:
+  html:
+    path: ./reports/clean-code-report.html
+    auto_refresh: false
+    refresh_interval: 10
+    theme: auto
+  markdown:
+    enabled: true
+    path: ./reports/violations.md
+    include_examples: true
+
+logging:
+  level: info
+  format: structured

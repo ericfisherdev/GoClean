@@ -1,0 +1,34 @@
+---
+# GoClean Minimal Rust Configuration
+# This is the simplest configuration for scanning Rust projects
+
+scan:
+  paths:
+    - ./src
+  file_types:
+    - .rs
+  exclude:
+    - target/
+    - Cargo.lock
+
+thresholds:
+  function_lines: 30
+  cyclomatic_complexity: 10
+  parameters: 5
+
+# Basic Rust-specific settings
+rust:
+  enable_ownership_analysis: true
+  enable_error_handling_check: true
+  allow_unwrap: false
+  allow_expect: false
+
+output:
+  console:
+    enabled: true
+  html:
+    enabled: true
+    path: ./reports/rust-clean-code-report.html
+
+logging:
+  level: info
