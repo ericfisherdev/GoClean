@@ -164,8 +164,8 @@ for crate in crates/*/; do
     goclean scan \
         --path "$crate/src" \
         --file-types .rs \
-        --html \
-        --html-output "reports/${crate_name}-report.html"
+        --format html \
+        --output "reports/${crate_name}-report.html"
 done
 
 echo "✅ Quality analysis complete. Check ./reports/ for results."
@@ -465,8 +465,7 @@ jobs:
         goclean scan \
           --config configs/rust-ci.yaml \
           --format json \
-          --export-json \
-          --json-output goclean-results.json
+          --output goclean-results.json
 
     - name: Generate quality report
       run: |
@@ -743,7 +742,7 @@ repos:
       - id: goclean
         name: GoClean Quality Check
         entry: goclean
-        args: ['scan', '--config', 'configs/rust-minimal.yaml', '--format', 'table', '--fail-on', 'critical']
+        args: ['scan', '--config', 'configs/rust-minimal.yaml', '--console-violations']
         language: system
         files: '\.rs$'
         pass_filenames: false
@@ -793,8 +792,7 @@ echo "🚀 Running GoClean pre-push analysis..."
 # Run comprehensive analysis before push
 goclean scan \
     --config configs/rust-strict.yaml \
-    --format summary \
-    --fail-on critical
+    --console-violations
 
 if [ $? -ne 0 ]; then
     echo "❌ Critical quality issues found. Push blocked."
