@@ -1473,16 +1473,20 @@
                         case 'severity':
                             
                             const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
-                            const aMaxSeverity = Math.max(...Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
-                            const bMaxSeverity = Math.max(...Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0));
+                            const aSeverities = Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0);
+                            const bSeverities = Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => severityOrder[v.dataset.severity] || 0);
+                            const aMaxSeverity = aSeverities.length > 0 ? Math.max(...aSeverities) : 0;
+                            const bMaxSeverity = bSeverities.length > 0 ? Math.max(...bSeverities) : 0;
                             return bMaxSeverity - aMaxSeverity;
                         case 'type':
                             const aTypes = Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
                             const bTypes = Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => v.dataset.type).sort().join('');
                             return aTypes.localeCompare(bTypes);
                         case 'line':
-                            const aMinLine = Math.min(...Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
-                            const bMinLine = Math.min(...Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity));
+                            const aLines = Array.from(a.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity);
+                            const bLines = Array.from(b.querySelectorAll('.violation-card:not(.filtered-hidden)')).map(v => parseInt(v.dataset.line) || Infinity);
+                            const aMinLine = aLines.length > 0 ? Math.min(...aLines) : Infinity;
+                            const bMinLine = bLines.length > 0 ? Math.min(...bLines) : Infinity;
                             return aMinLine - bMinLine;
                         default:
                             return 0;
