@@ -1118,7 +1118,21 @@
                         const searchContent = (violation.dataset.searchContent || '').toLowerCase();
                         
                         const severityMatches = !severityFilter || severity === severityFilter;
-                        const typeMatches = !typeFilter || type === typeFilter;
+                        
+                        // Handle Rust filters by checking data-rust-category attribute
+                        let typeMatches = !typeFilter;
+                        if (typeFilter) {
+                            if (typeFilter.startsWith('rust_')) {
+                                // For Rust filters, strip the 'rust_' prefix and compare against data-rust-category
+                                const rustCategory = typeFilter.substring(5); // Remove 'rust_' prefix
+                                const violationRustCategory = violation.dataset.rustCategory || '';
+                                typeMatches = violationRustCategory === rustCategory;
+                            } else {
+                                // For non-Rust filters, use the original data-type comparison
+                                typeMatches = type === typeFilter;
+                            }
+                        }
+                        
                         const contentMatchesSearch = !searchTerm || searchContent.includes(searchTerm);
                         
                         const searchMatches = !searchTerm || fileMatchesSearch || contentMatchesSearch;
@@ -1195,9 +1209,35 @@
                     let textNode;
                     while(textNode = walker.nextNode()) {
                         if (textNode.parentElement.tagName !== 'SCRIPT' && textNode.parentElement.tagName !== 'STYLE' && regex.test(textNode.nodeValue)) {
-                            const span = document.createElement('span');
-                            span.innerHTML = textNode.nodeValue.replace(regex, '<span class="search-highlight">$1</span>');
-                            textNode.parentNode.replaceChild(span, textNode);
+                            // Create DocumentFragment to safely build content using DOM APIs
+                            const fragment = document.createDocumentFragment();
+                            const text = textNode.nodeValue;
+                            let lastIndex = 0;
+                            
+                            // Find all matches and build fragment with text nodes and highlight spans
+                            const matches = text.matchAll(regex);
+                            for (const match of matches) {
+                                // Add text before match
+                                if (match.index > lastIndex) {
+                                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                                }
+                                
+                                // Add highlighted match
+                                const highlightSpan = document.createElement('span');
+                                highlightSpan.className = 'search-highlight';
+                                highlightSpan.appendChild(document.createTextNode(match[1]));
+                                fragment.appendChild(highlightSpan);
+                                
+                                lastIndex = match.index + match[0].length;
+                            }
+                            
+                            // Add remaining text after last match
+                            if (lastIndex < text.length) {
+                                fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                            }
+                            
+                            // Replace the text node with the fragment
+                            textNode.parentNode.replaceChild(fragment, textNode);
                         }
                     }
                 });
@@ -1620,9 +1660,34 @@
                     const text = textNode.textContent;
                     const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
                     if (regex.test(text)) {
-                        const span = document.createElement('span');
-                        span.innerHTML = text.replace(regex, '<span class="search-highlight">$1</span>');
-                        textNode.parentNode.replaceChild(span, textNode);
+                        // Create DocumentFragment to safely build content using DOM APIs
+                        const fragment = document.createDocumentFragment();
+                        let lastIndex = 0;
+                        
+                        // Find all matches and build fragment with text nodes and highlight spans
+                        const matches = text.matchAll(regex);
+                        for (const match of matches) {
+                            // Add text before match
+                            if (match.index > lastIndex) {
+                                fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                            }
+                            
+                            // Add highlighted match
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.className = 'search-highlight';
+                            highlightSpan.appendChild(document.createTextNode(match[1]));
+                            fragment.appendChild(highlightSpan);
+                            
+                            lastIndex = match.index + match[0].length;
+                        }
+                        
+                        // Add remaining text after last match
+                        if (lastIndex < text.length) {
+                            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                        }
+                        
+                        // Replace the text node with the fragment
+                        textNode.parentNode.replaceChild(fragment, textNode);
                     }
                 });
             }
