@@ -394,12 +394,12 @@ dev: clean-reports dev-check test
 
 1. **GoClean Scan Configuration:**
    - Program: `goclean`
-   - Arguments: `scan --console`
+   - Arguments: `scan --console-violations`
    - Working directory: `$ProjectFileDir$`
 
 2. **GoClean Report Configuration:**
    - Program: `goclean`
-   - Arguments: `scan --html --auto-refresh`
+   - Arguments: `scan --format html --output reports/quality-report.html`
    - Working directory: `$ProjectFileDir$`
 
 **External Tools:**
