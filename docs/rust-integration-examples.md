@@ -599,10 +599,12 @@ pipeline {
                     goclean scan \
                         --config configs/rust-ci.yaml \
                         --format json \
-                        --export-json \
-                        --json-output target/goclean-report.json \
-                        --html \
-                        --html-output target/quality-report.html
+                        --output target/goclean-report.json
+                    
+                    goclean scan \
+                        --config configs/rust-ci.yaml \
+                        --format html \
+                        --output target/quality-report.html
                 '''
             }
             
